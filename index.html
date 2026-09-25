@@ -4279,7 +4279,7 @@ canvas.addEventListener('pointerdown', e => { pointers.set(e.pointerId, [e.clien
 canvas.addEventListener('pointermove', e => {
   if (dragging && pointers.has(e.pointerId)) {
     const prev = pointers.get(e.pointerId); pointers.set(e.pointerId, [e.clientX, e.clientY]);
-    if (pointers.size === 1) { const kx = mode === 'cockpit' ? .003 : -.005, ky = mode === 'cockpit' ? -.003 : -.005; want.t += (e.clientX - prev[0]) * kx; want.p = Math.min(3.05, Math.max(.06, want.p + (e.clientY - prev[1]) * ky)); if (Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4) spin = false; }
+    if (pointers.size === 1) { const kx = mode === 'cockpit' ? .003 : .005, ky = mode === 'cockpit' ? -.003 : -.005;   /* drag right turns the aircraft right: the near side follows the cursor */ want.t += (e.clientX - prev[0]) * kx; want.p = Math.min(3.05, Math.max(.06, want.p + (e.clientY - prev[1]) * ky)); if (Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4) spin = false; }
     else if (pointers.size === 2) { const [a, b] = [...pointers.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]); want.r = Math.min(150, Math.max(4, want.r * pinch0 / d)); pinch0 = d; }
     document.getElementById('spin').setAttribute('aria-pressed', String(spin));
   } else hover(e);
