@@ -757,8 +757,29 @@ function paintLoftTexture(st, a0, a1, W = 2048, H = 384) {
   for (let X = Math.ceil(xmin); X <= xmax; X += 3.05) { const u = X2u(X); ctx.beginPath(); ctx.moveTo(u, 0); ctx.lineTo(u, H); ctx.stroke(); }
   ctx.strokeStyle = 'rgba(0,0,0,.035)';
   for (const k of [2.3, 3.9, 6.1, 7.7]) { const v = H * k / 10; ctx.beginPath(); ctx.moveTo(0, v); ctx.lineTo(W, v); ctx.stroke(); }
-  { const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, 'rgba(255,255,255,.035)'); g.addColorStop(.5, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(0,0,0,.035)');
+  /* rows run crown (a1), belly (halfway), crown (a0): the wash is light at both edges and dark in the middle (it used to run light to dark
+     across the canvas, so one side of the crown came out darker than the other) */
+  { const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, 'rgba(255,255,255,.035)'); g.addColorStop(.5, 'rgba(0,0,0,.035)'); g.addColorStop(1, 'rgba(255,255,255,.035)');
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
+  /* service grime, kept faint (Breeze aircraft are kept clean): a few broad blotches so the paint is not perfectly even, a grey-brown film
+     along the lower fuselage that builds aft of the wing-to-body fairing, and streaks blown aft from the drain masts and the fairing's
+     trailing edge. A canvas pixel is about 1 cm along x and 2 cm round, so blotches are drawn at half height to come out round */
+  { let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const row = a => (1 - (a - a0) / (a1 - a0)) * (H - 1), belly = row(Math.PI), px = (H - 1) / (a1 - a0);   // px: rows per radian
+    for (let k = 0; k < 60; k++) { const u = rnd() * W, v = rnd() * H, R = 120 + rnd() * 380, g = ctx.createRadialGradient(0, 0, 0, 0, 0, R), dark = rnd() < .6;
+      g.addColorStop(0, dark ? `rgba(70,62,54,${.012 + rnd() * .014})` : `rgba(255,255,255,${.01 + rnd() * .012})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.save(); ctx.translate(u, v); ctx.scale(1, .5); ctx.fillStyle = g; ctx.fillRect(-R, -R, 2 * R, 2 * R); ctx.restore(); }
+    const film = ctx.createLinearGradient(0, belly - .95 * px, 0, belly + .95 * px); film.addColorStop(0, 'rgba(74,64,54,0)'); film.addColorStop(.5, 'rgba(74,64,54,.085)'); film.addColorStop(1, 'rgba(74,64,54,0)');
+    ctx.fillStyle = film;
+    for (let X = xmin; X < xmax; X += .25) { const k = X > 12 ? .25 : X > -4.5 ? .45 : X > -15 ? .75 + .25 * Math.sin((X + 4.5) / 10.5 * Math.PI) : .75 * (X - xmin) / (-15 - xmin) + .1;
+      ctx.globalAlpha = Math.max(0, Math.min(1, k)); ctx.fillRect(X2u(X), belly - px, X2u(X + .25) - X2u(X) + 1, 2 * px); }
+    ctx.globalAlpha = 1; ctx.filter = 'blur(1px)';
+    const streak = (X, a, len, w, al) => { const u0 = X2u(X), u1 = X2u(Math.max(xmin, X - len)), v = row(a), g = ctx.createLinearGradient(u0, 0, u1, 0);
+      g.addColorStop(0, `rgba(58,50,42,${al})`); g.addColorStop(.25, `rgba(58,50,42,${al * .8})`); g.addColorStop(1, 'rgba(58,50,42,0)'); ctx.fillStyle = g; ctx.fillRect(u1, v - w / 2, u0 - u1, w); };
+    const side = z => Math.PI - Math.asin(Math.max(-1, Math.min(1, z / fusAt(st, 0).rz)));   // the angle round the section of a point on the belly z off the keel
+    for (let i = 0; i < 5; i++) { streak(-6.9, side(.3) + (rnd() - .5) * .08, 3 + rnd() * 5, 2 + rnd() * 3, .05 + rnd() * .05); streak(11.4, side(.3) + (rnd() - .5) * .08, 1.5 + rnd() * 2, 2 + rnd() * 2, .04 + rnd() * .04); }   // the drain masts
+    for (const s of [1, -1]) for (let i = 0; i < 9; i++) streak(-4.4, Math.PI + s * (.25 + rnd() * .75), 2 + rnd() * 6, 1.5 + rnd() * 3, .025 + rnd() * .045);   // off the fairing's trailing edge
+    ctx.filter = 'none'; }
   const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 16; tex.encoding = THREE.sRGBEncoding; return tex;
 }
 const FIN_BOUNDS = { xmin: -18.45, xmax: -9.3, vmin: 1.6, vmax: 8.0 };
@@ -811,7 +832,7 @@ function outlineTexture(w, h, win) {
     box(.13, .56, .20, .18, 'rgba(236,241,246,.45)', 'rgba(236,241,246,.8)', .005, 2);        // operating instructions
     box(.71, .63, .13, .14, null, 'rgba(236,241,246,.85)', .02, 3);                          // external handle access flap, forward half
   } else if (win === 'exit') {
-    box(.5, .455, .30, .43, null, 'rgba(236,241,246,.5)', .09, 3);                           // seal ring round the exit's own cabin window (the glass is the window decal)
+    box(.5, .455, .30, .43, null, 'rgba(112,120,130,.35)', .09, 3);                          // seal ring round the exit's own cabin window (the glass is the window decal), grey like the window seals
     box(.5, .12, .20, .06, 'rgba(18,28,42,.55)', 'rgba(210,45,45,.9)', .02);                 // pull handle at the top, red surround
   }
   /* the door patch's v runs from its top edge (0) down, and u from its forward edge: unflipped rows put the canvas top at the door top (the
@@ -1329,20 +1350,18 @@ function buildFuselage() {
   const fst = hst.map(h => ({ x: h.x, r: 1, cy: h.yb + .45, ry: .45, rz: h.W, cz: 0 })); FUS.fst = fst;
 
   // cabin windows: 11 x 16 in, 0.60 m pitch, skipping the doors and the overwing exits; drawn as rounded panes on the skin
-  const wtex = (() => { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 352; const c = cv.getContext('2d');
+  /* the pane is dark tinted glass behind a thin grey seal; its shine comes from the sky reflection (weak face on, strong at a slant, as
+     glass is), not painted stripes, which read as a cartoon. A roughness map keeps the seal matte and the glass smooth */
+  const [wtex, wrough] = [0, 1].map(pass => { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 352; const c = cv.getContext('2d');
     const rr = (x, y, w, h, r) => { c.beginPath(); c.roundRect ? c.roundRect(x, y, w, h, r) : c.rect(x, y, w, h); };
-    rr(8, 8, 240, 336, 62); c.fillStyle = 'rgba(206,216,228,.95)'; c.fill();                       // outer frame
-    rr(22, 22, 212, 308, 54); c.fillStyle = 'rgba(122,134,150,.95)'; c.fill();                     // recess shadow
-    rr(30, 30, 196, 292, 48);
-    const g = c.createLinearGradient(0, 30, 0, 322);
-    g.addColorStop(0, '#1b3049'); g.addColorStop(.30, '#0b1524'); g.addColorStop(.75, '#0e1c2e'); g.addColorStop(1, '#1d2c40');
-    c.fillStyle = g; c.fill();
-    c.save(); rr(30, 30, 196, 292, 48); c.clip();
-    c.fillStyle = 'rgba(200,226,255,.28)'; c.beginPath(); c.moveTo(0, 96); c.lineTo(256, 34); c.lineTo(256, 132); c.lineTo(0, 190); c.closePath(); c.fill();
-    c.fillStyle = 'rgba(255,255,255,.10)'; c.beginPath(); c.moveTo(0, 250); c.lineTo(256, 210); c.lineTo(256, 246); c.lineTo(0, 292); c.closePath(); c.fill();
-    c.restore();
-    const t = new THREE.CanvasTexture(cv); t.anisotropy = 8; return t; })();
-  const wmat = new THREE.MeshStandardMaterial({ map: wtex, transparent: true, roughness: .08, metalness: .35, envMapIntensity: 1.1, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -8 });
+    rr(8, 8, 240, 336, 62); c.fillStyle = pass ? '#c8c8c8' : 'rgba(112,120,130,.95)'; c.fill();     // seal
+    rr(18, 18, 220, 316, 56); c.fillStyle = pass ? '#c8c8c8' : 'rgba(22,28,36,.97)'; c.fill();      // recess shadow
+    rr(26, 26, 204, 300, 50);
+    if (pass) c.fillStyle = '#141414';
+    else { const g = c.createLinearGradient(0, 26, 0, 326); g.addColorStop(0, '#1a2a3d'); g.addColorStop(.4, '#0c1622'); g.addColorStop(1, '#121d2b'); c.fillStyle = g; }
+    c.fill();
+    const t = new THREE.CanvasTexture(cv); t.anisotropy = 8; if (!pass) t.encoding = THREE.sRGBEncoding; return t; });
+  const wmat = new THREE.MeshStandardMaterial({ map: wtex, roughnessMap: wrough, transparent: true, roughness: 1, metalness: 0, envMapIntensity: 1.5, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -8 });
   for (const x of [...CABIN_WINDOWS, OW_EXIT_X]) for (const side of [1, -1]) {   // the overwing exits carry the same window, in line with the row
     const c = [[x + .14, angleAt(st, x, .72, side)], [x - .14, angleAt(st, x, .72, side)], [x - .14, angleAt(st, x, .30, side)], [x + .14, angleAt(st, x, .30, side)]];
     const w = surfaceQuad(st, c, 2, 3, wmat, 1.006); w.renderOrder = 3; aircraft.add(w); windows.push(w);
@@ -1574,10 +1593,10 @@ function buildFuselage() {
     lens.userData.skinPart = true; reg(E2, lens, 'Taxi light, wide (wing-to-body fairing)', 1); }
   lamp(-19.05, topY(-19.05) - .01, 0, 'Tail strobe / navigation light', 0xffffff, .05);   // on the tail cone just above the APU exhaust
   // (the nose landing and taxi lights are built on the nose gear itself, in buildGear, so they retract and steer with it)
-  /* APU exhaust: a short bare-metal pipe standing proud of the round tail-cone end, dark inside (N211BZ tail) */
-  { const cyE = (fusTop(-19.35) + fusBot(-19.35)) / 2, pipe = new THREE.Mesh(new THREE.CylinderGeometry(.17, .18, .26, 28, 1, true), std(0x8c939b, { metalness: .7, roughness: .4, side: THREE.DoubleSide }));
+  /* APU exhaust: a short bare-metal pipe standing proud of the round tail-cone end, dark inside (N211BZ tail), dulled and darkened by heat */
+  { const cyE = (fusTop(-19.35) + fusBot(-19.35)) / 2, pipe = new THREE.Mesh(new THREE.CylinderGeometry(.17, .18, .26, 28, 1, true), std(0x37332e, { metalness: .5, roughness: .6, side: THREE.DoubleSide }));
     pipe.rotation.z = Math.PI / 2; pipe.position.set(-19.30, cyE, 0); aircraft.add(pipe); skin.push(pipe);
-    const lipE = new THREE.Mesh(new THREE.TorusGeometry(.17, .012, 8, 28), std(0xa9b0b8, { metalness: .7, roughness: .35 })); lipE.rotation.y = Math.PI / 2; lipE.position.set(-19.43, cyE, 0); aircraft.add(lipE); skin.push(lipE);
+    const lipE = new THREE.Mesh(new THREE.TorusGeometry(.17, .012, 8, 28), std(0x4a443d, { metalness: .6, roughness: .5 })); lipE.rotation.y = Math.PI / 2; lipE.position.set(-19.43, cyE, 0); aircraft.add(lipE); skin.push(lipE);
     const ex = new THREE.Mesh(new THREE.CircleGeometry(.165, 24), std(0x0b0f14)); ex.position.set(-19.33, cyE, 0); ex.rotation.y = -Math.PI / 2; aircraft.add(ex); skin.push(ex); }
 }
 
@@ -1795,6 +1814,7 @@ function buildWing() {
   return g;
 }
 
+let HEAT_TEX = null;   // the core cowl's heat-stain map, shared by both engines
 function buildEngine(side) {
   const g = new THREE.Group(), sys = sysById.engines;
   /* the nacelle from TTM ch. 01 Fig. 28 (nacelle and pylon stations, ZS = FS: X = 23.612 - 0.0254 ZS, FS 0 being 168 in ahead of the
@@ -1835,13 +1855,22 @@ function buildEngine(side) {
   /* core and exhaust (Fig. 28; Breeze N217BZ side view): the bare-metal core cowl leaves the sleeve's trailing edge about 1.06 m across and
      tapers to the core nozzle at ZS 816.2 (X 2.88, about 0.77 m); a small plug, about 0.33 m across, ends at ZS 833.3 (X 2.45) */
   const ring = (X, r0, r1, m) => { const k = new THREE.Mesh(new THREE.RingGeometry(r0, r1, 48), m); k.rotation.y = Math.PI / 2; k.position.set(lx(X), droop(X), 0); g.add(k); return k; };
-  const core = new THREE.Mesh(loft([[3.75, .56], [3.44, .53], [3.20, .475], [2.99, .41], [2.88, .385]].map(([X, r]) => ({ x: lx(X), r, cy: droop(X) })), 40), std(0x8d97a6, { metalness: .6, roughness: .35, emissive: sys.color, emissiveIntensity: 0 }));
+  /* heat staining (Breeze ramp photos): the core cowl is dull grey metal forward, going straw and bronze toward the nozzle, with soot
+     streaks running aft; the plug is darker still. Polished silver read as a model. u runs aft (0) to forward (1) */
+  const heat = HEAT_TEX || (HEAT_TEX = (() => { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 256; const c = cv.getContext('2d');
+    const gr = c.createLinearGradient(0, 0, 512, 0); gr.addColorStop(0, '#4e463e'); gr.addColorStop(.22, '#7a6e5f'); gr.addColorStop(.5, '#959aa1'); gr.addColorStop(1, '#a6adb6');
+    c.fillStyle = gr; c.fillRect(0, 0, 512, 256);
+    let seed = 5; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 140; i++) { const v = rnd() * 256, len = 80 + rnd() * 360, a = .04 + rnd() * .12, w = 1 + rnd() * 4, gs = c.createLinearGradient(0, 0, len, 0);
+      gs.addColorStop(0, `rgba(34,30,27,${a})`); gs.addColorStop(1, 'rgba(34,30,27,0)'); c.fillStyle = gs; c.fillRect(0, v, len, w); }
+    const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; t.anisotropy = 8; return t; })());
+  const core = new THREE.Mesh(loft([[3.75, .56], [3.44, .53], [3.20, .475], [2.99, .41], [2.88, .385]].map(([X, r]) => ({ x: lx(X), r, cy: droop(X) })), 40), std(0xffffff, { map: heat, metalness: .55, roughness: .48, emissive: sys.color, emissiveIntensity: 0 }));
   core.userData.skinPart = true; g.add(reg(sys, core, 'Core exhaust', 1));
-  const plug = new THREE.Mesh(loft([[2.95, .17], [2.88, .165], [2.75, .13], [2.62, .085], [2.52, .04], [2.446, .004]].map(([X, r]) => ({ x: lx(X), r, cy: droop(X) })), 32), std(0x8b8270, { metalness: .65, roughness: .35 }));
+  const plug = new THREE.Mesh(loft([[2.95, .17], [2.88, .165], [2.75, .13], [2.62, .085], [2.52, .04], [2.446, .004]].map(([X, r]) => ({ x: lx(X), r, cy: droop(X) })), 32), std(0x2c2722, { metalness: .5, roughness: .6 }));
   plug.userData.skinPart = true; g.add(reg(sys, plug, 'Core exhaust', 1));
   { const dark = std(0x07090c, { roughness: .9, metalness: 0, side: THREE.DoubleSide });
     ring(2.885, .165, .38, dark); ring(3.46, .535, .975, dark);                                    // the core and bypass exits: dark ducts, not the skins' insides
-    const lipR = new THREE.Mesh(new THREE.TorusGeometry(.385, .012, 6, 48), std(0xc9ced4, { metalness: .8, roughness: .25 })); lipR.rotation.y = Math.PI / 2; lipR.position.set(lx(2.88), droop(2.88), 0); g.add(lipR); }   // the core nozzle's bright lip
+    const lipR = new THREE.Mesh(new THREE.TorusGeometry(.385, .012, 6, 48), std(0x6a6258, { metalness: .7, roughness: .4 })); lipR.rotation.y = Math.PI / 2; lipR.position.set(lx(2.88), droop(2.88), 0); g.add(lipR); }   // the core nozzle's bright lip
   { const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 128; const c = cv.getContext('2d');
     c.fillStyle = '#1b2029'; c.fillRect(0, 0, 1024, 128);
     for (let y = 6; y < 128; y += 10) { c.fillStyle = '#7d8796'; c.fillRect(0, y, 1024, 3); c.fillStyle = '#0b0e13'; c.fillRect(0, y + 3, 1024, 3); }   // curved turning vanes (run around the ring)
