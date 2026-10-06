@@ -1738,17 +1738,30 @@ function buildWing() {
 }
 
 function buildEngine(side) {
-  const g = new THREE.Group(), sys = sysById.engines, L = ENG.x - ENG.xr;   // nacelle 8.25 -> 4.15
-  const nacProfile = [[L / 2, 1.13, 0], [L / 2 - .25, 1.22, 0], [L / 2 - .7, 1.245, 0], [L / 2 - 1.2, 1.25, 0], [L / 2 - 1.8, 1.245, 0], [L / 2 - 2.3, 1.235, 0], [L / 2 - 2.8, 1.22, 0], [-L / 2 + 1.35, 1.2, 0], [-L / 2 + 1.2, 1.19, 0], [-L / 2 + .8, 1.14, .02], [-L / 2 + .3, 1.05, .03], [-L / 2 + .12, .98, .04], [-L / 2, .92, .05]];
+  const g = new THREE.Group(), sys = sysById.engines;
+  /* the nacelle from TTM ch. 01 Fig. 28 (nacelle and pylon stations, ZS = FS: X = 23.612 - 0.0254 ZS, FS 0 being 168 in ahead of the
+     nose) with diameters measured off the drawing and scaled to the 2.41 m (95 in) of ch. 71 Table 1. Intake 12 o'clock ZS 647.1 (X 7.18),
+     inlet / fan cowl joint ZS 678.9, fan cowl / thrust reverser joint ZS 732.0, translating sleeve from ZS 772 to its trailing edge about
+     ZS 794 (X 3.44); full 2.41 m from ZS 676 to 732, then tapering to 1.97 m at the sleeve's trailing edge. The aft body droops: the exhaust
+     axis ends about 0.19 m below the intake's (the drawing's top line falls faster than its bottom rises). Positions here are aircraft X;
+     the group sits at the nacelle's mid point EX0. (The old profile was 2.50 m across, folded back on itself at the sleeve, and carried a
+     core and plug 0.75 m too long.) */
+  const EX0 = (ENG.x + ENG.xr) / 2, lx = X => X - EX0;
+  const NAC = [[7.10, 1.107], [7.05, 1.118], [6.95, 1.138], [6.85, 1.160], [6.75, 1.172], [6.645, 1.185], [6.54, 1.194], [6.44, 1.205], [5.02, 1.205], [4.92, 1.182],
+               [4.71, 1.168], [4.51, 1.146], [4.31, 1.138], [4.10, 1.121], [4.00, 1.110], [3.90, 1.089], [3.70, 1.052], [3.50, 1.000], [3.44, .985]], SLV = 14;   // NAC[14]: sleeve forward edge, ZS 772
+  const droop = X => -.19 * Math.max(0, Math.min(1, (6.0 - X) / (6.0 - 2.446)));
+  const rAt = X => { for (let i = 1; i < NAC.length; i++) { const [xa, ra] = NAC[i - 1], [xb, rb] = NAC[i]; if (X <= xa && X >= xb) return ra + (rb - ra) * (xa - X) / (xa - xb); } return X > NAC[0][0] ? NAC[0][1] : NAC[NAC.length - 1][1]; };
   /* nacelle paint: deep royal blue, sampled on N211BZ (#00368f in daylight); the raw navy hex rendered far too light */
-  const nacMat = paint({ color: new THREE.Color('#0b3ea3').convertSRGBToLinear(), emissive: sys.color, emissiveIntensity: 0 }), nacPts = nacProfile.map(([x, r, cy]) => ({ x, r, cy })), SLV = 7;   // profile point 7: sleeve forward edge
+  const nacMat = paint({ color: new THREE.Color('#0b3ea3').convertSRGBToLinear(), emissive: sys.color, emissiveIntensity: 0 }), nacPts = NAC.map(([X, r]) => ({ x: lx(X), r, cy: droop(X) }));
   const nac = new THREE.Mesh(loft(nacPts.slice(0, SLV + 1), 64), nacMat); nac.userData.skinPart = true; g.add(reg(sys, nac, 'PW1500G engine', 1));
-  // translating sleeve: the aft part of the fan cowl, which slides aft to uncover the cascades
+  // translating sleeve: the aft part of the thrust reverser cowl, which slides aft to uncover the cascades
   const sleeve = new THREE.Mesh(loft(nacPts.slice(SLV), 64), nacMat); sleeve.userData.skinPart = true; sleeve.userData.trSleeve = true; g.add(reg(sys, sleeve, 'PW1500G engine', 1));
-  const lip = new THREE.Mesh(new THREE.TorusGeometry(1.11, .1, 12, 40), std(0xdfe4eb, { metalness: .5, roughness: .3, emissive: sysById.ice.color, emissiveIntensity: 0 }));
-  lip.rotation.y = Math.PI / 2; lip.position.x = L / 2; lip.userData.skinPart = true; g.add(reg(sysById.ice, lip, 'Cowl anti-ice', 1));
-  const inner = new THREE.Mesh(new THREE.CylinderGeometry(1.03, 1.0, 1.0, 40, 1, true), std(0x7cc9b3, { roughness: .6, metalness: .1, side: THREE.BackSide })); inner.rotation.z = -Math.PI / 2; inner.position.x = L / 2 - .55; g.add(inner);   // mint-green inlet lining, as on every new-livery photo
-  const fan = new THREE.Group(); fan.position.x = L / 2 - .95;
+  /* the inlet lip: bare polished metal (Breeze N215BZ from ahead), its leading edge (highlight, about 2.15 m across on the drawing) at the
+     intake station, its inner side running into the inlet at about the fan case (fan 73 in, ch. 71 Table 1) */
+  const lip = new THREE.Mesh(new THREE.TorusGeometry(1.03, .08, 12, 48), std(0xdfe4eb, { metalness: .5, roughness: .3, emissive: sysById.ice.color, emissiveIntensity: 0 }));
+  lip.rotation.y = Math.PI / 2; lip.position.x = lx(ENG.x - .08); lip.userData.skinPart = true; g.add(reg(sysById.ice, lip, 'Cowl anti-ice', 1));
+  const inner = new THREE.Mesh(new THREE.CylinderGeometry(.955, .94, 1.0, 48, 1, true), std(0x7cc9b3, { roughness: .6, metalness: .1, side: THREE.BackSide })); inner.rotation.z = -Math.PI / 2; inner.position.x = lx(ENG.x - .58); g.add(inner);   // mint-green inlet lining, as on every new-livery photo
+  const fan = new THREE.Group(); fan.position.x = lx(ENG.x - .95); fan.scale.set(1, .905, .905);   // 18 blades to a 0.93 m tip (73 in fan)
   /* PW1500G fan (P&W / Key.aero, and a CS100 front photo on Wikimedia Commons): 18 wide-chord swept blades, dark with bright metal leading
      edges; a black spinner carrying the single white raindrop P&W paints on every GTF so the ground crew can see the fan turning */
   const bm = std(0x383e46, { metalness: .88, roughness: .26 });
@@ -1760,37 +1773,54 @@ function buildEngine(side) {
     const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; t.wrapS = THREE.RepeatWrapping; return t; })();
   const hub = new THREE.Mesh(new THREE.ConeGeometry(.3, .55, 48), std(0xffffff, { map: drop, roughness: .35, metalness: .2 })); hub.rotation.z = -Math.PI / 2; hub.position.x = .25; fan.add(hub);
   g.add(fan); spinners.push(fan);
-  const disc = new THREE.Mesh(new THREE.CircleGeometry(1.0, 40), std(0x1a2230, { roughness: .4 })); disc.rotation.y = Math.PI / 2; disc.position.x = L / 2 - 1.05; g.add(disc);
-  // core and exhaust: fan cowl rear at 4.15, exhaust to 3.0 (ACP side view)
-  const core = new THREE.Mesh(loft([{ x: -L / 2 + .3, r: .80, cy: .04 }, { x: -L / 2, r: .62, cy: .05 }, { x: -L / 2 - .6, r: .5, cy: .06 }, { x: -L / 2 - 1.15, r: .34, cy: .08 }], 28), std(0x8d97a6, { metalness: .6, roughness: .35, emissive: sys.color, emissiveIntensity: 0 }));
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(.94, 48), std(0x1a2230, { roughness: .4 })); disc.rotation.y = Math.PI / 2; disc.position.x = lx(ENG.x - 1.05); g.add(disc);
+  /* core and exhaust (Fig. 28; Breeze N217BZ side view): the bare-metal core cowl leaves the sleeve's trailing edge about 1.06 m across and
+     tapers to the core nozzle at ZS 816.2 (X 2.88, about 0.77 m); a small plug, about 0.33 m across, ends at ZS 833.3 (X 2.45) */
+  const ring = (X, r0, r1, m) => { const k = new THREE.Mesh(new THREE.RingGeometry(r0, r1, 48), m); k.rotation.y = Math.PI / 2; k.position.set(lx(X), droop(X), 0); g.add(k); return k; };
+  const core = new THREE.Mesh(loft([[3.75, .56], [3.44, .53], [3.20, .475], [2.99, .41], [2.88, .385]].map(([X, r]) => ({ x: lx(X), r, cy: droop(X) })), 40), std(0x8d97a6, { metalness: .6, roughness: .35, emissive: sys.color, emissiveIntensity: 0 }));
   core.userData.skinPart = true; g.add(reg(sys, core, 'Core exhaust', 1));
-  const plug = new THREE.Mesh(new THREE.ConeGeometry(.26, 1.0, 20), std(0x59616f, { metalness: .6 })); plug.rotation.z = Math.PI / 2; plug.position.x = -L / 2 - 1.0; g.add(plug);
+  const plug = new THREE.Mesh(loft([[2.95, .17], [2.88, .165], [2.75, .13], [2.62, .085], [2.52, .04], [2.446, .004]].map(([X, r]) => ({ x: lx(X), r, cy: droop(X) })), 32), std(0x8b8270, { metalness: .65, roughness: .35 }));
+  plug.userData.skinPart = true; g.add(reg(sys, plug, 'Core exhaust', 1));
+  { const dark = std(0x07090c, { roughness: .9, metalness: 0, side: THREE.DoubleSide });
+    ring(2.885, .165, .38, dark); ring(3.46, .535, .975, dark);                                    // the core and bypass exits: dark ducts, not the skins' insides
+    const lipR = new THREE.Mesh(new THREE.TorusGeometry(.385, .012, 6, 48), std(0xc9ced4, { metalness: .8, roughness: .25 })); lipR.rotation.y = Math.PI / 2; lipR.position.set(lx(2.88), droop(2.88), 0); g.add(lipR); }   // the core nozzle's bright lip
   { const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 128; const c = cv.getContext('2d');
     c.fillStyle = '#1b2029'; c.fillRect(0, 0, 1024, 128);
     for (let y = 6; y < 128; y += 10) { c.fillStyle = '#7d8796'; c.fillRect(0, y, 1024, 3); c.fillStyle = '#0b0e13'; c.fillRect(0, y + 3, 1024, 3); }   // curved turning vanes (run around the ring)
     c.fillStyle = '#394250'; for (let k = 0; k < 24; k++) c.fillRect(k * 1024 / 24, 0, 7, 128);                                                  // axial strongbacks
     c.fillStyle = '#2a303a'; c.fillRect(1024 * .64, 0, 1024 * .22, 128); c.fillRect(1024 * .22, 0, 1024 * .06, 128);   // no cascade at the hinge beam (top, u .75) or the latch beam (bottom, u .25)
     const tx = new THREE.CanvasTexture(cv); tx.encoding = THREE.sRGBEncoding; tx.anisotropy = 8;
-    const xF = -L / 2 + 1.35, len = .56;                                               // cascade box: from the sleeve's forward edge aft 0.56 m, 2-4 cm inside the stowed sleeve (at 1.178 it showed through the fan cowl's aft fold)
-    const tr = new THREE.Mesh(new THREE.CylinderGeometry(1.16, 1.11, len, 64, 1, true), std(0xffffff, { map: tx, roughness: .7, metalness: .3, emissive: sys.color, emissiveIntensity: 0 }));
-    tr.rotation.z = -Math.PI / 2; tr.position.x = xF - len / 2; tr.userData.skinPart = true; g.add(reg(sys, tr, 'Thrust reverser (cascade)', 1)); }
-  for (const x of [L / 2 - 2.3, -L / 2 + 1.35]) { const sm = new THREE.Mesh(new THREE.TorusGeometry(1.212, .012, 6, 60), std(0x0e2350)); sm.rotation.y = Math.PI / 2; sm.position.x = x; g.add(sm); skin.push(sm); }
-  // pylon (ACP pylon stations FS 679 to FS 911 => X 6.75 to 0.87)
-  // pylon plan outline from the DXF: X 3.41 to 6.28, 0.68 m wide
-  const EX0 = (ENG.x + ENG.xr) / 2;
-  { const Y0 = ENG.y, P = [[6.6, -.548], [5.9, -.50], [4.7, -.38], [3.62, -.27], [2.4, -.28], [0.87, -.31], [1.25, -.40], [2.3, -.52], [3.30, -.56], [6.6, -.552]];   // side profile, aircraft X/Y
-    const sh = new THREE.Shape(); P.forEach(([x, y], k) => { const lx = x - EX0, ly = y - Y0; k ? sh.lineTo(lx, ly) : sh.moveTo(lx, ly); });
+    const xF = lx(4.00), len = .50;                                                    // cascade box: from the sleeve's forward edge aft 0.5 m, 3-4 cm inside the stowed sleeve
+    const tr = new THREE.Mesh(new THREE.CylinderGeometry(1.07, .955, len, 64, 1, true), std(0xffffff, { map: tx, roughness: .7, metalness: .3, emissive: sys.color, emissiveIntensity: 0 }));
+    tr.rotation.z = -Math.PI / 2; tr.position.set(xF - len / 2, droop(3.75), 0); tr.userData.skinPart = true; g.add(reg(sys, tr, 'Thrust reverser (cascade)', 1)); }
+  for (const X of [6.368, 5.019, 4.00]) { const sm = new THREE.Mesh(new THREE.TorusGeometry(rAt(X) + .003, .012, 6, 60), std(0x0e2350)); sm.rotation.y = Math.PI / 2; sm.position.set(lx(X), droop(X), 0); g.add(sm); skin.push(sm); }   // seams: inlet / fan cowl (ZS 678.9), fan cowl / reverser (ZS 732.0), sleeve (ZS 772)
+  /* pylon, side profile from TTM ch. 01 Fig. 28: front tip on the fan cowl at ZS 679.1 (X 6.36), top rising to the wing's leading edge
+     (the notch at ZS 795.2), then along the wing's lower skin to the aft tip at ZS 910.8 (X 0.48). Behind the nacelle the aft fairing hangs
+     about 1.1 m below the wing (front face ZS 806.7, deepest near ZS 830, ZS 880.6 on the rising aft edge), its underside a metal heat shield
+     just over the core exhaust (Breeze N217BZ side view). Its lower edge further forward runs inside the cowls. (The old outline used
+     FS 0 = 24.0 m, putting both ends 0.24-0.39 m forward, and hung its aft fairing only 0.25 m.) */
+  { const YC = ENG.y - .08, wl = X => wingLowerY(Math.min(X, 3.45), ENG.z) - YC, nacTop = X => droop(X) + rAt(X);
+    const coreR = X => X >= 3.44 ? .53 : X >= 3.20 ? .53 - .055 * (3.44 - X) / .24 : .475 - .065 * (3.20 - X) / .21, coreTop = X => droop(X) + coreR(X);
+    const BOT = [[1.245, .87], [1.77, 1.08], [2.53, 1.15], [3.05, 1.10]], bot = X => { for (let i = 1; i < BOT.length; i++) if (X <= BOT[i][0]) { const [xa, da] = BOT[i - 1], [xb, db] = BOT[i]; return wl(X) - (da + (db - da) * (X - xa) / (xb - xa)); } return wl(X) - 1.10; };
+    const P = [[6.363, nacTop(6.363) + .06], [6.0, nacTop(6.0) + .16], [5.027, nacTop(5.027) + .27], [3.50, wl(3.45) + .01],
+               ...[3.4, 3.1, 2.5, 2.0, 1.5, 1.245, .9, .478].map(X => [X, wl(X) + .015]),
+               [.50, wl(.50) - .02], ...BOT.map(([X]) => [X, bot(X)]), [3.30, coreTop(3.30) + .03], [3.44, nacTop(3.44) - .04], [4.0, nacTop(4.0) - .10], [5.0, nacTop(5.0) - .10], [6.30, nacTop(6.30) - .04]];
+    const sh = new THREE.Shape(); P.forEach(([X, y], k) => k ? sh.lineTo(lx(X), y) : sh.moveTo(lx(X), y));
     const W = .40, geo = new THREE.ExtrudeGeometry(sh, { depth: W, bevelEnabled: true, bevelThickness: .07, bevelSize: .06, bevelSegments: 4, curveSegments: 4 });
     geo.translate(0, 0, -W / 2); geo.computeVertexNormals();
-    const py = new THREE.Mesh(geo, paint({ color: LIVERY.white, roughness: .42, transparent: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 })); g.add(py); skin.push(py); }   // offset: its top lies on the wing's lower skin and its foot on the nacelle
+    const py = new THREE.Mesh(geo, paint({ color: LIVERY.white, roughness: .42, transparent: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 })); g.add(py); skin.push(py);   // offset: its top lies on the wing's lower skin and its foot on the nacelle
+    /* the heat shield: a bare-metal strip along the aft fairing's underside, over the core exhaust */
+    const hs = new THREE.Shape(), xs = [1.5, 1.77, 2.15, 2.53, 2.8, 3.05];
+    xs.forEach((X, k) => k ? hs.lineTo(lx(X), bot(X) - .01) : hs.moveTo(lx(X), bot(X) - .01)); [...xs].reverse().forEach(X => hs.lineTo(lx(X), bot(X) + .05));
+    const hg = new THREE.ExtrudeGeometry(hs, { depth: W + .1, bevelEnabled: false }); hg.translate(0, 0, -(W + .1) / 2);
+    const shield = new THREE.Mesh(hg, std(0xa9afb6, { metalness: .7, roughness: .4 })); shield.userData.skinPart = true; g.add(shield); }
   /* engine drain mast at 6 o'clock, aft on the fan cowl (EASA TCDS IM.E.090: the drain mast is the engine's furthest radial projection), and the
      fan cowl latch line along the bottom split, where the two cowl halves meet (the halves hinge at the pylon) */
   { const dmM = std(0xb5bcc4, { roughness: .45, metalness: .5 }), shp = new THREE.Shape(); shp.moveTo(.10, 0); shp.lineTo(-.10, 0); shp.lineTo(-.16, -.15); shp.lineTo(-.05, -.15); shp.closePath();   // swept blade
-    const mast = new THREE.Mesh(new THREE.ExtrudeGeometry(shp, { depth: .025, bevelEnabled: false }).translate(0, 0, -.0125), dmM); mast.position.set(-.55, -1.215, 0); mast.userData.skinPart = true; g.add(reg(sys, mast, 'Engine drain mast', 1));
-    /* both follow the cowl's own taper (radius from the profile, linear between rings as the loft is); a straight strip hung 27 mm clear at its aft end */
-    const nacR = x => { for (let i = 1; i < SLV; i++) { const [xa, ra] = nacProfile[i - 1], [xb, rb] = nacProfile[i]; if (x <= xa && x >= xb) return ra + (rb - ra) * (xa - x) / (xa - xb); } return nacProfile[SLV - 1][1]; };
-    const latchM = std(0x16345f, { roughness: .5 }); for (const x of [.95, .45, -.05]) { const lt = new THREE.Mesh(new THREE.BoxGeometry(.2, .012, .05), latchM); lt.position.set(x, -nacR(x) - .003, 0); g.add(lt); }   // flush latch handles
-    const split = new THREE.Mesh(tube(Array.from({ length: 12 }, (_, k) => { const x = 1.5 - k * 2.2 / 11; return [x, -nacR(x) - .001, 0]; }), .005), latchM); g.add(split); }
+    const mast = new THREE.Mesh(new THREE.ExtrudeGeometry(shp, { depth: .025, bevelEnabled: false }).translate(0, 0, -.0125), dmM); mast.position.set(lx(4.645), droop(4.645) - rAt(4.645), 0); mast.userData.skinPart = true; g.add(reg(sys, mast, 'Engine drain mast', 1));
+    /* both follow the cowl's own taper and droop (radius from the profile, linear between rings as the loft is) */
+    const latchM = std(0x16345f, { roughness: .5 }); for (const X of [6.15, 5.65, 5.15]) { const lt = new THREE.Mesh(new THREE.BoxGeometry(.2, .012, .05), latchM); lt.position.set(lx(X), droop(X) - rAt(X) - .003, 0); g.add(lt); }   // flush latch handles on the fan cowl
+    const split = new THREE.Mesh(tube(Array.from({ length: 16 }, (_, k) => { const X = 6.70 - k * 2.70 / 15; return [lx(X), droop(X) - rAt(X) - .001, 0]; }), .005), latchM); g.add(split); }   // the bottom split, fan cowl and reverser
   // accessories under the core: FADEC, VFG, EDP, bleed ports, oil tank, fire loop
   g.add(reg(sys, box(.5, .28, .32, sysMat(sys), -.4, -.95, .35), 'FADEC'));
   g.add(reg(sysById.elec, box(.62, .42, .42, sysMat(sysById.elec), -.8, -1.0, -.45), `Variable frequency generator ${side > 0 ? 1 : 2} (75 kVA)`));
@@ -5503,7 +5533,7 @@ document.getElementById('cRestore').addEventListener('click', () => courseMin(fa
    effect is cleared. Gear legs swing on their trunnions; the RAT deploys on its own arm. */
 const caGroup = new THREE.Group(); scene.add(caGroup);
 let caName = null, caT = 0, caState = {};
-const CA_ENG = { xC: (ENG.x + ENG.xr) / 2, xAft: ENG.xr - .2, y: ENG.y - .08, z: ENG.z, r: ENG.r };
+const CA_ENG = { xC: (ENG.x + ENG.xr) / 2, xAft: 3.10, y: ENG.y - .08, yAft: ENG.y - .08 - .15, z: ENG.z, r: ENG.r };   // exhaust: between the bypass exit (X 3.44) and the core nozzle (2.88), on the drooped exhaust axis
 const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q = new THREE.Quaternion();
 const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;   // smooth in/out
 const seg = (t, a, b) => Math.max(0, Math.min(1, (t - a) / (b - a)));     // 0..1 within [a,b]
@@ -5826,12 +5856,12 @@ const CA_EFFECTS = {
   /* hot exhaust jet from both cores, with a bright nozzle glow */
   thrust: {
     init() { caState.p = caParticles(220, 0x66d4ff, .17); for (const m of caState.p) { m.userData.z = Math.random() < .5 ? 1 : -1; m.userData.t = Math.random(); m.userData.ang = Math.random() * Math.PI * 2; }
-      for (const sd of [1, -1]) { const g = new THREE.Mesh(new THREE.SphereGeometry(.55, 14, 10), new THREE.MeshBasicMaterial({ color: 0xbfe8ff, transparent: true, opacity: .35, blending: THREE.AdditiveBlending, depthWrite: false })); g.position.set(CA_ENG.xAft + .1, CA_ENG.y, sd * CA_ENG.z); caGroup.add(g); }
+      for (const sd of [1, -1]) { const g = new THREE.Mesh(new THREE.SphereGeometry(.55, 14, 10), new THREE.MeshBasicMaterial({ color: 0xbfe8ff, transparent: true, opacity: .35, blending: THREE.AdditiveBlending, depthWrite: false })); g.position.set(CA_ENG.xAft + .1, CA_ENG.yAft, sd * CA_ENG.z); caGroup.add(g); }
       if (mode === 'exterior') caGlow(meshesByLabel(['PW1500G engine'])); },   // the exterior overview lights the nacelles it is talking about
     update(dt, now) { caGlowSet(.28 + .16 * Math.sin(now * .006));
       for (const m of caState.p) { m.userData.t += dt * (.9 + (m.userData.ang % 1) * .4); if (m.userData.t > 1) { m.userData.t -= 1; m.userData.ang = Math.random() * Math.PI * 2; }
         const t = m.userData.t, side = m.userData.z * CA_ENG.z, spread = .3 + t * 2.2;
-        _v1.set(CA_ENG.xAft - t * 11, CA_ENG.y + Math.cos(m.userData.ang) * spread * .35, side + Math.sin(m.userData.ang) * spread * .35);
+        _v1.set(CA_ENG.xAft - t * 11, CA_ENG.yAft + Math.cos(m.userData.ang) * spread * .35, side + Math.sin(m.userData.ang) * spread * .35);
         aircraft.localToWorld(_v1); m.position.copy(_v1);
         m.scale.setScalar(.8 + t * 2.2); m.material.opacity = .95 * (1 - t) * (1 - t); m.material.color.setHSL(.56 - t * .1, 1, .62 - t * .12); }
     }
