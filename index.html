@@ -5294,7 +5294,8 @@ const airport = (() => {
   const tiles = (geo, tw, th) => { const uv = geo.attributes.uv, p = geo.parameters; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * p.width / tw, uv.getY(i) * p.height / th); return geo; };   // plane uv counted in tiles of tw x th m
   const wall = (w, h, m, x, z, ry, tw = w, th = h, y0 = 0) => mesh(tiles(new THREE.PlaneGeometry(w, h), tw, th), m, x, G0 + y0 + h / 2, z, ry);   // a facade, facing +z turned by ry
   const box = (w, h, d, m, x, y0, z, ry = 0, parent = B) => mesh(new THREE.BoxGeometry(w, h, d), m, x, G0 + y0 + h / 2, z, ry, 0, 0, parent);
-  const SUN = [-26 / 34, 26 / 34];                                                                      // ground shift per metre of height along the sun's rays
+  const SUN = [-26 / 34, 26 / 34];                                                                     // ground shift per metre of height along the sun's rays
+  const duskLit = []; let lseed = 41; const lrnd = () => (lseed = (lseed * 16807) % 2147483647) / 2147483647;   // materials lit from inside at dusk [material, emissive intensity]; lrnd: their own random, leaving rnd's sequence as it was
   const hull = pts => { pts = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]); const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]), lo = [], up = [];
     for (const p of pts) { while (lo.length > 1 && cr(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); }
     for (const p of pts.slice().reverse()) { while (up.length > 1 && cr(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop(); up.push(p); }
@@ -5342,10 +5343,15 @@ const airport = (() => {
         c.fillStyle = '#8e969e'; for (const x of [.6, 3, 5.4]) c.fillRect(x * px - 1, Y(y + 2.2), 3, Y(y) - Y(y + 2.2)); }
       c.fillStyle = FASCIA; c.fillRect(0, Y(9), w, Y(8.3) - Y(9)); c.fillStyle = '#5b6168'; c.fillRect(0, Y(.6), w, Y(0) - Y(.6));
     })) });
+  officeM.emissive.setHex(0xffffff); officeM.emissiveIntensity = 0; duskLit.push([officeM, .7]);
+  officeM.emissiveMap = tex(canvas(256, 384, (c, w, h) => { const px = w / 6, Y = m => h - m / 9 * h; c.fillStyle = '#000'; c.fillRect(0, 0, w, h);
+    for (const y of [1.2, 5.2]) for (const [x0, x1] of [[.6, 3], [3, 5.4]]) { const b = lrnd() < .25 ? .15 : .6 + .4 * lrnd(); c.fillStyle = `rgba(255,232,190,${b})`; c.fillRect(x0 * px + 2, Y(y + 2.2), (x1 - x0) * px - 4, Y(y) - Y(y + 2.2)); } }));
   const prof = new THREE.Shape(); prof.moveTo(-HW / 2, 0); prof.lineTo(HW / 2, 0); prof.lineTo(HW / 2, HH); prof.absarc(0, HYC, HR0, Math.PI / 2 - HA, Math.PI / 2 + HA, false); prof.lineTo(-HW / 2, 0);
+  const doorGlow = tex(canvas(1024, 400, (c, w, h) => { const X = m => (m + HW / 2) / HW * w, Y = m => h - m / HT * h; c.fillStyle = '#000'; c.fillRect(0, 0, w, h);   // the hangar lit inside, through the door's translucent band
+    c.fillStyle = '#ffe9c4'; c.fillRect(X(-34), Y(16.7), 68 * w / HW, Y(14.2) - Y(16.7)); c.fillStyle = '#000'; for (let m = -34; m <= 34; m += 1.0625) c.fillRect(X(m), Y(16.7), 1.5, Y(14.2) - Y(16.7)); }));
   const profGeo = new THREE.ShapeGeometry(prof, 24), roofGeo = new THREE.CylinderGeometry(HR0, HR0, HD, 48, 1, true, Math.PI - HA, 2 * HA), roofM = mat({ color: lin('#9aa1a8'), roughness: .45, metalness: .55 });
   [-115, -25, 65].forEach((hx, i) => {
-    mesh(profGeo, mat({ map: doorTex(i + 2) }), hx, G0, HZ, Math.PI); mesh(profGeo, plainM, hx, G0, HZ + HD);                                       // door front toward the stand, plain back
+    { const dm = mat({ map: doorTex(i + 2), emissive: 0xffffff, emissiveMap: doorGlow, emissiveIntensity: 0 }); duskLit.push([dm, .55]); mesh(profGeo, dm, hx, G0, HZ, Math.PI); } mesh(profGeo, plainM, hx, G0, HZ + HD);                                       // door front toward the stand, plain back
     for (const s of [1, -1]) wall(HD, HH, cladM, hx + s * HW / 2, HZ + HD / 2, s * Math.PI / 2, 15, 20);
     mesh(roofGeo, roofM, hx, G0 + HYC, HZ + HD / 2, 0, Math.PI / 2);
     shade(rectFoot(hx - HW / 2, hx + HW / 2, HZ, HZ + HD), HH + HR * .6);
@@ -5369,7 +5375,13 @@ const airport = (() => {
     c.fillRect(0, Y(10), w, 3);
     c.fillStyle = panel; c.fillRect(0, Y(5.6), w, Y(4.6) - Y(5.6)); c.fillRect(0, Y(15), w, Y(14.2) - Y(15));                                          // floor band, top band
   });
-  const termRM = tex(termCv(true), false), termM = mat({ map: tex(termCv(false)), roughnessMap: termRM, metalnessMap: termRM, roughness: 1, metalness: 1, envMapIntensity: 1.2 });
+  const termEm = tex(canvas(896, 480, (c, w, h) => { const px = w / 28, Y = m => h - m / TH * h; c.fillStyle = '#000'; c.fillRect(0, 0, w, h);   // the terminal lit inside: light falling off below each ceiling, a row of downlights, some bays dark
+    for (const [y0, y1] of [[5.6, 10], [10, 14.2]]) for (let m = 0; m < 28; m += 1.75) { const b = lrnd() < .18 ? .04 : .3 + .55 * lrnd(), x = m * px + 3, bw = 1.75 * px - 3, gr = c.createLinearGradient(0, Y(y1), 0, Y(y0));
+      gr.addColorStop(0, `rgba(255,236,202,${b})`); gr.addColorStop(.3, `rgba(255,226,184,${b * .45})`); gr.addColorStop(1, `rgba(255,214,166,${b * .18})`); c.fillStyle = gr; c.fillRect(x, Y(y1), bw, Y(y0) - Y(y1));
+      c.fillStyle = `rgba(255,248,232,${Math.min(1, b + .35)})`; for (let k = 0; k < 3; k++) { c.beginPath(); c.arc(x + (k + .5) * bw / 3, Y(y1) + 6, 2.2, 0, 2 * Math.PI); c.fill(); } }
+    for (let m = 0; m < 28; m += 3.5) { c.fillStyle = `rgba(255,226,180,${lrnd() < .4 ? .05 : .25 + .2 * lrnd()})`; c.fillRect(m * px, Y(4.5), 3.5 * px - 2, Y(3.5) - Y(4.5)); } }));
+  const termRM = tex(termCv(true), false), termM = mat({ map: tex(termCv(false)), roughnessMap: termRM, metalnessMap: termRM, roughness: 1, metalness: 1, envMapIntensity: 1.2, emissive: 0xffffff, emissiveMap: termEm, emissiveIntensity: 0 });
+  duskLit.push([termM, .6]);
   wall(TL, TH, termM, TXC, TZ, 0, 28, TH); wall(TL, TH, termM, TXC, TZ - TD, Math.PI, 28, TH);
   wall(TD, TH, endM, TX0, TZ - TD / 2, -Math.PI / 2); wall(TD, TH, endM, TX1, TZ - TD / 2, Math.PI / 2);
   box(TL + 14, 1.4, TD + 14, mat({ color: lin('#e4e6e8'), roughness: .5, metalness: .25 }), TXC, TH, TZ - TD / 2);                                      // the roof
@@ -5400,10 +5412,13 @@ const airport = (() => {
         for (const x of [1.0, 1.9]) c.strokeRect(U(x), r * h - 6, .5 * px, 12);                                                                       // overwing exits
         c.fillStyle = '#1b222a'; c.fillRect(U(16.4), (r < .5 ? r - .05 : r + .05) * h - 4, 1.1 * px, 8); }                              // flight deck windows
     }));
-  const bodyM = mat({ map: bodyTex, roughness: .35, envMapIntensity: .8 }), wingM = mat({ color: lin('#c4c9cf'), roughness: .5, metalness: .2 }), tyreM = mat({ color: lin('#1c1e21'), roughness: .9 });
+  const bodyGlow = tex(canvas(1024, 256, (c, w, h) => { const U = x => (x + 19.3) / 38.15 * w, px = w / 38.15; c.fillStyle = '#000'; c.fillRect(0, 0, w, h);   // their cabins lit too
+      for (const r of [.19, .81]) { c.fillStyle = '#ffd9a0'; for (let x = -12.6; x < 12.9; x += .53) { if (Math.abs(x - 1.45) < .9) continue; c.fillRect(U(x), r * h - 3.5, .26 * px, 7); } } }));
+  const bodyM = mat({ map: bodyTex, roughness: .35, envMapIntensity: .8, emissive: 0xffffff, emissiveMap: bodyGlow, emissiveIntensity: 0 }), wingM = mat({ color: lin('#c4c9cf'), roughness: .5, metalness: .2 }), tyreM = mat({ color: lin('#1c1e21'), roughness: .9 });
   const metalM = mat({ color: lin('#9aa1a8'), roughness: .35, metalness: .7 }), fanM = mat({ color: lin('#15191e'), roughness: .6 });
   const shape = pts => new THREE.Shape(pts.map(([a, b]) => new THREE.Vector2(a, b)));
   const WING = [[3.4, 0], [-7.9, 17.4], [-9.7, 17.4], [-4.9, 6.3], [-3.8, 0], [-4.9, -6.3], [-9.7, -17.4], [-7.9, -17.4]], STAB = [[-14.6, 0], [-17.9, 6.1], [-19, 6.1], [-18.6, 0], [-19, -6.1], [-17.9, -6.1]];
+  duskLit.push([bodyM, .6]);
   const wingGeo = new THREE.ExtrudeGeometry(shape(WING), { depth: .45, bevelEnabled: false }), stabGeo = new THREE.ExtrudeGeometry(shape(STAB), { depth: .25, bevelEnabled: false });
   const finGeo = new THREE.ExtrudeGeometry(shape([[-12.8, 1.6], [-17.5, 8], [-19.1, 8], [-19.4, 1.1]]), { depth: .32, bevelEnabled: false });
   const fusGeo = loft([[18.85, .04, -.38], [18.5, .7, -.22], [17.8, 1.3, -.1], [16.8, 1.75, -.02], [15.5, 1.97, 0], [-9.5, 1.97, 0], [-12.5, 1.78, .16], [-15.5, 1.3, .5], [-18, .7, .9], [-19.3, .22, 1.12]].map(([x, r, cy]) => ({ x, r, cy, ry: 1.04 })), 28);
@@ -5470,14 +5485,14 @@ const airport = (() => {
     box(10, 4, 6, plainM, -190, 0, 245); }
 
   /* ---- floodlight masts round the stand, heads tipped down toward it; their shadows fall across the apron, so they are drawn on it ---- */
-  const lampM = mat({ color: lin('#dfe3e6'), roughness: .3, metalness: .2 }), decalM = new THREE.MeshBasicMaterial({ color: 0x0e1622, transparent: true, opacity: .45, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }), decalDuskM = decalM.clone();
+  const lampM = mat({ color: lin('#dfe3e6'), roughness: .3, metalness: .2 }), decalM = new THREE.MeshBasicMaterial({ color: 0x0e1622, transparent: true, opacity: .45, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }), decalDuskM = decalM.clone(), poolM = new THREE.MeshBasicMaterial({ map: alphaTexture(64, (x, y) => Math.pow(Math.max(0, 1 - Math.hypot(x, y)), 1.6)), color: 0xffcf96, transparent: true, opacity: .3, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
   for (const [x, z] of [[-70, -64], [0, -64], [70, -64], [-70, 72], [0, 72], [70, 72]]) {
     mesh(new THREE.CylinderGeometry(.22, .42, 28, 10), poleM, x, G0 + 14, z);
     const hd = new THREE.Group(); hd.position.set(x, G0 + 28.4, z); hd.rotation.set(.25, Math.atan2(-x, -z), 0, 'YXZ'); B.add(hd);
     mesh(new THREE.BoxGeometry(4.4, 2.2, .3), darkM, 0, 0, 0, 0, 0, 0, hd);
     for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) mesh(new THREE.BoxGeometry(1.15, .8, .45), lampM, (i - 1) * 1.4, (j - .5) * 1.05, .3, 0, 0, 0, hd);
     for (const [dm, sv] of [[decalM, SUN], [decalDuskM, DUSK.shift]]) for (const poly of [cast(circFoot(x, z, .35, 8), 28, 0, sv), cast(circFoot(x, z, 2.2, 8), 29.5, 27.3, sv)]) mesh(new THREE.ShapeGeometry(shape(poly.map(([a, b]) => [a, -b]))), dm, 0, G0 - .0015, 0, 0, -Math.PI / 2);
-    bigGlows.push([x, G0 + 28.2, z, 0xffdfae]);                                                      // the floodlights, on at dusk
+    bigGlows.push([x, G0 + 28.2, z, 0xffdfae]); { const d = Math.hypot(x, z); mesh(new THREE.PlaneGeometry(56, 56), poolM, x - x / d * 20, G0 - .0012, z - z / d * 20, 0, -Math.PI / 2); }   // the floodlights, on at dusk, and the pool each throws on the apron
   }
 
   /* ---- markings: taxiway and taxilane centrelines, lead-ins to the gates with their stop lines, the apron service road, our stop line ---- */
@@ -5507,13 +5522,14 @@ const airport = (() => {
     for (let z = TH0 + 70; z < END - 70; z += 50) mk(RX, z, RX, z + 30, .9);                                                   // centreline: 30 m stripes, 20 m gaps
     for (let k = 0; k < 6; k++) for (const s of [-1, 1]) { const x = RX + s * (3.6 + k * 3.4); mk(x, TH0 + 6, x, TH0 + 36, 1.8); }   // threshold stripes
     for (const [d, n] of [[150, 3], [300, 3], [550, 2], [700, 2], [850, 1], [1000, 1]]) for (const s of [-1, 1]) for (let k = 0; k < n; k++) { const x = RX + s * (9.9 + k * 3.3); mk(x, TH0 + d, x, TH0 + d + 22.5, 1.8); }   // touchdown zone
-    for (const s of [-1, 1]) mk(RX + s * 12, TH0 + 400, RX + s * 12, TH0 + 445, 6);                                           // aiming point
+    for (const s of [-1, 1]) mk(RX + s * 12, TH0 + 400, RX + s * 12, TH0 + 445, 6);
+    for (let d = 60; d <= 900; d += 60) for (const s of [-1, 1]) for (let k = 0; k < 3; k++) glows.push([RX + s * (9 + k * 1.5), G0 + .03, TH0 + d, 0xfff4e0]);   // touchdown zone lights: barrettes either side, the first 900 m                                           // aiming point
     for (let k = 0; k < 3; k++) { const z = TH0 - 14 - k * 16; for (const s of [-1, 1]) line(RX, z, RX + s * 19, z - 19, yellowM, .9); }   // overrun chevrons, pointing at the threshold
     { const t = tex(canvas(256, 288, (c, w, h) => { c.fillStyle = '#eceeee'; c.font = '700 300px Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.save(); c.scale(.56, 1); c.fillText('27', w / 2 / .56, h / 2 + 14); c.restore(); }));
       t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;                                                                            // the designator, read on the approach: tops toward the far end
       mesh(new THREE.PlaneGeometry(8, 9), mat({ map: t, transparent: true, roughness: .8, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }), RX, G0 - .03, TH0 + 52.5, Math.PI, -Math.PI / 2); }
     const stemM = mat({ color: lin('#d6b21e'), roughness: .5 }), housM = mat({ color: lin('#d4d7da'), roughness: .5 }), alsM = mat({ color: lin('#9aa1a8'), roughness: .5, metalness: .4 });
-    const lensW = new THREE.MeshBasicMaterial({ color: 0xfff6e8 }), lensG = new THREE.MeshBasicMaterial({ color: 0x35e07a }), lensR = new THREE.MeshBasicMaterial({ color: 0xff3a2a }), lensB = new THREE.MeshBasicMaterial({ color: 0x3a6dff });
+    const lensW = new THREE.MeshBasicMaterial({ color: 0xfff6e8 }), lensG = new THREE.MeshBasicMaterial({ color: 0x35e07a }), lensR = new THREE.MeshBasicMaterial({ color: 0xff3a2a }), lensB = new THREE.MeshBasicMaterial({ color: 0x3a6dff }), lensY = new THREE.MeshBasicMaterial({ color: 0xe8b830 });
     const fixture = (x, z, lens, glow, h = .35) => { mesh(new THREE.CylinderGeometry(.05, .07, h, 6), stemM, x, G0 + h / 2, z); mesh(new THREE.CylinderGeometry(.1, .1, .1, 10), lens, x, G0 + h + .05, z); glows.push([x, G0 + h + .08, z, glow]); };
     for (let z = TH0; z <= END; z += 60) for (const s of [-1, 1]) fixture(RX + s * 24, z, lensW, z > END - 600 ? 0xffc23a : 0xfff4e0);   // runway edge lights, yellow over the last 600 m
     for (let x = RX - 21; x <= RX + 21; x += 3) { fixture(x, TH0 - 1, lensG, 0x3dff7a, .25); fixture(x, END + 1, lensR, 0xff3020, .25); }   // threshold and runway end lights
@@ -5539,16 +5555,20 @@ const airport = (() => {
     for (let k = 0; k < 4; k++) { const x = RX - 37.5 - k * 9, z = TH0 + 400;                                                  // PAPI: on the glide path the two nearest the runway show red
       mesh(new THREE.BoxGeometry(1.2, .7, .9), housM, x, G0 + .75, z); for (const s of [-1, 1]) mesh(new THREE.CylinderGeometry(.05, .05, .4, 6), alsM, x + s * .45, G0 + .2, z);
       for (const s of [-1, 1]) { mesh(new THREE.CircleGeometry(.14, 12), k < 2 ? lensR : lensW, x + s * .3, G0 + .78, z - .46, Math.PI); glows.push([x + s * .3, G0 + .78, z - .5, k < 2 ? 0xff3020 : 0xfff4e0]); } }
+    g.userData.wigwags = [];                                                                         // runway guard lights at the holds, a pair either side of the taxiway
+    for (const [hx, zc] of [[140, 0], [165, -428]]) for (const sd of [-1, 1]) { const z = zc + sd * 14.5; mesh(new THREE.CylinderGeometry(.05, .06, .8, 6), alsM, hx - 1, G0 + .4, z);
+      mesh(new THREE.BoxGeometry(.3, .32, 1.0), darkM, hx - 1, G0 + .95, z); for (const dz of [-.27, .27]) { mesh(new THREE.CircleGeometry(.11, 12), lensY, hx - 1.16, G0 + .95, z + dz, -Math.PI / 2); g.userData.wigwags.push([hx - 1.2, G0 + .95, z + dz]); } }
     for (const [hx, z0, z1] of [[140, -11.5, 11.5], [165, -439.5, -416.5]]) { for (const dx of [-.45, -.15]) line(hx + dx, z0, hx + dx, z1, yellowM);   // hold positions: solid lines on the holding side,
       for (const dx of [.15, .45]) for (let z = z0; z < z1; z += 1.8) line(hx + dx, z, hx + dx, Math.min(z1, z + .9), yellowM); }   // dashed toward the runway
     const signFace = (txt, w, bg, fg, border) => mat({ roughness: .6, map: tex(canvas(Math.round(w * 80), 80, (c, W, H) => { c.fillStyle = bg; c.fillRect(0, 0, W, H);
       if (border) { c.strokeStyle = border; c.lineWidth = 5; c.strokeRect(7, 7, W - 14, H - 14); } c.fillStyle = fg; c.font = '700 52px Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, W / 2, H / 2 + 3); })) });
+    const signFace0 = signFace, signLit = (...a) => { const m = signFace0(...a); m.emissive.setHex(0xffffff); m.emissiveMap = m.map; m.emissiveIntensity = 0; duskLit.push([m, .5]); return m; };   // signs are lit from inside
     const sign = (x, z, ry, faces, h = 1) => { const W = faces.reduce((s, f) => s + f.w, 0), ux = Math.cos(ry), uz = -Math.sin(ry); let o = -W / 2;   // panels side by side on two posts, facing +z turned by ry
       for (const s of [-1, 1]) mesh(new THREE.CylinderGeometry(.05, .05, .6, 6), alsM, x + ux * s * W * .35, G0 + .3, z + uz * s * W * .35);
       box(W, h, .3, plainM, x, .6, z, ry); for (const f of faces) { const c = o + f.w / 2; mesh(new THREE.PlaneGeometry(f.w, h), f.m, x + ux * c + Math.sin(ry) * .16, G0 + .6 + h / 2, z + uz * c + Math.cos(ry) * .16, ry); o += f.w; } };
-    sign(140, -16.5, -Math.PI / 2, [{ w: 1.2, m: signFace('B', 1.2, '#16181b', '#f2c21b', '#f2c21b') }, { w: 2.6, m: signFace('27-9', 2.6, '#c4161c', '#ffffff') }]);   // location and mandatory signs at the holds:
-    sign(165, -445, -Math.PI / 2, [{ w: 1.6, m: signFace('A1', 1.6, '#16181b', '#f2c21b', '#f2c21b') }, { w: 1.4, m: signFace('27', 1.4, '#c4161c', '#ffffff') }]);   // at the runway's end, only the end's designator
-    for (let n = 1; n <= 4; n++) sign(197, END - 304.8 * n, Math.PI, [{ w: 1.6, m: signFace(String(n), 1.6, '#16181b', '#ffffff') }], 1.4);   // distance remaining, thousands of feet
+    sign(140, -16.5, -Math.PI / 2, [{ w: 1.2, m: signLit('B', 1.2, '#16181b', '#f2c21b', '#f2c21b') }, { w: 2.6, m: signLit('27-9', 2.6, '#c4161c', '#ffffff') }]);   // location and mandatory signs at the holds:
+    sign(165, -445, -Math.PI / 2, [{ w: 1.6, m: signLit('A1', 1.6, '#16181b', '#f2c21b', '#f2c21b') }, { w: 1.4, m: signLit('27', 1.4, '#c4161c', '#ffffff') }]);   // at the runway's end, only the end's designator
+    for (let n = 1; n <= 4; n++) sign(197, END - 304.8 * n, Math.PI, [{ w: 1.6, m: signLit(String(n), 1.6, '#16181b', '#ffffff') }], 1.4);   // distance remaining, thousands of feet
     { const X = 188, Z = 150, sockM = mat({ side: THREE.DoubleSide, roughness: .8, map: tex(canvas(16, 160, (c, w, h) => { for (let k = 0; k < 5; k++) { c.fillStyle = k % 2 ? '#f4f4f2' : '#ef6a12'; c.fillRect(0, k * h / 5, w, h / 5); } })) });
       mesh(new THREE.CylinderGeometry(.07, .1, 6.6, 8), plainM, X, G0 + 3.3, Z);                                                // windsock: the mouth into the west wind, the tail drooping east
       mesh(new THREE.CylinderGeometry(.45, .2, 3.4, 16, 1, true), sockM, X, G0 + 6.05, Z - 1.68, 0, Math.PI / 2 - .15);
@@ -5639,12 +5659,14 @@ const airport = (() => {
     list.forEach(q => q.dispose()); const o = new THREE.Mesh(out, m); if (m === decalM || m === decalDuskM) o.renderOrder = 2; g.add(o); }
   /* the look of the moment: day, or the gear step's dusk with long shadows and every airfield light glowing */
   const decalDay = g.children.find(o => o.material === decalM), decalDusk = g.children.find(o => o.material === decalDuskM); decalDusk.visible = false;
-  const glowTex = tex(canvas(64, 64, (c, w, h) => { const gr = c.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.18, 'rgba(255,255,255,.85)'); gr.addColorStop(.45, 'rgba(255,255,255,.18)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = gr; c.fillRect(0, 0, w, h); }), false);
-  const points = (list, size) => { const geo = new THREE.BufferGeometry(), pos = [], col = [], cc = new THREE.Color(); for (const [x, y, z, hex] of list) { pos.push(x, y, z); cc.setHex(hex); col.push(cc.r, cc.g, cc.b); }
+  const glowTex = alphaTexture(64, (x, y) => alphaStops(Math.hypot(x, y), [[0, 1], [.18, .85], [.45, .18], [1, 0]]));
+  const points = (list, size) => { const geo = new THREE.BufferGeometry(), pos = [], col = [], cc = new THREE.Color(); for (const [x, y, z, hex] of list) { pos.push(x, Math.max(y, G0 + size * .35 + .05), z);   /* lifted so the ground does not slice the bottom off the glow */ cc.setHex(hex); col.push(cc.r, cc.g, cc.b); }
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
     const p = new THREE.Points(geo, new THREE.PointsMaterial({ map: glowTex, size, vertexColors: true, transparent: true, depthWrite: false, toneMapped: false, fog: false })); p.visible = false; g.add(p); return p; };
   const lit = [points(glows, 1.5), points(bigGlows, 10)];
-  g.userData.look = dusk => { if (dusk && !duskTex) duskTex = tex(paintSite(DUSK.shift)); siteM.map = dusk ? duskTex : dayTex; decalDay.visible = !dusk; decalDusk.visible = dusk; for (const p of lit) p.visible = dusk; };
+  const pools = g.children.find(o => o.material === poolM); pools.visible = false; pools.renderOrder = 3;
+  g.userData.look = dusk => { if (dusk && !duskTex) duskTex = tex(paintSite(DUSK.shift)); siteM.map = dusk ? duskTex : dayTex; decalDay.visible = !dusk; decalDusk.visible = dusk; for (const p of lit) p.visible = dusk;
+    pools.visible = dusk; for (const [m, k] of duskLit) m.emissiveIntensity = dusk ? k : 0; };
   g.visible = false; scene.add(g); return g; })();
 scene.fog = new THREE.Fog(HAZE, 1e5, 2e5);
 /* contact shadow: the soft darkening of the ground under the aircraft from the sky it hides (the sun's shadow is sharp and falls to one side).
@@ -6155,8 +6177,7 @@ const intro = (() => {
   const P0 = new THREE.Vector3(44, GROUND_Y + 1.9, 13), P1 = new THREE.Vector3(36, GROUND_Y + 6, 34);   // camera on the ramp: eye height ahead of the line, rising to 6 m off the nose quarter
   const TA = new THREE.Vector3(7, -1.9, 0), TB = new THREE.Vector3(3, -1.2, 0);                     // looking at the nose, then the whole aircraft
   const st = { on: false, t: 0 }, P = new THREE.Vector3(), T = new THREE.Vector3(), D = new THREE.Vector3(), Z = new THREE.Vector3(0, 0, 1), Q = new THREE.Quaternion();
-  const glowTex = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const c = cv.getContext('2d'), g = c.createRadialGradient(32, 32, 0, 32, 32, 32);
-    g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.12, 'rgba(255,255,255,.8)'); g.addColorStop(.4, 'rgba(255,255,255,.18)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(cv); })();
+  const glowTex = alphaTexture(64, (x, y) => alphaStops(Math.hypot(x, y), [[0, 1], [.12, .8], [.4, .18], [1, 0]]));
   function setup() {
     if (st.ground) return;
     st.ground = [apron, leadIn, wear, airport].map(o => ({ o, x: o.position.x }));
@@ -6501,7 +6522,7 @@ function caBag() {
   g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   return { m: g, he, v: new THREE.Vector3(), w: new THREE.Vector3(), rest: false };
 }
-const _bc = new THREE.Vector3(), _bq = new THREE.Quaternion(), _bu = new THREE.Vector3(0, 1, 0), _fq = new THREE.Quaternion(), _fz = new THREE.Vector3(0, 0, 1);
+const _bc = new THREE.Vector3(), _bq = new THREE.Quaternion(), _bu = new THREE.Vector3(0, 1, 0), _fq = new THREE.Quaternion(), _fz = new THREE.Vector3(0, 0, 1), _gv = new THREE.Vector3(), _gd = new THREE.Vector3();
 /* high lift, shared by the high-lift step and the gear step's takeoff and landing: flaps pivot on their leading edge and run aft on the
    tracks, slats pivot on their trailing edge and run forward and down, the ailerons droop with the flaps, the flap track fairings' tails
    follow. caHighLiftSet takes the lever position 0..5 (ACP placard p402: 1 = slats to the intermediate setting only; 2 and 3 add flap;
@@ -6524,15 +6545,18 @@ function caHighLiftSet(lever) {
   for (const p of caState.pos) if (p.flap) p.mesh.position.set(p.orig.x - fl * .45, p.orig.y - fl * .06, p.orig.z); else if (p.slat) p.mesh.position.set(p.orig.x + sl * .38, p.orig.y - sl * .12, p.orig.z);
   for (const o of caState.ftf) o.rotation.z = fl * .30;                                       // tails drop with the flap, their tips staying just behind its trailing edge
 }
-/* soft round textures for sprites: a light's glow (bright core) and a puff of smoke (no core, ragged) */
+/* soft round textures for sprites and glows: white throughout, only the alpha varying. A canvas keeps fully transparent pixels black, and
+   filtering bled that black into the soft edge of every glow as a grey ring. f(x, y) gives the alpha for x, y in -1..1 */
+function alphaTexture(n, f) { const d = new Uint8Array(n * n * 4);
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const k = (j * n + i) * 4; d[k] = d[k + 1] = d[k + 2] = 255; d[k + 3] = Math.round(255 * Math.max(0, Math.min(1, f((i + .5) / n * 2 - 1, (j + .5) / n * 2 - 1)))); }
+  const t = new THREE.DataTexture(d, n, n, THREE.RGBAFormat); t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.needsUpdate = true; return t; }
+function alphaStops(r, st) { if (r <= st[0][0]) return st[0][1]; for (let i = 1; i < st.length; i++) if (r <= st[i][0]) return st[i - 1][1] + (st[i][1] - st[i - 1][1]) * (r - st[i - 1][0]) / (st[i][0] - st[i - 1][0]); return st[st.length - 1][1]; }
+/* a light's glow (bright core, halo and a faint four-point star) and a puff of smoke (no core, ragged) */
 let CA_GLOW = null, CA_SMOKE = null;
-function caGlowTex() { if (!CA_GLOW) { const cv = document.createElement('canvas'); cv.width = cv.height = 128; const c = cv.getContext('2d'), g = c.createRadialGradient(64, 64, 0, 64, 64, 64);   // core, halo and a faint four-point star, so a lamp reads as a light even against white paint
-  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.08, 'rgba(255,255,255,.95)'); g.addColorStop(.25, 'rgba(255,255,255,.3)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, 128, 128);
-  for (const [w, h] of [[128, 3], [3, 128]]) { const r = c.createRadialGradient(64, 64, 0, 64, 64, 64); r.addColorStop(0, 'rgba(255,255,255,.9)'); r.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = r; c.fillRect(64 - w / 2, 64 - h / 2, w, h); }
-  CA_GLOW = new THREE.CanvasTexture(cv); } return CA_GLOW; }
-function caSmokeTex() { if (!CA_SMOKE) { const cv = document.createElement('canvas'); cv.width = cv.height = 128; const c = cv.getContext('2d');
-  for (let i = 0; i < 14; i++) { const x = 44 + Math.random() * 40, y = 44 + Math.random() * 40, r = 14 + Math.random() * 20, g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, 'rgba(255,255,255,.5)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, 128, 128); }
-  CA_SMOKE = new THREE.CanvasTexture(cv); } return CA_SMOKE; }
+function caGlowTex() { if (!CA_GLOW) CA_GLOW = alphaTexture(128, (x, y) => { const r = Math.hypot(x, y), ray = (u, v) => Math.max(0, 1 - Math.abs(v) / .025) * Math.max(0, 1 - Math.abs(u)) * .9;
+  return Math.max(alphaStops(r, [[0, 1], [.08, .95], [.25, .3], [1, 0]]), ray(x, y), ray(y, x)); }); return CA_GLOW; }
+function caSmokeTex() { if (!CA_SMOKE) { let seed = 5; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647, blobs = Array.from({ length: 14 }, () => [(rnd() - .5) * .6, (rnd() - .5) * .6, .22 + rnd() * .3]);
+  CA_SMOKE = alphaTexture(128, (x, y) => Math.min(.9, blobs.reduce((a, [bx, by, r]) => a + .5 * Math.max(0, 1 - Math.hypot(x - bx, y - by) / r), 0))); } return CA_SMOKE; }
 /* keep the sun's shadow box and the contact shadow on an aircraft that has moved off the stand (x, z); (0, 0) puts them back */
 const SUN_DAY = new THREE.Vector3(26, 34, -26);
 function caFollow(x, z, y = 0) {                                                                      // y: the shadow box must rise with an aircraft in the climb, or it loses it
@@ -6865,7 +6889,7 @@ const CA_EFFECTS = {
          The aircraft really moves, so the sun's shadow box (at its height too: left on the ground it lost the aircraft in the climb and
          shadowed parts of it at random) and the contact shadow follow it; the camera follows it (drag to look round; each shot resets the
          angle) except beside the runway for the rotation. Cuts dip to black. Pitch turns about the main wheels' contact point */
-      const F = caState.flight = { p: aircraft.position.clone(), r: aircraft.rotation.clone(), shot: -1, d: 0, ws: 0, loops: 0, lastT: 0, wheels: [], smoke: [], rabbit: [], steer: null, steerA: 0, acc: 0,
+      const F = caState.flight = { p: aircraft.position.clone(), r: aircraft.rotation.clone(), shot: -1, d: 0, ws: 0, loops: 0, lastT: 0, wheels: [], smoke: [], rabbit: [], glows: [], wig: [], steer: null, steerA: 0, acc: 0,
         C: new THREE.Vector3(G.mainX, G.mainY - G.mainR, 0), o: new THREE.Object3D(), dip: document.createElement('div'),
         beacons: aircraft.children.filter(o => o.isMesh && o.material && o.material.isMeshBasicMaterial && o.geometry.type === 'SphereGeometry' && Math.abs(o.position.x - 4) < 1e-6 && o.material.color.getHex() === 0xff4040) };
       F.o.scale.copy(aircraft.scale);
@@ -6907,7 +6931,7 @@ const CA_EFFECTS = {
       /* lights: a glow on each lamp, shown while it is switched on (set just outside the housing, or the skin hides it) */
       caState.extra = caState.extra || [];
       const glow = (m, size, col, off = [0, 0, 0]) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: caGlowTex(), color: col, depthWrite: false, transparent: true, toneMapped: false }));
-        s.position.copy(m.position).add(new THREE.Vector3(...off)); s.scale.set(size, size, 1); s.visible = false; m.parent.add(s); caState.extra.push(s); return s; };
+        s.position.copy(m.position).add(new THREE.Vector3(...off)); s.userData.anchor = s.position.clone(); s.scale.set(size, size, 1); s.visible = false; m.parent.add(s); caState.extra.push(s); F.glows.push(s); return s; };
       F.landing = meshesByLabel(['Landing light (wing root leading edge)']).map(m => glow(m, 2.8, 0xfff3dc, [.5, 0, 0]));
       F.noseLdg = meshesByLabel(['Nose landing light']).map(m => glow(m, 2.2, 0xfff3dc, [.3, 0, 0]));
       F.taxi = [...meshesByLabel(['Nose taxi light']).map(m => glow(m, 1.6, 0xfff3dc, [.3, 0, 0])), ...meshesByLabel(['Taxi light, wide (wing-to-body fairing)']).map(m => glow(m, 1.6, 0xfff3dc, [0, -.25, 0]))];
@@ -6917,10 +6941,16 @@ const CA_EFFECTS = {
       F.steady.push(...meshesByLabel(['Tail strobe / navigation light']).map(m => glow(m, 1.2, 0xffffff, [-.2, 0, 0])), ...meshesByLabel(['Logo light (stabilizer tip)']).map(m => glow(m, 1.3, 0xfff1d8)),   // white at the tail, the logo lights
         ...meshesByLabel(['Wing inspection light']).map(m => glow(m, 1.3, 0xfff1d8, [0, 0, Math.sign(m.position.z) * .12]))); for (const g of F.steady) g.visible = true;   // and the wing inspection lights
       for (let k = 1; k <= 21; k++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: caGlowTex(), color: 0xffffff, depthWrite: false, transparent: true, toneMapped: false }));   // the approach lights' sequenced flashers
-        s.position.set(230, GROUND_Y + 1.45 + k * .04, -420 - 30 * k); s.scale.set(4.5, 4.5, 1); s.visible = false; caGroup.add(s); F.rabbit.push(s); }
+        s.position.set(230, GROUND_Y + 1.45 + k * .04, -420 - 30 * k); s.userData.anchor = s.position.clone(); s.scale.set(4.5, 4.5, 1); s.visible = false; caGroup.add(s); F.rabbit.push(s); }
+      F.beaconGlow = F.beacons.map(b => glow(b, 2.4, 0xff2a14, [0, Math.sign(b.position.y || 1) * .15, 0]));   // the beacons' red flash
+      for (const p of airport.userData.wigwags) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: caGlowTex(), color: 0xffc23a, depthWrite: false, transparent: true, toneMapped: false }));   // runway guard lights, flashing in turn
+        s.position.set(...p); s.scale.set(1.6, 1.6, 1); s.visible = false; caGroup.add(s); F.wig.push(s); }
+      const poolM = new THREE.MeshBasicMaterial({ map: alphaTexture(64, (x, y) => Math.pow(Math.max(0, 1 - Math.hypot(x, y)), 1.4)), color: 0xfff0d8, transparent: true, opacity: .26, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 });
+      F.taxiPool = new THREE.Mesh(new THREE.PlaneGeometry(14, 26), poolM); F.landPool = new THREE.Mesh(new THREE.PlaneGeometry(28, 95), poolM.clone()); F.landPool.material.opacity = .3;   // the taxi and landing lights on the pavement ahead
+      for (const p of [F.taxiPool, F.landPool]) { p.visible = false; p.renderOrder = 3; caGroup.add(p); }
       F.dip.className = 'c-dip'; courseWrap.prepend(F.dip);
       setDusk(true);
-      { const hid = [...F.landing, ...F.noseLdg, ...F.taxi, ...F.strobes, ...F.rabbit], smoke = new THREE.Sprite(new THREE.SpriteMaterial({ map: caSmokeTex(), transparent: true, depthWrite: false })); caGroup.add(smoke);   /* compile the shaders now: the first strobe flash, glow or puff of smoke otherwise stalled a frame */
+      { const hid = [...F.landing, ...F.noseLdg, ...F.taxi, ...F.strobes, ...F.rabbit, ...F.beaconGlow, ...F.wig, F.taxiPool, F.landPool], smoke = new THREE.Sprite(new THREE.SpriteMaterial({ map: caSmokeTex(), transparent: true, depthWrite: false })); caGroup.add(smoke);   /* compile the shaders now: the first strobe flash, glow or puff of smoke otherwise stalled a frame */
         for (const s of hid) s.visible = true; renderer.compile(scene, camera); for (const s of hid) s.visible = false; caGroup.remove(smoke); smoke.material.dispose(); }
       caState.restoreFns.push(() => { for (const w of F.wheels) w.m.quaternion.copy(w.q); for (const b of F.beacons) b.material.color.setHex(0xff4040);
         aircraft.position.copy(F.p); aircraft.rotation.copy(F.r); contact.plane.material.opacity = .62; setDusk(false); caFollow(0, 0); intro.fan = 1; F.dip.remove(); });
@@ -7007,6 +7037,15 @@ const CA_EFFECTS = {
       else if (shot !== F.shot) { want.t = Q[0]; want.p = Q[1]; want.r = Q[2]; if (mode === 'cut' || F.shot < 0) { cam.t = want.t; cam.p = want.p; cam.r = want.r; } else normalizeTheta(); F.shot = shot; }
       camera.position.set(target.x + cam.r * Math.sin(cam.p) * Math.cos(cam.t), target.y + cam.r * Math.cos(cam.p), target.z + cam.r * Math.sin(cam.p) * Math.sin(cam.t));
       camera.position.y = Math.max(camera.position.y, GROUND_Y + 1.2); camera.lookAt(target);                    // never into the ground (a swing from below the aircraft passed 0.5 m off it)
+      for (let k = 0; k < F.beacons.length; k++) F.beaconGlow[k].visible = (T + k * .55) % 1.1 < .12;
+      { const wp = (T * 1.1) % 1; F.wig.forEach((s, i) => { s.visible = (Math.floor(i / 2) + i) % 2 ? wp >= .5 : wp < .5; }); }   // each pair's two lamps alternate
+      { const fx = Math.cos(psi), fz = -Math.sin(psi);                                                  // the pools of light ahead of the nose
+        for (const [p, on, ahead] of [[F.taxiPool, taxiLt && ground && v > .05, 31], [F.landPool, runway && ground && T > TLU - 1, 78]]) { p.visible = on;
+          if (on) { p.position.set(aircraft.position.x + fx * ahead, GROUND_Y + .02, aircraft.position.z + fz * ahead); p.rotation.set(-Math.PI / 2, psi - Math.PI / 2, 0, 'YXZ'); } } }
+      /* the glows are pulled toward the camera by 40 % of their size, so the skin round a lamp (or the ground under a light) cannot cut a hard
+         edge through them: that edge read as a shadow on the lights */
+      for (const s of F.glows) if (s.visible) { const p = s.parent, w = p.localToWorld(_gv.copy(s.userData.anchor)); w.addScaledVector(_gd.subVectors(camera.position, w).normalize(), s.scale.x * .4); s.position.copy(p.worldToLocal(w)); }
+      for (const s of F.rabbit) if (s.visible) s.position.copy(s.userData.anchor).addScaledVector(_gd.subVectors(camera.position, s.userData.anchor).normalize(), 2);
       const dip = c => Math.max(0, 1 - Math.abs(T - c) / .45);
       F.dip.style.opacity = Math.max(dip(T1), dip(TCUT), dip(TFIN), T > L - .45 ? (T - (L - .45)) / .45 : 0, F.loops && T < .45 ? 1 - T / .45 : 0).toFixed(3);
     }
