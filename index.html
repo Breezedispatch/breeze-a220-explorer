@@ -905,8 +905,11 @@ function vessel(r, h, mat, x, y, z, axis = 'x') {
   const m = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.001, r * 1.001, h + 2 * r, 8), mat); m.visible = false; g.add(m);   // pick/label proxy
   g.userData.proxy = true; return g;
 }
-/* airfoil loft: sections {v, le, chord, t (thickness ratio), dy}; map converts (x, y, v) to model space */
-const TH = u => (0.2969 * Math.sqrt(u) - 0.126 * u - 0.3516 * u * u + 0.2843 * u ** 3 - 0.1015 * u ** 4) * 5;
+/* airfoil loft: sections {v, le, chord, t (thickness ratio), dy}; map converts (x, y, v) to model space.
+   TH: the NACA 4-digit thickness distribution normalized to 1 at its thickest (30% chord), so a section's half-thickness is
+   0.5 * t * TH(u) * chord. It peaked at 0.5 until 2026-10-06, which built every wing, tail and control surface at half its
+   thickness ratio (the TTM ch. 01 Fig. 23 front view matches the ratios, not the halved surfaces). */
+const TH = u => (0.2969 * Math.sqrt(u) - 0.126 * u - 0.3516 * u * u + 0.2843 * u ** 3 - 0.1015 * u ** 4) * 10;
 function wingLoft(sections, map, n = 36, camber = .012, uvb = null) {
   const prof = [];
   for (let i = 0; i <= n; i++) { const u = (1 + Math.cos(Math.PI * i / n)) / 2; prof.push([u, 1]); }
@@ -1643,7 +1646,10 @@ function buildWing() {
   /* the root runs 0.4 m into the body and is thickened and lowered toward it (the blend under the wing-to-body fairing) */
   const rootT = z => z >= 2.217 ? tc(z) : .135 + .02 * (2.217 - z) / .87, rootDy = z => z >= 2.217 ? 0 : -.05 * (2.217 - z) / .87;
   const wSec = (z, zAt = z) => { const L = le(zAt), C = L - te(zAt), cx = teCutX(z); return { v: z, le: L, chord: C, t: rootT(z), dy: rootDy(z), uc: cx == null ? null : (L - cx) / C, uf: inSlat(z) ? (L - slatTE(z)) / C + .004 : null }; };
-  sec.push(wSec(1.35, 1.755));
+  /* the stub inside the body keeps the root's lower surface (it fills the fuselage's curve under the wing) but its top drops just under
+     the cabin floor (y -0.5): the wing box runs under the floor, and at full thickness the stub stood 0.4 m above it in the cabin view */
+  { const s = wSec(1.35, 1.755), cam = s.chord * .048 * .21, bot = s.dy + cam - .5 * s.t * s.chord, top = (-.52 + .75 - 1.35 * Math.sin(.088)) / Math.cos(.088);
+    sec.push({ ...s, t: (top - bot) / s.chord, dy: (top + bot) / 2 - cam }); }
   for (const z of [1.755, 1.84, 1.86, 1.97, 1.99, 2.1, 2.217, 2.6, 3.2, 4.0, 4.78, 4.80, 5.2, 5.44, 5.78, 5.80, 6.192, 7.0, 7.9, 8.94, 8.96, 10.0, 11.0, 12.12, 12.14, 12.24, 12.26, 12.29, 12.31, 12.32, 12.34, 13.2, 14.2, 15.27, 15.29, 15.6, 15.98, 16]) sec.push(wSec(z));
   const wing = new THREE.Mesh(wingLoft(sec, (x, y, v) => [x, y, -v]), paint({ color: LIVERY.white, roughness: .45 }));
   g.add(wing); skin.push(wing);
@@ -1677,20 +1683,24 @@ function buildWing() {
     for (const i of [8, 12, 16]) { const p = wlTEAt(wlPath(WS * i / 20).h); if (p) { const w = new THREE.Mesh(wg, wm); w.position.set(p.x + .01, p.y, p.z); g.add(w); } }   // at the winglet's own sections, where its mesh has vertices
     { const w = new THREE.Mesh(wg, wm); w.position.set(te(15.65), 0, -15.65); g.add(w); } }   // and one on the fixed tip trailing edge outboard of the aileron
 
-  /* flap track fairings: ACP p540 stations BL 4.79 / 7.60 / 10.42, their tips 0.77 / 0.76 / 0.67 m aft of the trailing edge. Each canoe is split
-     at the flap's leading edge: the forward part is fixed to the wing, the aft part rides on the flap carriage and drops with it (built after
-     the flaps, below; the one-piece pods let the deployed flap pass straight through them) */
-  const buildFTF = flapFor => { for (const [z, tip] of [[4.79, .77], [7.60, .76], [10.42, .67]]) {
-    const ch = le(z) - te(z), tk = tc(z);
-    const lower = x => { const u = Math.min(1, Math.max(0, (le(z) - x) / ch)); return ch * (4 * .012 * u * (1 - u) - tk * TH(u) * .5); };   // wing lower surface, same aerofoil as the wing
-    const depthAt = x => { const u = Math.min(1, Math.max(0, (le(z) - x) / ch)); return ch * tk * TH(u); };   // local wing thickness
-    const D = [[1.9, .02, .03], [1.4, .15, .13], [.8, .23, .16], [.2, .22, .16], [-tip * .45, .14, .11], [-tip, .03, .03]];   // [ahead of TE, depth, half-width]
-    const sec = ([d, ry, rz]) => { const xs = Math.max(te(z) + d, te(z)), top = lower(xs) + Math.min(.025, .45 * depthAt(xs)); return { x: te(z) + d, r: 1, ry, rz, cy: top - ry, cz: -z }; };   // crest stays inside the thin trailing edge
-    const split = flapLE(z) - te(z), k = D.findIndex(q => q[0] < split), a0 = D[k - 1], a1 = D[k], t = (a0[0] - split) / (a0[0] - a1[0]);
-    const sS = sec([split, a0[1] + (a1[1] - a0[1]) * t, a0[2] + (a1[2] - a0[2]) * t]), cap = (s, dx) => ({ ...s, x: s.x + dx, ry: .01, rz: .01, cy: s.cy });   // flat end caps at the split
+  /* flap track fairings (canoes) at ACP p540 stations BL 4.79 / 7.60 / 10.42 (TTM ch. 01 Fig. 23 front view: 7.7 and 10.5). Plan from the
+     JetBlue A220-300 N3196J photo from directly below: 3.25 / 3.13 / 2.85 m long, ending 0.62 / 0.52 / 0.43 m behind the trailing edge, about
+     0.42 m wide, pointed at both ends, the outer two toed out 4-5 deg toward the tail, a seam 1.0 m behind the nose. Profile from the Fig. 23
+     side view: at most 0.34 m below the wing, deepest about 60% back. They were 2.6 m long, started 1.9 m ahead of the trailing edge, came to
+     full depth within 0.5 m (a blunt nose) and stood 0.76 m past it. The part ahead of the seam is fixed; the rest hinges down at the seam,
+     where the side view draws a pivot, and follows the flap (CA_EFFECTS.highlift turns each group marked ftfAft) */
+  const buildFTF = () => { for (const [z, L, A, W, toe] of [[4.79, 3.25, .62, .21, 1], [7.60, 3.13, .52, .21, 4], [10.42, 2.85, .43, .20, 5]]) {
+    const tau = toe * Math.PI / 180, xf = te(z) + L - A, zAt = x => z + (xf - x) * Math.tan(tau);   // the canoe's axis, toed out toward its tail
+    const lower = (x, zz) => { const ch = le(zz) - te(zz), u = Math.min(1, Math.max(0, (le(zz) - x) / ch)); return ch * (4 * .012 * u * (1 - u) - tc(zz) * TH(u) * .5); };   // wing lower surface, same aerofoil as the wing
+    const depthAt = (x, zz) => { const ch = le(zz) - te(zz), u = Math.min(1, Math.max(0, (le(zz) - x) / ch)); return ch * tc(zz) * TH(u); };   // local wing thickness
+    const PROF = [[0, .015, .1], [.06, .06, .43], [.15, .10, .71], [.32, .145, .93], [.5, .17, 1], [.65, .18, 1], [.8, .15, .81], [.9, .10, .52], [.97, .04, .21], [1, .012, .06]];   // [along the length, depth radius, half-width / W]
+    const at = t => { const k = Math.max(1, PROF.findIndex(p => p[0] >= t)), [t0, y0, w0] = PROF[k - 1], [t1, y1, w1] = PROF[k], f = (t - t0) / (t1 - t0); return [y0 + (y1 - y0) * f, (w0 + (w1 - w0) * f) * W]; };
+    const sec = t => { const x = xf - t * L, zz = zAt(x), [ry, rz] = at(t), top = lower(x, zz) + Math.min(.025, .45 * depthAt(x, zz)); return { x, r: 1, ry, rz, cy: top - ry, cz: -zz }; };   // crest stays inside the thin trailing edge
+    const tS = 1.0 / L, sS = sec(tS), cap = (s, dx) => ({ ...s, x: s.x + dx, ry: .01, rz: .01 });   // flat end caps at the seam
     const mk = secs => { const m = new THREE.Mesh(loft(secs, 28), paint({ color: LIVERY.white, roughness: .47 })); m.userData.skinPart = true; skin.push(m); return m; };
-    g.add(mk([...D.slice(0, k).map(sec), sS, cap(sS, -.005)]));
-    flapFor(z).add(mk([cap(sS, .005), sS, ...D.slice(k).map(sec)]));
+    g.add(mk([...PROF.filter(p => p[0] < tS).map(p => sec(p[0])), sS, cap(sS, -.005)]));
+    const piv = new THREE.Group(); piv.position.set(sS.x, sS.cy, sS.cz); piv.rotation.y = -tau; piv.userData.ftfAft = true; g.add(piv); piv.updateMatrix();
+    const aft = mk([cap(sS, .005), sS, ...PROF.filter(p => p[0] > tS).map(p => sec(p[0]))]); aft.geometry.applyMatrix4(piv.matrix.clone().invert()); piv.add(aft);
   } };
 
   // fuel tank inside the wing
@@ -1727,7 +1737,7 @@ function buildWing() {
   const slat = (z0, z1, label) => surf(partLoft(stations(z0, z1, 8).map(z => ({ ...base(z), u1: (le(z) - slatTE(z)) / chordAt(z) })), wmap, 0, 1, .012, .002, 16, true), label);
   const spoiler = (z0, z1, hx, tx, label) => surf(upperSheet(stations(z0, z1, 4).map(z => ({ ...base(z), u0: (le(z) - hx(z)) / chordAt(z), u1: (le(z) - tx(z)) / chordAt(z) })), wmap, 0, 1, .012, .008, .03), label);
   /* each surface's ends sit 1-2 cm inside the span where the wing is cut, clear of the wing's 2 cm cut transitions (end caps on them flickered) */
-  { const ifl = flap(IFL[0] + .02, IFL[1] - .01, 'Inboard flap'), ofl = flap(IFL[1] + .01, OFL[1] - .02, 'Outboard flap'); buildFTF(z => z < IFL[1] ? ifl : ofl); }
+  flap(IFL[0] + .02, IFL[1] - .01, 'Inboard flap'); flap(IFL[1] + .01, OFL[1] - .02, 'Outboard flap'); buildFTF();
   { const ail = surf(partLoft(stations(AIL[0] + .02, AIL[1] - .02, 8).map(z => ({ ...base(z), u0: (le(z) - ailHinge(z)) / chordAt(z) })), wmap, 0, 1, .012, .002), 'Aileron');
     for (const z of [12.7, 13.9, 15.0]) { const w = new THREE.Mesh(wickG, wickM); w.position.set(te(z), 0, -z); ail.add(w); } }   // static dischargers ride on the aileron (they were left floating when it moved)
   spoiler(4.11, 6.12, () => .44, () => -.07, 'Ground spoiler');                                             // the one ground spoiler, over the inboard flap nose
@@ -1882,9 +1892,9 @@ function buildTail() {
   const fin = new THREE.Mesh(wingLoft(finSec, (x, y, v) => [x, v, y], 36, 0, FIN_BOUNDS), paint({ map: finTex }));
   aircraft.add(fin); skin.push(fin);
   const S = sysById.fcs, hinge = y => -14.36 - (17.71 - 14.36) * (y - 1.78) / (8.0 - 1.78);
-  const UF = .3, finCut = y => .176 - (.176 - .10) * (y - 2.5) / 4.5;     // fin thickness at the hinge, measured
+  const UF = .3, finCut = y => .352 - (.352 - .20) * (y - 2.5) / 4.5;     // fin thickness at the hinge, measured
   const rudSec = [1.62, 3.0, 4.5, 6.0, 7.0, 7.78].map(y => { const face = hinge(y) + .045, chord = (face - finTE(y)) / (1 - UF);
-    return { v: y, le: face + UF * chord, chord, uf: UF, t: 2.06 * finCut(y) / chord }; });   // square front at the hinge line, flush with the fin's cut face
+    return { v: y, le: face + UF * chord, chord, uf: UF, t: 1.03 * finCut(y) / chord }; });   // square front at the hinge line, flush with the fin's cut face
   const rud = new THREE.Mesh(wingLoft(rudSec, (x, y, v) => [x, v, y], 36, 0, FIN_BOUNDS), paint({ map: finTex, emissive: S.color, emissiveIntensity: 0, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));   // offset: its nose overlaps the fin's cut face
   rud.userData.skinPart = true; aircraft.add(reg(S, rud, 'Rudder', 1));
   { const wm = std(0x1b1e23, { roughness: .6, transparent: false }), wg = new THREE.CylinderGeometry(.0035, .005, .13, 6).rotateZ(Math.PI / 2).translate(-.065, 0, 0);
@@ -6014,6 +6024,8 @@ const CA_EFFECTS = {
       caState.ail = meshesByLabel(['Aileron']).map(m => caPivotOnHinge(m, 'z', 'x', 1, Z)).filter(Boolean);
       for (const r of [...caState.flaps, ...caState.slats, ...caState.ail]) caOrient(r, DOWN);   // flap and aileron trailing edges down, slat noses down
       caState.pos = [...caState.flaps.map(r => ({ mesh: r.piv, orig: r.piv.position.clone(), flap: true })), ...caState.slats.map(r => ({ mesh: r.piv, orig: r.piv.position.clone(), slat: true }))];
+      caState.ftf = []; aircraft.traverse(o => { if (o.userData.ftfAft) caState.ftf.push(o); });   // the flap track fairings' tails, hinged at their seams
+      caState.restoreFns = caState.restoreFns || []; caState.restoreFns.push(() => caState.ftf.forEach(o => { o.rotation.z = 0; }));
       caGlow(meshesByLabel(['Inboard slat', 'Outboard slat', 'Inboard flap', 'Outboard flap'])); },
     update(dt, now) {
       caT += dt; const T = caT % 24;
@@ -6034,6 +6046,7 @@ const CA_EFFECTS = {
       for (const r of caState.slats) caSet(r, sl * .45);
       for (const r of caState.ail) caSet(r, fl * .17);                                          // aileron droop, up to about 10 deg
       for (const p of caState.pos) p.flap ? p.mesh.position.set(p.orig.x - fl * .45, p.orig.y - fl * .06, p.orig.z) : p.mesh.position.set(p.orig.x + sl * .38, p.orig.y - sl * .12, p.orig.z);
+      for (const o of caState.ftf) o.rotation.z = fl * .30;                                       // tails drop with the flap, their tips staying just behind its trailing edge
       if (lever > .05 && lever < 1.05 && T < 9) label = 'Lever 1: slats to the intermediate setting, flaps stay up';
       caLive(label); caGlowSet(.18 + .1 * Math.sin(now * .004));
     }
