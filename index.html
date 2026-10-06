@@ -2071,11 +2071,12 @@ function buildGear() {
         panel(0, GF.sBlue, 'Main gear lower door (on the fairing)', true);
         panel(GF.sBlue + gp, 1.62, 'Main gear leg door (middle)', false);
         panel(1.62 + gp, GF.sTop, 'Main gear leg door (upper)', false);
-        /* the scoop's aft rim: a rolled lip 7 cm thick along the middle panel's aft edge, painted with the hazard stripes, set just inside the
-           door's outer face, so gear down it shows as the striped edge of the scoop and gear up it sits hidden in the slot (airBaltic CS300
-           hangar photo; the gear-swing video) */
-        { const N = 24, sA = GF.sBlue + 2 * gp, sB = GF.sBox - .02, pts = [];   // foot to lip only: above the lip the edge steps in to the flat panel (photos: plain)
-          for (let k = 0; k <= N; k++) { const s = sA + (sB - sA) * k / N, x = xs(0, s) + .035, d = skinD(x, s); pts.push(fr.toW(x, s, d + .04).toArray()); }
+        /* the scoop's rims: a rolled lip 7 cm thick along the middle panel's aft and forward edges, painted with the hazard stripes, set just
+           inside the door's outer face, so gear down they show as the striped edges of the scoop and gear up they sit hidden in the slot
+           (airBaltic CS300 hangar photos from aft and from ahead; Riga spotter day, from ahead; the gear-swing video) */
+        for (const [u, dx, top] of [[0, .035, GF.sBox], [1, -.035, GF.sBox - GF.lip]]) {
+          const N = 24, sA = GF.sBlue + 2 * gp, sB = top - .02, pts = [];   // foot to lip only: above the lip the edge steps in to the flat panel (photos: plain)
+          for (let k = 0; k <= N; k++) { const s = sA + (sB - sA) * k / N, x = xs(u, s) + dx, d = skinD(x, s); pts.push(fr.toW(x, s, d + .04).toArray()); }
           const path = down(pts.flat()), curve = new THREE.CatmullRomCurve3(Array.from({ length: N + 1 }, (_, k) => new THREE.Vector3(path[3 * k], path[3 * k + 1], path[3 * k + 2])));
           const cv = document.createElement('canvas'); cv.width = 64; cv.height = 8; const c = cv.getContext('2d'); c.fillStyle = '#f2c51c'; c.fillRect(0, 0, 32, 8); c.fillStyle = '#111317'; c.fillRect(32, 0, 32, 8);
           const tx = new THREE.CanvasTexture(cv); tx.encoding = THREE.sRGBEncoding; tx.wrapS = THREE.RepeatWrapping; tx.repeat.set(curve.getLength() / .12, 1);   // 6 cm bands
