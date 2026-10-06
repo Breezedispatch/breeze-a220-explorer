@@ -162,6 +162,10 @@
   .c-photo.big figcaption{font-size:13.5px}
   @media (max-width:760px){ .c-photo{width:38vw;top:50px;right:10px} .c-photo.big{width:92vw} }
   /* full-bleed slides: title, section dividers, end */
+  /* letterbox bars while the course intro plays */
+  .c-bars{position:absolute;left:0;right:0;height:0;background:#02060c;transition:height .7s ease;pointer-events:none}
+  .c-bars.t{top:0} .c-bars.b{bottom:0}
+  body.intro .c-bars{height:8vh}
   .c-slide{position:absolute;inset:0;display:none;align-items:center;justify-content:center;pointer-events:auto;background:radial-gradient(130% 130% at 50% 30%,#0a2647 0%,#071a33 45%,#051833 100%)}
   body.course .c-slide.show{display:flex}
   .c-slide .inner{text-align:center;padding:40px;max-width:900px}
@@ -366,6 +370,7 @@
   <div class="gs-def" id="gsDef" hidden></div>
 </div>
 <div class="course-wrap" id="courseWrap" aria-label="Guided course">
+  <div class="c-bars t"></div><div class="c-bars b"></div>
   <div class="c-prog"><i id="cProg"></i></div>
   <div class="c-top"><span class="c-brand" id="cBrandMark"></span><span class="c-sec" id="cSec"></span></div>
   <button class="c-exit" id="cExit">Exit course</button>
@@ -5184,7 +5189,7 @@ function updateShadows() {
   hemiLight.groundColor.setHex(on ? 0x8d9195 : 0x16223a);   // outside, light bounced off the concrete lifts the undersides
   /* outside, the concrete apron under a daylight sky with haze at the horizon; inside views keep the dark blueprint grid. The fog object
      stays in the scene with a far range indoors, so switching views recompiles no materials */
-  if (lookReady) { scene.background = on ? SKY_BG : null; apron.visible = leadIn.visible = wear.visible = contact.plane.visible = on; grid.visible = shadow.visible = !on; scene.fog.near = on ? 70 : 1e5; scene.fog.far = on ? 520 : 2e5; contact.dirty = on; }
+  if (lookReady) { scene.background = on ? SKY_BG : null; apron.visible = leadIn.visible = wear.visible = airport.visible = contact.plane.visible = on; grid.visible = shadow.visible = !on; scene.fog.near = on ? 70 : 1e5; scene.fog.far = on ? 520 : 2e5; contact.dirty = on; }
   sun.color.setHex(on ? 0xfff1df : 0xffffff);   // outside, sunlight a touch warm against the cool sky fill
   for (const m of shadowCasters) { const mt = m.material, solid = on && mt.visible !== false && mt.opacity > .98 && !mt.isMeshBasicMaterial && !mt.isLineBasicMaterial;
     m.castShadow = solid; m.receiveShadow = solid; }
@@ -5227,6 +5232,57 @@ const wear = (() => { const L = 120, B = 30, W = 2048, H = 512, k = W / L, cv = 
   const t = new THREE.CanvasTexture(cv); t.anisotropy = 8; t.encoding = THREE.sRGBEncoding;
   const m = new THREE.Mesh(new THREE.PlaneGeometry(L, B), new THREE.MeshStandardMaterial({ map: t, transparent: true, depthWrite: false, roughness: .8, metalness: 0, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
   m.rotation.x = -Math.PI / 2; m.position.y = GROUND_Y - .0008; m.receiveShadow = true; scene.add(m); return m; })();
+/* the airport round the stand, set well back so the haze softens it and it frames the aircraft without competing: three maintenance
+   hangars across the apron, the terminal with jet bridges and the control tower on the other side, a cargo shed beyond the tail and apron
+   floodlight masts. Plain shapes with painted faces: at 150 m and more, nothing finer than a door leaf or a glazing bay shows */
+const airport = (() => { const g = new THREE.Group(), G0 = GROUND_Y;
+  const tex = (w, h, draw, rx = 1, ry = 1) => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; draw(cv.getContext('2d'), w, h);
+    const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); return t; };
+  const mat = o => new THREE.MeshStandardMaterial(Object.assign({ roughness: .85, metalness: 0, envMapIntensity: .5 }, o));
+  const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); g.add(o); return o; };
+  /* hangars: 72 m wide, eaves 20 m, an 8 m arched roof, 60 m deep. The front is the door: seven leaves across 66 m, a glazed band near
+     their top, the header above and the gable in cladding. The extruded profile's caps take uv in metres, hence the repeat */
+  const HW = 72, HH = 20, HR = 8, HD = 60, HT = HH + HR;
+  const doorTex = tex(576, 224, (c, w, h) => { const X = m => (m / HW + .5) * w, Y = m => (1 - m / HT) * h;
+    c.fillStyle = '#c3c7cb'; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#b4b9bf'; c.fillRect(X(-33), Y(18), X(33) - X(-33), Y(0) - Y(18));
+    c.fillStyle = '#56616d'; c.fillRect(X(-33), Y(17), X(33) - X(-33), Y(14.8) - Y(17));                        // glazed band
+    c.fillStyle = '#8e969e'; for (let m = -33; m <= 33; m += 1.25) c.fillRect(X(m), Y(17), 1, Y(14.8) - Y(17));
+    c.fillStyle = '#7b828a'; for (let k = 0; k <= 7; k++) c.fillRect(X(-33 + k * 66 / 7) - 1, Y(18), 2, Y(0) - Y(18));   // leaf joints
+    c.fillStyle = 'rgba(90,96,104,.35)'; for (let m = 3; m < 14; m += 3) c.fillRect(X(-33), Y(m), X(33) - X(-33), 1);   // panel lines
+    c.fillStyle = '#3c4249'; c.fillRect(X(-33), Y(.45), X(33) - X(-33), Y(0) - Y(.45));                        // the bottom track
+    c.fillStyle = '#d2d5d8'; c.fillRect(0, Y(20), w, Y(18) - Y(20)); }, 1 / HW, 1 / HT);
+  doorTex.offset.set(.5, 0);
+  const hShape = new THREE.Shape(); hShape.moveTo(-HW / 2, 0); hShape.lineTo(HW / 2, 0); hShape.lineTo(HW / 2, HH); hShape.quadraticCurveTo(0, HH + 2 * HR, -HW / 2, HH); hShape.closePath();
+  const hGeo = new THREE.ExtrudeGeometry(hShape, { depth: HD, bevelEnabled: false, curveSegments: 20 }), hMats = [mat({ map: doorTex }), mat({ color: 0x8c9299 })];
+  for (const x of [-130, -40, 50]) add(hGeo, hMats, x, G0, -150 - HD);                                           // doors face the stand, 150 m off
+  /* terminal: 280 m of glazing in three storeys toward the apron, with spandrels at the floors and a fascia at the roof */
+  const glassTex = tex(448, 240, (c, w, h) => { const Y = m => (1 - m / 15) * h;
+    const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#8399ae'); gr.addColorStop(1, '#3b4857'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
+    for (let k = 0; k < 19; k++) if ((k * 7) % 5 === 1) { c.fillStyle = 'rgba(200,210,220,.12)'; c.fillRect(k * w / 18.7, Y(14), w / 18.7, Y(0) - Y(14)); }   // a few bays with blinds down
+    c.fillStyle = '#c6cacf'; for (const [a, b] of [[5, 5.8], [10.3, 11.1], [14, 15]]) c.fillRect(0, Y(b), w, Y(a) - Y(b));
+    c.fillStyle = 'rgba(41,49,58,.45)'; for (let m = 0; m < 28; m += 3) c.fillRect(m / 28 * w, 0, 2, Y(0) - Y(14)); }, 10, 1);
+  const plainT = mat({ color: 0x8a8e92 }), roofT = mat({ color: 0x5c6166 });
+  add(new THREE.BoxGeometry(280, 15, 36), [plainT, plainT, roofT, plainT, plainT, mat({ map: glassTex, roughness: .3, metalness: .2, envMapIntensity: .9 })], -30, G0 + 7.5, 170 + 18);
+  const bridgeM = mat({ color: 0x8d939a, roughness: .6, metalness: .2 });
+  for (const x of [-120, -70, -20, 30, 80]) { add(new THREE.BoxGeometry(3.2, 3.2, 22), bridgeM, x, G0 + 6.1, 170 - 11); add(new THREE.BoxGeometry(4.2, 3.8, 3.2), bridgeM, x, G0 + 6.1, 170 - 22.6);
+    add(new THREE.BoxGeometry(.9, 4.5, .9), mat({ color: 0x4a5057 }), x, G0 + 2.25, 170 - 19); }                // tunnel, cab and the wheeled leg
+  /* control tower behind the terminal: tapered shaft, a gallery, the glazed cab, roof and mast */
+  const tw = { x: -60, z: 236 };
+  add(new THREE.CylinderGeometry(3, 3.8, 38, 20), mat({ color: 0xa3a5a2 }), tw.x, G0 + 19, tw.z);
+  add(new THREE.CylinderGeometry(6.2, 3.2, 3, 24), mat({ color: 0x9a9da0 }), tw.x, G0 + 37.5, tw.z);
+  add(new THREE.CylinderGeometry(6.6, 6, 5, 24), mat({ color: 0x1d2935, roughness: .2, metalness: .3, envMapIntensity: 1 }), tw.x, G0 + 41.5, tw.z);
+  add(new THREE.CylinderGeometry(7.3, 7.3, .9, 24), mat({ color: 0xb2b5b8 }), tw.x, G0 + 44.45, tw.z);
+  add(new THREE.CylinderGeometry(.18, .18, 9, 6), mat({ color: 0x6b7178 }), tw.x, G0 + 49.4, tw.z);
+  /* cargo shed beyond the tail, a row of dock doors along its face */
+  const dockTex = tex(512, 96, (c, w, h) => { c.fillStyle = '#b9bcbf'; c.fillRect(0, 0, w, h); c.fillStyle = '#d4d6d8'; c.fillRect(0, 0, w, h * .14);
+    c.fillStyle = '#6a717a'; for (let k = 0; k < 4; k++) c.fillRect(k * w / 4 + w * .07, h * .5, w * .11, h * .5); }, 5, 1);
+  add(new THREE.BoxGeometry(40, 12, 150), [mat({ map: dockTex }), plainT, roofT, plainT, plainT, plainT], -260, G0 + 6, -10);
+  /* apron floodlight masts, about 25 m, heads turned toward the stand */
+  const mastM = mat({ color: 0x7a8188, roughness: .5, metalness: .5 }), headM = mat({ color: 0xc9ccd0, roughness: .4, metalness: .3 });
+  for (const [x, z] of [[-55, -48], [8, -48], [70, -48], [-55, 52], [70, 52]]) { add(new THREE.CylinderGeometry(.22, .36, 25, 8), mastM, x, G0 + 12.5, z);
+    const hd = add(new THREE.BoxGeometry(3.4, 1.3, .5), headM, x, G0 + 25.4, z); hd.rotation.y = Math.atan2(-x, -z); }
+  g.visible = false; scene.add(g); return g; })();
 scene.fog = new THREE.Fog(HAZE, 1e5, 2e5);
 /* contact shadow: the soft darkening of the ground under the aircraft from the sky it hides (the sun's shadow is sharp and falls to one side).
    The aircraft is rendered once from the ground looking up, each fragment darker the nearer it is to the ground (within 4.5 m), the image
@@ -5244,7 +5300,7 @@ const contact = (() => { const SIZE = 48, RES = 512, H = 4.5, mk = () => { const
   const quadScene = new THREE.Scene(), quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1); quadScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), blurM));
   const blur = (step, from, to, horiz) => { blurM.uniforms.tDiffuse.value = from.texture; blurM.uniforms.dir.value.set(horiz ? step / RES : 0, horiz ? 0 : step / RES); renderer.setRenderTarget(to); renderer.render(quadScene, quadCam); };
   return { plane, dirty: true, render() {
-    const hide = [apron, leadIn, wear, grid, shadow, plane].filter(o => o.visible), bg = scene.background, clr = renderer.getClearAlpha(), cc = renderer.getClearColor(new THREE.Color());
+    const hide = [apron, leadIn, wear, airport, grid, shadow, plane].filter(o => o.visible), bg = scene.background, clr = renderer.getClearAlpha(), cc = renderer.getClearColor(new THREE.Color());
     hide.forEach(o => { o.visible = false; }); scene.background = null; scene.overrideMaterial = depthM; renderer.setClearColor(0x000000, 0);
     renderer.setRenderTarget(rtA); renderer.clear(); renderer.render(scene, cam); scene.overrideMaterial = null;
     for (const s of [5, 3, 1.5]) { blur(s, rtA, rtB, true); blur(s, rtB, rtA, false); }
@@ -5291,7 +5347,7 @@ const ao = (() => { const KS = 16, kernel = [];
     const resized = nt.width !== W || nt.height !== H; if (resized) { nt.setSize(W, H); at.setSize(W, H); bt.setSize(W, H); blurM.uniforms.texel.value.set(1 / W, 1 / H); }
     const moved = resized || !primed || !lastView.equals(camera.matrixWorldInverse) || !lastProj.equals(camera.projectionMatrix) || !!caName;
     if (moved) { lastView.copy(camera.matrixWorldInverse); lastProj.copy(camera.projectionMatrix); primed = true;
-      const hide = [apron, leadIn, wear, contact.plane, grid, shadow].filter(o => o.visible), bg = scene.background, fog = scene.fog.near;
+      const hide = [apron, leadIn, wear, airport, contact.plane, grid, shadow].filter(o => o.visible), bg = scene.background, fog = scene.fog.near;
       hide.forEach(o => { o.visible = false; }); scene.background = null; scene.overrideMaterial = normM; const cc = renderer.getClearColor(new THREE.Color()), ca = renderer.getClearAlpha(); renderer.setClearColor(0x000000, 0);
       renderer.setRenderTarget(nt); renderer.clear(); renderer.render(scene, camera); scene.overrideMaterial = null; scene.background = bg; hide.forEach(o => { o.visible = true; }); renderer.setClearColor(cc, ca);
       aoM.uniforms.proj.value.copy(camera.projectionMatrix); aoM.uniforms.invProj.value.copy(camera.projectionMatrixInverse); pass(aoM, at); pass(blurM, bt);
@@ -5341,6 +5397,7 @@ function hover(e) {
   tip.style.display = hit ? 'block' : 'none'; if (hit) { tip.textContent = text; tip.style.left = e.clientX + 'px'; tip.style.top = e.clientY + 'px'; }
 }
 function pick(e) {
+  if (intro.on) return;
   if (mode === 'cockpit') { ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera); const h = ray.intersectObjects(ckItems, false)[0]; selectCockpitItem(h ? h.object : null); return; }
   if (mode === 'exterior' && COCKPIT_ENABLED) { const h = castAt(e, glazing); if (h) { setMode('layout'); return; } }
   if (mode === 'systems') { const h = castAt(e, sysPick); if (h) selectSystem(h.object.userData.systemId); }
@@ -5359,6 +5416,7 @@ addEventListener('resize', resize); resize();
 let last = performance.now(), viewOffAt = 0, viewOffSig = '';
 function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now;
+  if (intro.on) intro.update(dt);   // the course intro drives the camera
   if (spin && !dragging && mode !== 'cockpit') want.t += dt * .06;
   const k = 1 - Math.pow(.001, dt);
   cam.t += (want.t - cam.t) * k; cam.p += (want.p - cam.p) * k; cam.r += (want.r - cam.r) * k; target.lerp(wantTarget, k);
@@ -5375,7 +5433,7 @@ function frame(now) {
   if (now - viewOffAt > 250) { viewOffAt = now; const pn = document.getElementById('cPanel'), W = innerWidth, H = innerHeight;
     const r = courseOn && !document.body.classList.contains('cmin') && pn && pn.style.display !== 'none' && W > 760 && !engEl.classList.contains('open') ? pn.getBoundingClientRect().right : 0, off = Math.round(r / 2), sig = off + 'x' + W + 'x' + H;
     if (sig !== viewOffSig) { viewOffSig = sig; if (off) camera.setViewOffset(W, H, -off, 0, W, H); else camera.clearViewOffset(); } }
-  spinners.forEach(f => f.rotation.x += dt * (mode === 'exterior' ? 2.2 : .6));
+  spinners.forEach(f => f.rotation.x += dt * (mode === 'exterior' ? 2.2 : .6) * intro.fan);
   if (flowItems.length) updateFlow(dt);
   if (typeof courseAnimUpdate === 'function') courseAnimUpdate(dt, now);
   if (shadowDirty || (typeof caName !== 'undefined' && caName)) { renderer.shadowMap.needsUpdate = true; shadowDirty = false; }   // the shadow map follows moving parts only while a course animation runs
@@ -5608,7 +5666,7 @@ function courseEnter() {
   cIdx = 0; courseShow(0);
 }
 function courseExit() {
-  courseOn = false; document.body.classList.remove('course');
+  intro.stop(); courseOn = false; document.body.classList.remove('course');
   if (typeof courseAnimSet === 'function') courseAnimSet(null);
   cabinCutaway(false);
   engStop(); engEl.classList.remove('open');
@@ -5619,6 +5677,7 @@ function courseExit() {
 let CUTAWAY_MESHES = null;
 function cabinCutaway(on) { if (!CUTAWAY_MESHES) { CUTAWAY_MESHES = []; for (const grp of [cabinGroup, cockpitGroup]) grp.traverse(o => { if (o.isMesh && (o.userData.cutaway || (o.material && o.material.userData && o.material.userData.cutaway))) CUTAWAY_MESHES.push(o); }); } for (const m of CUTAWAY_MESHES) m.visible = !on; }
 function courseShow(i) {
+  if (intro.on) intro.stop();
   cIdx = Math.max(0, Math.min(COURSE.length - 1, i));
   const s = COURSE[cIdx];
   // progress + counters
@@ -5714,8 +5773,67 @@ function courseShow(i) {
 
 let courseEngineOpen = false;
 
-function courseNext() { if (cIdx < COURSE.length - 1) courseShow(cIdx + 1); }
-function coursePrev() { if (cIdx > 0) courseShow(cIdx - 1); }
+function courseNext() {
+  if (intro.on) { intro.stop(); courseShow(cIdx + 1); return; }                                        // Next during the intro skips it
+  if (cIdx === 0 && COURSE[0].kind === 'title' && intro.wanted()) { intro.start(); return; }         // Begin: the taxi-in plays first
+  if (cIdx < COURSE.length - 1) courseShow(cIdx + 1);
+}
+function coursePrev() { if (intro.on) { intro.stop(); courseShow(cIdx); return; } if (cIdx > 0) courseShow(cIdx - 1); }
+/* course intro: after Begin, the aircraft taxis in along the lead-in line and stops on its mark, then the first section opens. The aircraft
+   stays put and the ground (apron, line, stand wear, airport) slides back under it, so the sun shadow, contact shadow and occlusion, all
+   centred on the aircraft, need no redraw. The camera stands on the ramp ahead and to the right of the stop mark and rises as the aircraft
+   comes in. Beacons flash and the fans turn at idle until the stop, then the engines spool down. Next skips it; Back returns to the title */
+const intro = (() => {
+  const V0 = 4.5, T1 = 5, T2 = 11, END = 13;   // about 9 kt to 5 s, then braking smoothly to a stop at 11 s
+  const dist = t => { if (t <= T1) return V0 * t; const u = Math.min(1, (t - T1) / (T2 - T1)); return V0 * T1 + V0 * (T2 - T1) * (u - u ** 3 + u ** 4 / 2); };   // speed V0 (1 - smoothstep u), integrated
+  const S0 = dist(T2);                                                                                  // 36 m out at the start
+  const P0 = new THREE.Vector3(44, GROUND_Y + 1.9, 13), P1 = new THREE.Vector3(36, GROUND_Y + 6, 34);   // camera on the ramp: eye height ahead of the line, rising to 6 m off the nose quarter
+  const TA = new THREE.Vector3(7, -1.9, 0), TB = new THREE.Vector3(3, -1.2, 0);                     // looking at the nose, then the whole aircraft
+  const st = { on: false, t: 0 }, P = new THREE.Vector3(), T = new THREE.Vector3(), D = new THREE.Vector3(), Z = new THREE.Vector3(0, 0, 1), Q = new THREE.Quaternion();
+  const glowTex = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const c = cv.getContext('2d'), g = c.createRadialGradient(32, 32, 0, 32, 32, 32);
+    g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.12, 'rgba(255,255,255,.8)'); g.addColorStop(.4, 'rgba(255,255,255,.18)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(cv); })();
+  function setup() {
+    if (st.ground) return;
+    st.ground = [apron, leadIn, wear, airport].map(o => ({ o, x: o.position.x }));
+    st.wheels = []; for (const sys of SYSTEMS) for (const m of sys.meshes) { const l = m.userData.label;   // tyres, drums, faces and caps turn about their axles (along z)
+      if (['Main wheel', 'Main wheel hub cap', 'Nose wheel', 'Nosewheel cap'].includes(l)) st.wheels.push({ m, q: m.quaternion.clone(), R: l.startsWith('Main') ? GEAR.mainR : GEAR.noseR }); }
+    st.beacons = aircraft.children.filter(o => o.isMesh && o.material && o.material.isMeshBasicMaterial && o.geometry.type === 'SphereGeometry' && Math.abs(o.position.x - 4) < 1e-6 && o.material.color.getHex() === 0xff4040)
+      .map((m, k) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xff2414, depthWrite: false, transparent: true, opacity: .9 }));   /* normal blending: added light washed out to white against the daylight sky */
+        s.position.copy(m.position); s.scale.set(2.2, 2.2, 1); s.visible = false; aircraft.add(s); return { m, glow: s, ph: k * .55 }; });   // upper and lower beacons flash alternately
+  }
+  return {
+    fan: 1,
+    get on() { return st.on; },
+    wanted: () => !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches),
+    start() {
+      if (st.on) return; setup();
+      if (typeof courseAnimSet === 'function') courseAnimSet(null);
+      cabinCutaway(false); setModeQuiet('exterior'); spin = false;
+      document.getElementById('cSlide').classList.remove('show'); document.getElementById('cPanel').style.display = 'none'; document.getElementById('cPhoto').hidden = true;
+      courseWrap.dataset.kind = 'intro'; document.body.classList.add('intro');
+      document.getElementById('cNext').textContent = 'Skip intro ›'; document.getElementById('cPrev').disabled = false; document.getElementById('cCount').textContent = '';
+      st.t = 0; st.on = true; this.update(0);
+    },
+    stop() {
+      if (!st.on) return; st.on = false; this.fan = 1;
+      for (const g of st.ground) g.o.position.x = g.x;
+      for (const w of st.wheels) w.m.quaternion.copy(w.q);
+      for (const b of st.beacons) { b.m.material.color.setHex(0xff4040); b.glow.visible = false; }
+      document.body.classList.remove('intro');
+    },
+    update(dt) {
+      const t = (st.t += dt); if (t >= END) { this.stop(); courseShow(cIdx + 1); return; }
+      const d = dist(Math.min(t, T2)), s = S0 - d;
+      for (const g of st.ground) g.o.position.x = g.x + s;
+      for (const w of st.wheels) w.m.quaternion.copy(w.q).premultiply(Q.setFromAxisAngle(Z, -d / w.R));   // rolling forward: the top of the wheel moves forward
+      for (const b of st.beacons) { const lit = (t + b.ph) % 1.1 < .12; b.m.material.color.setHex(lit ? 0xff3a2a : 0x4a0d0d); b.glow.visible = lit; }
+      this.fan = t < T2 + .3 ? 3 : 3 - 2 * Math.min(1, (t - T2 - .3) / 1.7);
+      const e = ease(Math.min(1, t / 12)); P.lerpVectors(P0, P1, e); P.x += s; T.lerpVectors(TA, TB, e);
+      D.subVectors(P, T); const r = D.length();
+      want.r = cam.r = r; want.p = cam.p = Math.acos(D.y / r); want.t = cam.t = Math.atan2(D.z, D.x); target.copy(T); wantTarget.copy(T);
+    }
+  };
+})();
 
 // quiet variants: change scene without the rail UI side effects fighting us
 function setModeQuiet(m) {
