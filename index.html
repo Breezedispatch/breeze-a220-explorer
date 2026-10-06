@@ -1358,8 +1358,10 @@ function buildFuselage() {
   // cabin windows: 11 x 16 in, 0.60 m pitch, skipping the doors and the overwing exits; drawn as rounded panes on the skin
   /* the pane is dark tinted glass behind a thin grey seal; its shine comes from the sky reflection (weak face on, strong at a slant, as
      glass is), not painted stripes, which read as a cartoon. A roughness map keeps the seal matte and the glass smooth */
-  const [wtex, wrough] = [0, 1].map(pass => { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 352; const c = cv.getContext('2d');
+  const [wtex, wrough, wglow] = [0, 1, 2].map(pass => { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 352; const c = cv.getContext('2d');
     const rr = (x, y, w, h, r) => { c.beginPath(); c.roundRect ? c.roundRect(x, y, w, h, r) : c.rect(x, y, w, h); };
+    if (pass === 2) { c.fillStyle = '#000'; c.fillRect(0, 0, 256, 352); rr(26, 26, 204, 300, 50); const g = c.createLinearGradient(0, 26, 0, 326); g.addColorStop(0, '#ffe6b8'); g.addColorStop(1, '#c98a52'); c.fillStyle = g; c.fill();
+      const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; return t; }                // the cabin behind the glass, lit, brighter at the ceiling: shown at dusk (the gear step)
     rr(8, 8, 240, 336, 62); c.fillStyle = pass ? '#c8c8c8' : 'rgba(112,120,130,.95)'; c.fill();     // seal
     rr(18, 18, 220, 316, 56); c.fillStyle = pass ? '#c8c8c8' : 'rgba(22,28,36,.97)'; c.fill();      // recess shadow
     rr(26, 26, 204, 300, 50);
@@ -1367,7 +1369,7 @@ function buildFuselage() {
     else { const g = c.createLinearGradient(0, 26, 0, 326); g.addColorStop(0, '#1a2a3d'); g.addColorStop(.4, '#0c1622'); g.addColorStop(1, '#121d2b'); c.fillStyle = g; }
     c.fill();
     const t = new THREE.CanvasTexture(cv); t.anisotropy = 8; if (!pass) t.encoding = THREE.sRGBEncoding; return t; });
-  const wmat = new THREE.MeshStandardMaterial({ map: wtex, roughnessMap: wrough, transparent: true, roughness: 1, metalness: 0, envMapIntensity: 1.5, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -8 });
+  const wmat = CABIN_GLASS = new THREE.MeshStandardMaterial({ map: wtex, roughnessMap: wrough, emissive: 0xffffff, emissiveMap: wglow, emissiveIntensity: 0, transparent: true, roughness: 1, metalness: 0, envMapIntensity: 1.5, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -8 });
   for (const x of [...CABIN_WINDOWS, OW_EXIT_X]) for (const side of [1, -1]) {   // the overwing exits carry the same window, in line with the row
     const c = [[x + .14, angleAt(st, x, .72, side)], [x - .14, angleAt(st, x, .72, side)], [x - .14, angleAt(st, x, .30, side)], [x + .14, angleAt(st, x, .30, side)]];
     const w = surfaceQuad(st, c, 2, 3, wmat, 1.006); w.renderOrder = 3; aircraft.add(w); windows.push(w);
@@ -5176,7 +5178,7 @@ const sun = new THREE.DirectionalLight(0xffffff, .85); sun.position.set(28, 42, 
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.shadowMap.autoUpdate = false;
 sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -.0004; sun.shadow.normalBias = .025;
 Object.assign(sun.shadow.camera, { left: -24, right: 24, top: 24, bottom: -24, near: 10, far: 110 }); sun.shadow.camera.updateProjectionMatrix();
-var shadowCasters = null, shadowDirty = true, lookReady = false, contactTick = 0, DUSK = null;   // var: applyState can run before this line (lookReady: the apron and backdrop exist)
+var shadowCasters = null, shadowDirty = true, lookReady = false, contactTick = 0, DUSK = null, CABIN_GLASS = null;   // var: applyState can run before this line (lookReady: the apron and backdrop exist)
 function updateShadows() {
   if (typeof aircraft === 'undefined' || !aircraft) return;
   if (!shadowCasters) { shadowCasters = []; aircraft.traverse(o => { if (o.isMesh && o.material && !Array.isArray(o.material)) shadowCasters.push(o); }); }
@@ -5241,7 +5243,7 @@ function setDusk(on) {                                                          
   if (on && !DUSK.env) { const e = new THREE.CanvasTexture(duskCanvas(1024, 512, true).cv); e.mapping = THREE.EquirectangularReflectionMapping; e.encoding = THREE.sRGBEncoding;
     const pm = new THREE.PMREMGenerator(renderer); DUSK.env = pm.fromEquirectangular(e).texture; pm.dispose(); e.dispose();
     const b = new THREE.CanvasTexture(duskCanvas(2048, 1024, false).cv); b.mapping = THREE.EquirectangularReflectionMapping; b.encoding = THREE.sRGBEncoding; DUSK.bg = b; }
-  DUSK.on = !!on; airport.userData.look(DUSK.on); updateShadows();
+  DUSK.on = !!on; airport.userData.look(DUSK.on); if (CABIN_GLASS) CABIN_GLASS.emissiveIntensity = DUSK.on ? .5 : 0; updateShadows();   // cabin lights on behind the windows
 }
 const apron = (() => { const N = 4, P = 512, S = N * P, cv = document.createElement('canvas'); cv.width = cv.height = S; const c = cv.getContext('2d');   // a 4 x 4 block of 5 m slabs, each its own: one stain pattern on every slab tiled visibly
   for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) { const g = 165 + Math.round((Math.random() - .5) * 14); c.fillStyle = `rgb(${g},${g + 2},${g + 1})`; c.fillRect(i * P, j * P, P, P);
@@ -6867,15 +6869,27 @@ const CA_EFFECTS = {
         C: new THREE.Vector3(G.mainX, G.mainY - G.mainR, 0), o: new THREE.Object3D(), dip: document.createElement('div'),
         beacons: aircraft.children.filter(o => o.isMesh && o.material && o.material.isMeshBasicMaterial && o.geometry.type === 'SphereGeometry' && Math.abs(o.position.x - 4) < 1e-6 && o.material.color.getHex() === 0xff4040) };
       F.o.scale.copy(aircraft.scale);
-      /* taxiway A's last stretch to the threshold: down A heading -z, right onto the connector (20 m radius), across the hold line, right
-         onto the runway (22 m radius), lined up at z -406; sampled every half metre with heading and curvature */
-      { const pts = [[150, -380], [150, -408]]; for (let i = 1; i <= 24; i++) { const a = i / 24 * Math.PI / 2; pts.push([170 - 20 * Math.cos(a), -408 - 20 * Math.sin(a)]); }
-        pts.push([208, -428]); for (let i = 1; i <= 24; i++) { const a = i / 24 * Math.PI / 2; pts.push([208 + 22 * Math.sin(a), -406 - 22 * Math.cos(a)]); }
-        const S = [{ x: pts[0][0], z: pts[0][1], s: 0 }]; for (let i = 1; i < pts.length; i++) { const [x0, z0] = pts[i - 1], [x1, z1] = pts[i], L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.ceil(L / .5));
-          for (let j = 1; j <= n; j++) S.push({ x: x0 + (x1 - x0) * j / n, z: z0 + (z1 - z0) * j / n, s: S[S.length - 1].s + L / n }); }
-        for (let i = 0; i < S.length; i++) { const a = S[Math.max(0, i - 1)], b = S[Math.min(S.length - 1, i + 1)]; S[i].psi = Math.atan2(-(b.z - a.z), b.x - a.x); }
-        for (let i = 0; i < S.length; i++) { const a = S[Math.max(0, i - 2)], b = S[Math.min(S.length - 1, i + 2)]; let dp = b.psi - a.psi; dp = Math.atan2(Math.sin(dp), Math.cos(dp)); S[i].k = dp / Math.max(.01, b.s - a.s); }
-        F.path = S; F.pathL = S[S.length - 1].s; }
+      /* taxiway A's last stretch to the threshold, taxied as a pilot does: the nose wheel follows the yellow centreline, on true arcs (the old
+         path was a chain of 1.3 m chords and turned the aircraft in 4 degree jerks), and the main gear trails it like a towed trailer,
+         cutting inside each turn. Down A heading -z, right onto the connector (20 m radius), across the hold line, right onto the runway
+         (22 m radius), then along the centreline until the mains have come back onto it. Walked once here in 5 cm steps: for each distance
+         the nose wheel has gone, where the mains are, the aircraft's heading, and the direction the nose wheel rolls */
+      { const Lw = G.noseX - G.mainX, segs = [];
+        const line = (x0, z0, x1, z1) => segs.push({ len: Math.hypot(x1 - x0, z1 - z0), at: u => [x0 + (x1 - x0) * u, z0 + (z1 - z0) * u], dir: () => [x1 - x0, z1 - z0] });
+        const arc = (R, at, dir) => segs.push({ len: R * Math.PI / 2, at: u => at(u * Math.PI / 2), dir: u => dir(u * Math.PI / 2), arc: true });
+        line(150, -392, 150, -408); arc(20, a => [170 - 20 * Math.cos(a), -408 - 20 * Math.sin(a)], a => [Math.sin(a), -Math.cos(a)]);
+        line(170, -428, 208, -428); arc(22, a => [208 + 22 * Math.sin(a), -406 - 22 * Math.cos(a)], a => [Math.cos(a), Math.sin(a)]); line(230, -406, 230, -346);   // 60 m along the centreline: the mains end within a degree of it
+        const S = []; let base = 0, M = null;
+        for (const sg of segs) { const n = Math.ceil(sg.len / .05);
+          for (let i = S.length ? 1 : 0; i <= n; i++) { const u = i / n, [nx, nz] = sg.at(u), [dx, dz] = sg.dir(u);
+            if (!M) M = [nx, nz + Lw]; else { const ex = nx - M[0], ez = nz - M[1], d = Math.hypot(ex, ez); M = [nx - ex / d * Lw, nz - ez / d * Lw]; }   // the mains keep their distance, pulled along behind
+            S.push({ s: base + sg.len * u, x: M[0], z: M[1], psi: Math.atan2(-(nz - M[1]), nx - M[0]), psiN: Math.atan2(-dz, dx) }); }
+          base += sg.len; }
+        /* the time at each point: 11 m/s on the straights, 7 m/s round the turns, 10 m to change speed, braking to a stop at 2.5 m/s2 */
+        const arcs = []; { let b0 = 0; for (const sg of segs) { if (sg.arc) arcs.push([b0, b0 + sg.len]); b0 += sg.len; } }
+        const vAt = q => { let v = 11; for (const [a0, a1] of arcs) { const d = q < a0 ? a0 - q : q > a1 ? q - a1 : 0; v = Math.min(v, 7 + 4 * Math.min(1, d / 10)); } return Math.max(.12, Math.min(v, Math.sqrt(2 * 2.5 * Math.max(0, base - q)))); };
+        S[0].t = 0; S[0].v = vAt(0); for (let i = 1; i < S.length; i++) { S[i].v = vAt(S[i].s); S[i].t = S[i - 1].t + (S[i].s - S[i - 1].s) / ((S[i].v + S[i - 1].v) / 2); }
+        F.path = S; F.pathL = base; F.taxiT = S[S.length - 1].t; F.lu = S[S.length - 1]; }
       /* nosewheel steering inside the nose leg's pivot: a second pivot on the strut axis carries the parts below the steering collar (listed
          first, so it is undone before the leg's pivot) */
       const nl = caState.legs.find(l => l.k === 'n');
@@ -6899,6 +6913,9 @@ const CA_EFFECTS = {
       F.taxi = [...meshesByLabel(['Nose taxi light']).map(m => glow(m, 1.6, 0xfff3dc, [.3, 0, 0])), ...meshesByLabel(['Taxi light, wide (wing-to-body fairing)']).map(m => glow(m, 1.6, 0xfff3dc, [0, -.25, 0]))];
       const st = []; aircraft.traverse(o => { if (o.name === 'strobe') st.push(o); }); st.push(...meshesByLabel(['Tail strobe / navigation light']));
       F.strobes = st.map(m => glow(m, 3.6, 0xffffff, m.name === 'strobe' ? [0, 0, Math.sign(m.position.z) * .3] : [-.3, 0, 0]));
+      F.steady = []; aircraft.traverse(o => { if (o.name === 'navlight') F.steady.push(glow(o, 1.7, o.material.color.getHex(), [0, 0, Math.sign(o.position.z) * .25])); });   // on at dusk: navigation lights, red left and green right,
+      F.steady.push(...meshesByLabel(['Tail strobe / navigation light']).map(m => glow(m, 1.2, 0xffffff, [-.2, 0, 0])), ...meshesByLabel(['Logo light (stabilizer tip)']).map(m => glow(m, 1.3, 0xfff1d8)),   // white at the tail, the logo lights
+        ...meshesByLabel(['Wing inspection light']).map(m => glow(m, 1.3, 0xfff1d8, [0, 0, Math.sign(m.position.z) * .12]))); for (const g of F.steady) g.visible = true;   // and the wing inspection lights
       for (let k = 1; k <= 21; k++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: caGlowTex(), color: 0xffffff, depthWrite: false, transparent: true, toneMapped: false }));   // the approach lights' sequenced flashers
         s.position.set(230, GROUND_Y + 1.45 + k * .04, -420 - 30 * k); s.scale.set(4.5, 4.5, 1); s.visible = false; caGroup.add(s); F.rabbit.push(s); }
       F.dip.className = 'c-dip'; courseWrap.prepend(F.dip);
@@ -6909,7 +6926,7 @@ const CA_EFFECTS = {
         aircraft.position.copy(F.p); aircraft.rotation.copy(F.r); contact.plane.material.opacity = .62; setDusk(false); caFollow(0, 0); intro.fan = 1; F.dip.remove(); });
     },
     update(dt) {
-      const F = caState.flight, D2R = Math.PI / 180, VR = 68, A = 3, T1 = 8, TLU = 25.5, TR = TLU + VR / A, TLO = TR + 2.3, TCUT = TLO + 16, TFIN = TCUT + 9.5, TD = TFIN + 9.5, L = TD + 10.5;   // a 16 s climb (30 was too long)
+      const F = caState.flight, D2R = Math.PI / 180, VR = 68, A = 3, T1 = 8, TLU = T1 + F.taxiT + 1.2, TR = TLU + VR / A, TLO = TR + 2.3, TCUT = TLO + 16, TFIN = TCUT + 9.5, TD = TFIN + 9.5, L = TD + 10.5;   // a 16 s climb (30 was too long)
       caT += dt; const T = caT % L;
       if (T < F.lastT) { F.loops++; for (const p of F.smoke) { caGroup.remove(p.s); p.s.material.dispose(); } F.smoke = []; } F.lastT = T;
       let x = 0, z = 0, h = 0, psi = 0, th = 0, v = 0, ground = true, fan, txt, e = 0, eN = 0, dN = 0, lever = 2, steer = 0, gnd = 0, rev = 0, runway = false, taxiLt = true;
@@ -6917,15 +6934,19 @@ const CA_EFFECTS = {
         const t = Math.max(0, T - 1.5); x = t < 5.625 ? .8 * t * t : 25.3 + 9 * (t - 5.625); v = T < 1.5 ? 0 : Math.min(9, 1.6 * t); fan = 2.5; lever = 2 * ease(seg(T, 2, 5.5));
         txt = T < 1.5 ? 'Gear down and locked: engines running, cleared to taxi' : T < 5.5 ? 'Taxiing out, flaps 2 set for takeoff' : 'Taxiing to runway 27';
       } else if (T < TLU) {                                                                              // taxiway A to the threshold, the connector, the hold line, lining up
-        const t = T - T1, P = F.path, Lp = F.pathL, tc = (Lp - 12) / 9, s = t < tc ? 9 * t : Math.min(Lp, Lp - 12 + 9 * (t - tc) - 1.6875 * Math.min(t - tc, 2.667) ** 2);
-        v = t < tc ? 9 : Math.max(0, 9 - 3.375 * (t - tc)); let lo = 0, hi = P.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (P[m].s <= s) lo = m; else hi = m; }   /* between the samples either side: picking the nearest moved it in half-metre jumps */
-        const a = P[lo], b = P[hi], f = b.s > a.s ? Math.min(1, Math.max(0, (s - a.s) / (b.s - a.s))) : 0; x = a.x + (b.x - a.x) * f; z = a.z + (b.z - a.z) * f; psi = a.psi + Math.atan2(Math.sin(b.psi - a.psi), Math.cos(b.psi - a.psi)) * f;
-        steer = v > .5 ? -Math.atan(15.3 * (a.k + (b.k - a.k) * f)) : 0; runway = s > 45; taxiLt = !runway; fan = v > .5 ? 2.5 : 3.5;
+        const t = Math.min(T - T1, F.taxiT), P = F.path;                                                 // by time: the speed follows the path (slow in the turns)
+        let lo = 0, hi = P.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (P[m].t <= t) lo = m; else hi = m; }                // between the samples either side
+        const a = P[lo], b = P[hi], f = b.t > a.t ? Math.min(1, Math.max(0, (t - a.t) / (b.t - a.t))) : 0, wrap = q => Math.atan2(Math.sin(q), Math.cos(q)), s = a.s + (b.s - a.s) * f;
+        v = T - T1 < F.taxiT ? a.v + (b.v - a.v) * f : 0;
+        psi = a.psi + wrap(b.psi - a.psi) * f; const pN = a.psiN + wrap(b.psiN - a.psiN) * f;
+        x = a.x + (b.x - a.x) * f - Math.cos(psi) * GEAR.mainX; z = a.z + (b.z - a.z) * f + Math.sin(psi) * GEAR.mainX;                       // the origin is 0.65 m behind the mains
+        steer = v > .05 ? -wrap(pN - psi) : 0; runway = s > 45; taxiLt = !runway; fan = v > .5 ? 2.5 : 3.5;   // the nose wheel points along the line it is on
         txt = s < 45 ? 'Taxiway A to the threshold of runway 27' : v > .5 ? 'Past the hold line, cleared for takeoff: strobes and landing lights on' : 'Lined up at the start of runway 27: takeoff thrust';
       } else if (T < TCUT) {                                                                             // takeoff roll, rotation, liftoff, gear up, flaps up, a long climb toward the sun
-        const t = T - TLU, tr = TR - TLU; psi = -Math.PI / 2; x = 230; fan = T < TLO + 12 ? 6.5 : 5; runway = true; taxiLt = false;
-        if (t < tr) { v = A * t; z = -406 + A / 2 * t * t; }
-        else { const u = t - tr, u6 = Math.min(u, 6); v = Math.min(80, VR + 2 * u); z = -406 + VR * VR / (2 * A) + VR * u6 + u6 * u6 + 80 * Math.max(0, u - 6); }
+        const t = T - TLU, tr = TR - TLU, lu = F.lu, ox = lu.x - Math.cos(lu.psi) * GEAR.mainX, z0 = lu.z + Math.sin(lu.psi) * GEAR.mainX, k0 = ease(seg(t, 0, 5));   // from where it lined up, settling onto the centreline
+        psi = lu.psi + (-Math.PI / 2 - lu.psi) * k0; x = ox + (230 - ox) * k0; fan = T < TLO + 12 ? 6.5 : 5; runway = true; taxiLt = false;
+        if (t < tr) { v = A * t; z = z0 + A / 2 * t * t; }
+        else { const u = t - tr, u6 = Math.min(u, 6); v = Math.min(80, VR + 2 * u); z = z0 + VR * VR / (2 * A) + VR * u6 + u6 * u6 + 80 * Math.max(0, u - 6); }
         th = 8.5 * D2R * ease(seg(T, TR, TR + 2.8)) + 4.5 * D2R * ease(seg(T, TR + 2.8, TR + 7));          // rotation about 3 deg a second, then the climb attitude
         if (T > TLO) { ground = false; const a = T - TLO; h = a < 3 ? 10 * a * a / 6 : 15 + 10 * (a - 3); }
         const g0 = TLO + 3; e = ease(seg(T, g0 + .3, g0 + 2.6)); eN = ease(seg(T, g0 + .5, g0 + 2.8)); dN = T < g0 ? 0 : T < g0 + .5 ? ease(seg(T, g0, g0 + .5)) : T < g0 + 2.8 ? 1 : T < g0 + 3.3 ? 1 - ease(seg(T, g0 + 2.8, g0 + 3.3)) : 0;
@@ -6951,7 +6972,7 @@ const CA_EFFECTS = {
       }
       for (const l of caState.legs) l.rec.piv.quaternion.setFromAxisAngle(l.rec.axis, l.amp * (l.k === 'n' ? eN : e));
       gearPose(e, e, eN, dN); caHighLiftSet(lever); caLive(txt); intro.fan = fan;
-      F.steerA += (steer - F.steerA) * Math.min(1, dt * 5); if (F.steer) F.steer.piv.quaternion.setFromAxisAngle(F.steer.axis, F.steerA);   // into the turn (checked: the wheel points inside the arc)
+      F.steerA += (steer - F.steerA) * Math.min(1, dt * 10); if (F.steer) F.steer.piv.quaternion.setFromAxisAngle(F.steer.axis, F.steerA);   // into the turn (checked: the wheel points inside the arc)
       for (const r of caState.mf) caSet(r, gnd * .9); for (const r of caState.gs) caSet(r, gnd * .95);
       for (const p of caState.pos) if (p.sleeve) { p.mesh.position.copy(p.orig); p.mesh.position.x -= .55 * rev; }
       /* place it: yaw psi, pitch th about the main wheels' contact point, height h over the ramp */
@@ -6977,14 +6998,15 @@ const CA_EFFECTS = {
       const co = ground ? Math.max(0, Math.min(1, 1 - (v - 8) / 6)) : 0;                                // the soft contact shadow fades as it speeds up (it is redrawn every frame meanwhile)
       contact.plane.material.opacity = .62 * co; contact.plane.visible = co > .01; if (co > .01) contact.dirty = true;
       /* camera: per shot a cut, a swing (the angle eases over), or a fixed spot beside the runway; otherwise it follows the aircraft */
-      const SH = [[0, 'cut', [.62, 1.45, 52]], [T1, 'cut', [-1.0, 1.45, 55]], [TLU, 'swing', [.25, 1.5, 48]], [45, 'fixed', [275, 2.2, 470]], [TLO + 2.2, 'swing', [.3, 1.68, 40]],
+      const SH = [[0, 'cut', [.62, 1.45, 52]], [T1, 'cut', [-1.0, 1.45, 55]], [TLU, 'swing', [.25, 1.5, 48]], [TR - 3.2, 'fixed', [275, 2.2, 470]], [TLO + 2.2, 'swing', [.3, 1.68, 40]],
         [TLO + 7, 'swing', [-1.8, 1.62, 50]], [TCUT, 'cut', [.2, 1.75, 45]], [TFIN, 'cut', [.8, 1.5, 52]], [TD - 1, 'swing', [1.2, 1.5, 56]]];
       let shot = 0; while (shot + 1 < SH.length && T >= SH[shot + 1][0]) shot++;
       const [, mode, Q] = SH[shot], lag = 0;   /* touchdown: from ahead, looking back down the runway, so the smoke trail it leaves stays in view behind it (at 60 m/s it is 50 m back within a second) */
       target.set(aircraft.position.x, aircraft.position.y - .6, aircraft.position.z - lag); wantTarget.copy(target);
       if (mode === 'fixed') { const P = new THREE.Vector3(Q[0], GROUND_Y + Q[1], Q[2]).sub(target), r = P.length(); cam.r = want.r = r; cam.p = want.p = Math.acos(P.y / r); cam.t = want.t = Math.atan2(P.z, P.x); F.shot = shot; }
       else if (shot !== F.shot) { want.t = Q[0]; want.p = Q[1]; want.r = Q[2]; if (mode === 'cut' || F.shot < 0) { cam.t = want.t; cam.p = want.p; cam.r = want.r; } else normalizeTheta(); F.shot = shot; }
-      camera.position.set(target.x + cam.r * Math.sin(cam.p) * Math.cos(cam.t), target.y + cam.r * Math.cos(cam.p), target.z + cam.r * Math.sin(cam.p) * Math.sin(cam.t)); camera.lookAt(target);
+      camera.position.set(target.x + cam.r * Math.sin(cam.p) * Math.cos(cam.t), target.y + cam.r * Math.cos(cam.p), target.z + cam.r * Math.sin(cam.p) * Math.sin(cam.t));
+      camera.position.y = Math.max(camera.position.y, GROUND_Y + 1.2); camera.lookAt(target);                    // never into the ground (a swing from below the aircraft passed 0.5 m off it)
       const dip = c => Math.max(0, 1 - Math.abs(T - c) / .45);
       F.dip.style.opacity = Math.max(dip(T1), dip(TCUT), dip(TFIN), T > L - .45 ? (T - (L - .45)) / .45 : 0, F.loops && T < .45 ? 1 - T / .45 : 0).toFixed(3);
     }
