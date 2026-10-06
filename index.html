@@ -5183,6 +5183,7 @@ function updateShadows() {
   const on = mode === 'exterior';
   /* outside, a stronger and lower sun against less flat fill, so the shadows read (at the old balance the sky and ambient light washed
      them out); the cabin, systems and flight deck views keep the soft studio light */
+  camera.near = on ? 1 : .3; camera.updateProjectionMatrix();                                            // outside, 1 m: three times the depth precision, so far surfaces close together stop flickering
   const dusk = on && DUSK && DUSK.on;                                                                  // the gear step's sunset: a low orange sun, violet fill, the sunset sky reflected
   sun.intensity = dusk ? 2.4 : on ? 1.6 : .85; if (dusk) sun.position.copy(DUSK.sunPos); else sun.position.set(...(on ? [26, 34, -26] : [28, 42, -22]));
   hemiLight.intensity = dusk ? .34 : on ? .32 : .40; ambLight.intensity = dusk ? .22 : on ? .32 : .5; fill.intensity = dusk ? .32 : on ? .22 : .28; scene.environment = dusk ? DUSK.env : on ? SKY_ENV : STUDIO_ENV;
@@ -5625,7 +5626,7 @@ const airport = (() => {
     for (let k = 0; k < 40; k++) { const x = rnd() * 1024, y = rnd() * 1024, r = 6 + rnd() * 18; c.fillStyle = 'rgba(30,42,24,.85)'; c.beginPath(); c.ellipse(x, y, r, r * (.5 + rnd() * .5), rnd() * 3, 0, 7); c.fill(); }   // copses
     c.strokeStyle = 'rgba(160,156,146,.8)'; c.lineWidth = 2; for (let k = 0; k < 3; k++) { c.beginPath(); let x = rnd() * 1024, y = 0; c.moveTo(x, y); while (y < 1024) { y += 60; x += (rnd() - .5) * 60; c.lineTo(x, y); } c.stroke(); }   // lanes
   })) });
-  for (const [x, z, w, d] of [[0, -S / 2 - 6000, S + 24000, 12000], [0, S / 2 + 6000, S + 24000, 12000], [-S / 2 - 6000, 0, 12000, S], [S / 2 + 6000, 0, 12000, S]]) mesh(tiles(new THREE.PlaneGeometry(w, d), 3000, 3000), farM, x, G0 - .04, z, 0, -Math.PI / 2);
+  for (const [x, z, w, d] of [[0, -S / 2 - 6000, S + 24000, 12000], [0, S / 2 + 6000, S + 24000, 12000], [-S / 2 - 6000, 0, 12000, S], [S / 2 + 6000, 0, 12000, S]]) mesh(tiles(new THREE.PlaneGeometry(w, d), 3000, 3000), farM, x, G0 - .3, z, 0, -Math.PI / 2);   // 0.3 m down: level with the runway carrying on north, the two flickered through each other
 
   /* merge: one mesh per material */
   B.updateMatrixWorld(true); const byMat = new Map();
@@ -6902,11 +6903,13 @@ const CA_EFFECTS = {
         s.position.set(230, GROUND_Y + 1.45 + k * .04, -420 - 30 * k); s.scale.set(4.5, 4.5, 1); s.visible = false; caGroup.add(s); F.rabbit.push(s); }
       F.dip.className = 'c-dip'; courseWrap.prepend(F.dip);
       setDusk(true);
+      { const hid = [...F.landing, ...F.noseLdg, ...F.taxi, ...F.strobes, ...F.rabbit], smoke = new THREE.Sprite(new THREE.SpriteMaterial({ map: caSmokeTex(), transparent: true, depthWrite: false })); caGroup.add(smoke);   /* compile the shaders now: the first strobe flash, glow or puff of smoke otherwise stalled a frame */
+        for (const s of hid) s.visible = true; renderer.compile(scene, camera); for (const s of hid) s.visible = false; caGroup.remove(smoke); smoke.material.dispose(); }
       caState.restoreFns.push(() => { for (const w of F.wheels) w.m.quaternion.copy(w.q); for (const b of F.beacons) b.material.color.setHex(0xff4040);
         aircraft.position.copy(F.p); aircraft.rotation.copy(F.r); contact.plane.material.opacity = .62; setDusk(false); caFollow(0, 0); intro.fan = 1; F.dip.remove(); });
     },
     update(dt) {
-      const F = caState.flight, D2R = Math.PI / 180, VR = 68, A = 3, T1 = 8, TLU = 25.5, TR = TLU + VR / A, TLO = TR + 2.3, TCUT = 84, TFIN = 96, TD = 105.5, L = TD + 10.5;
+      const F = caState.flight, D2R = Math.PI / 180, VR = 68, A = 3, T1 = 8, TLU = 25.5, TR = TLU + VR / A, TLO = TR + 2.3, TCUT = TLO + 16, TFIN = TCUT + 9.5, TD = TFIN + 9.5, L = TD + 10.5;   // a 16 s climb (30 was too long)
       caT += dt; const T = caT % L;
       if (T < F.lastT) { F.loops++; for (const p of F.smoke) { caGroup.remove(p.s); p.s.material.dispose(); } F.smoke = []; } F.lastT = T;
       let x = 0, z = 0, h = 0, psi = 0, th = 0, v = 0, ground = true, fan, txt, e = 0, eN = 0, dN = 0, lever = 2, steer = 0, gnd = 0, rev = 0, runway = false, taxiLt = true;
@@ -6915,26 +6918,27 @@ const CA_EFFECTS = {
         txt = T < 1.5 ? 'Gear down and locked: engines running, cleared to taxi' : T < 5.5 ? 'Taxiing out, flaps 2 set for takeoff' : 'Taxiing to runway 27';
       } else if (T < TLU) {                                                                              // taxiway A to the threshold, the connector, the hold line, lining up
         const t = T - T1, P = F.path, Lp = F.pathL, tc = (Lp - 12) / 9, s = t < tc ? 9 * t : Math.min(Lp, Lp - 12 + 9 * (t - tc) - 1.6875 * Math.min(t - tc, 2.667) ** 2);
-        v = t < tc ? 9 : Math.max(0, 9 - 3.375 * (t - tc)); let i = Math.min(P.length - 1, Math.floor(s / .5)); const p = P[i]; x = p.x; z = p.z; psi = p.psi;
-        steer = v > .5 ? -Math.atan(15.3 * p.k) : 0; runway = s > 45; taxiLt = !runway; fan = v > .5 ? 2.5 : 3.5;
+        v = t < tc ? 9 : Math.max(0, 9 - 3.375 * (t - tc)); let lo = 0, hi = P.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (P[m].s <= s) lo = m; else hi = m; }   /* between the samples either side: picking the nearest moved it in half-metre jumps */
+        const a = P[lo], b = P[hi], f = b.s > a.s ? Math.min(1, Math.max(0, (s - a.s) / (b.s - a.s))) : 0; x = a.x + (b.x - a.x) * f; z = a.z + (b.z - a.z) * f; psi = a.psi + Math.atan2(Math.sin(b.psi - a.psi), Math.cos(b.psi - a.psi)) * f;
+        steer = v > .5 ? -Math.atan(15.3 * (a.k + (b.k - a.k) * f)) : 0; runway = s > 45; taxiLt = !runway; fan = v > .5 ? 2.5 : 3.5;
         txt = s < 45 ? 'Taxiway A to the threshold of runway 27' : v > .5 ? 'Past the hold line, cleared for takeoff: strobes and landing lights on' : 'Lined up at the start of runway 27: takeoff thrust';
       } else if (T < TCUT) {                                                                             // takeoff roll, rotation, liftoff, gear up, flaps up, a long climb toward the sun
-        const t = T - TLU, tr = TR - TLU; psi = -Math.PI / 2; x = 230; fan = T < TLO + 18 ? 6.5 : 5; runway = true; taxiLt = false;
+        const t = T - TLU, tr = TR - TLU; psi = -Math.PI / 2; x = 230; fan = T < TLO + 12 ? 6.5 : 5; runway = true; taxiLt = false;
         if (t < tr) { v = A * t; z = -406 + A / 2 * t * t; }
         else { const u = t - tr, u6 = Math.min(u, 6); v = Math.min(80, VR + 2 * u); z = -406 + VR * VR / (2 * A) + VR * u6 + u6 * u6 + 80 * Math.max(0, u - 6); }
         th = 8.5 * D2R * ease(seg(T, TR, TR + 2.8)) + 4.5 * D2R * ease(seg(T, TR + 2.8, TR + 7));          // rotation about 3 deg a second, then the climb attitude
         if (T > TLO) { ground = false; const a = T - TLO; h = a < 3 ? 10 * a * a / 6 : 15 + 10 * (a - 3); }
         const g0 = TLO + 3; e = ease(seg(T, g0 + .3, g0 + 2.6)); eN = ease(seg(T, g0 + .5, g0 + 2.8)); dN = T < g0 ? 0 : T < g0 + .5 ? ease(seg(T, g0, g0 + .5)) : T < g0 + 2.8 ? 1 : T < g0 + 3.3 ? 1 - ease(seg(T, g0 + 2.8, g0 + 3.3)) : 0;
-        lever = 2 * (1 - ease(seg(T, TLO + 14, TLO + 18)));
+        lever = 2 * (1 - ease(seg(T, TLO + 9, TLO + 12)));
         txt = T < TR ? 'Takeoff roll: accelerating to rotation speed, about 132 kt' : T < TLO ? 'Rotation, about 770 m down the runway' : T < g0 ? 'Liftoff about 950 m down the runway: positive climb'
           : T < g0 + .5 ? 'Gear lever UP: the nose gear forward doors open' : T < g0 + 2.8 ? 'Retracting: mains swing inboard, the nose gear folds forward' : T < g0 + 3.3 ? 'Nose gear forward doors close'
-          : T < TLO + 14 ? 'Gear up and locked: main tyres ride exposed in their bins, sealed by brushes' : T < TLO + 18 ? 'Flaps up' : 'Climbing out toward the sun: drag to look round the aircraft';
+          : T < TLO + 9 ? 'Gear up and locked: main tyres ride exposed in their bins, sealed by brushes' : T < TLO + 12 ? 'Flaps up' : 'Climbing out toward the sun: drag to look round the aircraft';
       } else if (T < TFIN) {                                                                             // the approach, 4.6 km out on the 3 degree path: gear down, then flaps full
-        const D = 4600 - 70 * (T - TCUT); psi = -Math.PI / 2; x = 230; z = -40 - D; h = D * .0524; v = 70; ground = false; runway = true; taxiLt = false; fan = 3.5; th = 2.5 * D2R;
-        e = 1 - ease(seg(T, 87.5, 89.8)); eN = 1 - ease(seg(T, 87.6, 89.9)); dN = T < 87 ? 0 : T < 87.5 ? ease(seg(T, 87, 87.5)) : T < 89.9 ? 1 : T < 90.4 ? 1 - ease(seg(T, 89.9, 90.4)) : 0;
-        lever = 2 + ease(seg(T, 85, 86.5)) + 2 * ease(seg(T, 91, 94));
-        txt = T < 87 ? 'On the glide path, 4.6 km out: flaps 3' : T < 87.5 ? 'Gear lever DOWN: the nose gear forward doors open' : T < 89.9 ? 'Extending: gear free of the uplocks, falling and driven down'
-          : T < 90.4 ? 'Nose gear forward doors close' : T < 91 ? 'Gear down and locked' : 'Gear down, flaps full';
+        const a = T - TCUT, D = 4600 - 70 * a; psi = -Math.PI / 2; x = 230; z = -40 - D; h = D * .0524; v = 70; ground = false; runway = true; taxiLt = false; fan = 3.5; th = 2.5 * D2R;
+        e = 1 - ease(seg(a, 2.3, 4.6)); eN = 1 - ease(seg(a, 2.4, 4.7)); dN = a < 1.8 ? 0 : a < 2.3 ? ease(seg(a, 1.8, 2.3)) : a < 4.7 ? 1 : a < 5.2 ? 1 - ease(seg(a, 4.7, 5.2)) : 0;
+        lever = 2 + ease(seg(a, .4, 1.6)) + 2 * ease(seg(a, 5.8, 8.6));
+        txt = a < 1.8 ? 'On the glide path, 4.6 km out: flaps 3' : a < 2.3 ? 'Gear lever DOWN: the nose gear forward doors open' : a < 4.7 ? 'Extending: gear free of the uplocks, falling and driven down'
+          : a < 5.2 ? 'Nose gear forward doors close' : a < 5.8 ? 'Gear down and locked' : 'Gear down, flaps full';
       } else {                                                                                           // short final over the approach lights, flare, touchdown, rollout
         const tau = TD - T; psi = -Math.PI / 2; x = 230; fan = 3.5; lever = 5; runway = true; taxiLt = false;
         if (T < TD) { v = 64; z = -40 - 64 * tau; ground = false;
