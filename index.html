@@ -76,7 +76,7 @@
   .viewbar button{border:0;background:transparent;color:var(--ink2);font:inherit;padding:7px 12px;border-radius:8px;cursor:pointer}
   .viewbar button:hover{background:rgba(255,255,255,.07);color:var(--ink)}
   .viewbar button[aria-pressed="true"]{background:rgba(61,181,230,.2);color:var(--ink)}
-  .hint{position:fixed;right:20px;top:18px;color:var(--ink3);font-size:12.5px} .schem.open ~ .hint{display:none}
+  .hint{position:fixed;right:16px;top:14px;color:var(--ink3);font-size:12.5px;padding:5px 11px;background:var(--rail);border:1px solid var(--line);border-radius:10px;backdrop-filter:blur(14px)} .schem.open ~ .hint{display:none}   /* on the rail's panel: the exterior's light sky washed the bare text out */
 
   /* ---------------- SEARCH ---------------- */
   .gsearch{position:fixed;top:12px;left:404px;width:min(460px,calc(100vw - 720px));z-index:60}
@@ -5085,11 +5085,15 @@ renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESF
 /* daylight sky for reflections outside: zenith blue to a bright hazy horizon, a soft sun where the key light is, tarmac grey below the
    horizon, as an equirectangular canvas prefiltered for the PBR materials. The horizon line running along the fuselage and the sky in the
    glazing and the polished metal are what read as a real aircraft; the old environment was a plain light-to-dark gradient */
-const SKY_ENV = (() => { const W = 1024, H = 512, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
-  const sky = c.createLinearGradient(0, 0, 0, H / 2); sky.addColorStop(0, '#4d7cba'); sky.addColorStop(.55, '#8db1da'); sky.addColorStop(.93, '#d9e5f1'); sky.addColorStop(1, '#eef3f8');
+const HAZE = '#d6e2ee';   // the horizon: sky, fog and the far apron all meet in it
+function skyCanvas(W, H, envGround) {   // equirectangular: the sky above the horizon; below it the concrete for reflections, or plain haze for the backdrop (the apron covers it)
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
+  const sky = c.createLinearGradient(0, 0, 0, H / 2); sky.addColorStop(0, '#3a69ab'); sky.addColorStop(.5, '#7fa6d4'); sky.addColorStop(.9, '#c9d9ea'); sky.addColorStop(1, HAZE);
   c.fillStyle = sky; c.fillRect(0, 0, W, H / 2);
-  const gr = c.createLinearGradient(0, H / 2, 0, H); gr.addColorStop(0, '#80878f'); gr.addColorStop(.05, '#5b6168'); gr.addColorStop(1, '#25292e');
-  c.fillStyle = gr; c.fillRect(0, H / 2, W, H / 2);
+  if (envGround) { const gr = c.createLinearGradient(0, H / 2, 0, H); gr.addColorStop(0, '#b4b8bb'); gr.addColorStop(.06, '#a2a6a9'); gr.addColorStop(1, '#7a7e82'); c.fillStyle = gr; } else c.fillStyle = HAZE;
+  c.fillRect(0, H / 2, W, H / 2); return { cv, c };
+}
+const SKY_ENV = (() => { const W = 1024, H = 512, { cv, c } = skyCanvas(W, H, true);
   const d = new THREE.Vector3(26, 34, -26).normalize(), sx = (Math.atan2(d.z, d.x) / (2 * Math.PI) + .5) * W, sy = (.5 - Math.asin(d.y) / Math.PI) * H;   // the key light's direction
   const sg = c.createRadialGradient(sx, sy, 0, sx, sy, 70); sg.addColorStop(0, 'rgba(255,252,242,1)'); sg.addColorStop(.12, 'rgba(255,249,235,.9)'); sg.addColorStop(1, 'rgba(255,249,235,0)');
   c.fillStyle = sg; c.fillRect(sx - 70, sy - 70, 140, 140);
@@ -5101,7 +5105,7 @@ const STUDIO_PAINT_ENV = (() => { const face = (a, b) => { const cv = document.c
   t.encoding = THREE.sRGBEncoding; t.needsUpdate = true; const pm = new THREE.PMREMGenerator(renderer); const env = pm.fromCubemap(t).texture; pm.dispose(); return env; })();
 PAINT_ENV = SKY_ENV;   // the painted skin reflects the daylight sky (STUDIO_PAINT_ENV was its plain gradient)
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(38, 1, .3, 600);
+const camera = new THREE.PerspectiveCamera(38, 1, .3, 1200);   // far enough for the apron to fade into the haze
 const hemiLight = new THREE.HemisphereLight(0xe4edf8, 0x16223a, .40); scene.add(hemiLight);
 scene.environment = (() => {
   const face = (a, b, c) => { const cv = document.createElement('canvas'); cv.width = cv.height = 128; const x = cv.getContext('2d');
@@ -5124,7 +5128,7 @@ const sun = new THREE.DirectionalLight(0xffffff, .85); sun.position.set(28, 42, 
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.shadowMap.autoUpdate = false;
 sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -.0004; sun.shadow.normalBias = .025;
 Object.assign(sun.shadow.camera, { left: -24, right: 24, top: 24, bottom: -24, near: 10, far: 110 }); sun.shadow.camera.updateProjectionMatrix();
-var shadowCasters = null, shadowDirty = true;   // var: applyState can run before this line
+var shadowCasters = null, shadowDirty = true, lookReady = false;   // var: applyState can run before this line (lookReady: the apron and backdrop exist)
 function updateShadows() {
   if (typeof aircraft === 'undefined' || !aircraft) return;
   if (!shadowCasters) { shadowCasters = []; aircraft.traverse(o => { if (o.isMesh && o.material && !Array.isArray(o.material)) shadowCasters.push(o); }); }
@@ -5133,6 +5137,10 @@ function updateShadows() {
      them out); the cabin, systems and flight deck views keep the soft studio light */
   sun.intensity = on ? 1.6 : .85; sun.position.set(...(on ? [26, 34, -26] : [28, 42, -22]));
   hemiLight.intensity = on ? .32 : .40; ambLight.intensity = on ? .32 : .5; fill.intensity = on ? .22 : .28; scene.environment = on ? SKY_ENV : STUDIO_ENV;
+  hemiLight.groundColor.setHex(on ? 0x8d9195 : 0x16223a);   // outside, light bounced off the concrete lifts the undersides
+  /* outside, the concrete apron under a daylight sky with haze at the horizon; inside views keep the dark blueprint grid. The fog object
+     stays in the scene with a far range indoors, so switching views recompiles no materials */
+  if (lookReady) { scene.background = on ? SKY_BG : null; apron.visible = leadIn.visible = on; grid.visible = shadow.visible = !on; scene.fog.near = on ? 70 : 1e5; scene.fog.far = on ? 520 : 2e5; }
   for (const m of shadowCasters) { const mt = m.material, solid = on && mt.visible !== false && mt.opacity > .98 && !mt.isMeshBasicMaterial && !mt.isLineBasicMaterial;
     m.castShadow = solid; m.receiveShadow = solid; }
   shadowDirty = true;
@@ -5144,8 +5152,21 @@ buildAircraft(); scene.add(aircraft); scene.add(flowGroup);
 const grid = new THREE.GridHelper(140, 35, 0x2a4470, 0x1b3050); grid.position.y = GROUND_Y - .01; grid.material.transparent = true; grid.material.opacity = .55; scene.add(grid);
 const shadow = new THREE.Mesh(new THREE.CircleGeometry(1, 48), new THREE.MeshBasicMaterial({ color: 0x030a18, transparent: true, opacity: .32 }));
 shadow.rotation.x = -Math.PI / 2; shadow.scale.set(21, 19, 1); shadow.position.set(0, GROUND_Y - .006, 0); scene.add(shadow);
-const groundShadow = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), new THREE.ShadowMaterial({ color: 0x01050c, opacity: .55, depthWrite: false }));   // shows only the cast shadow
-groundShadow.rotation.x = -Math.PI / 2; groundShadow.position.set(0, GROUND_Y - .004, 0); groundShadow.receiveShadow = true; scene.add(groundShadow);
+/* the exterior view's setting: a concrete apron of 5 m slabs (light grey, speckled, a few faint stains) with a yellow lead-in line under the
+   aircraft, a daylight sky behind, and fog in the horizon's haze colour fading the far apron into it */
+const SKY_BG = (() => { const { cv } = skyCanvas(2048, 1024, false), t = new THREE.CanvasTexture(cv); t.mapping = THREE.EquirectangularReflectionMapping; t.encoding = THREE.sRGBEncoding; return t; })();
+const apron = (() => { const S = 1024, cv = document.createElement('canvas'); cv.width = cv.height = S; const c = cv.getContext('2d');
+  c.fillStyle = '#a7a9a8'; c.fillRect(0, 0, S, S);
+  const im = c.getImageData(0, 0, S, S), d = im.data; for (let i = 0; i < d.length; i += 4) { const n = (Math.random() - .5) * 18; d[i] += n; d[i + 1] += n; d[i + 2] += n; } c.putImageData(im, 0, 0);
+  for (let k = 0; k < 40; k++) { const g = 90 + Math.random() * 40; c.fillStyle = `rgba(${g},${g},${g},.06)`; c.beginPath(); c.ellipse(Math.random() * S, Math.random() * S, 40 + Math.random() * 160, 20 + Math.random() * 90, Math.random() * 3, 0, 7); c.fill(); }
+  c.strokeStyle = 'rgba(60,62,64,.55)'; c.lineWidth = 3; c.strokeRect(1.5, 1.5, S - 3, S - 3);   // the slab joints
+  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(220, 220); t.anisotropy = 8; t.encoding = THREE.sRGBEncoding;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1100, 1100), new THREE.MeshStandardMaterial({ map: t, color: 0xd6d6d4, roughness: .92, metalness: 0, envMapIntensity: .4 }));
+  m.rotation.x = -Math.PI / 2; m.position.y = GROUND_Y - .003; m.receiveShadow = true; scene.add(m); return m; })();
+const leadIn = new THREE.Mesh(new THREE.PlaneGeometry(240, .15), new THREE.MeshStandardMaterial({ color: 0xd9a400, roughness: .8 }));
+leadIn.rotation.x = -Math.PI / 2; leadIn.position.y = GROUND_Y - .001; leadIn.receiveShadow = true; scene.add(leadIn);
+scene.fog = new THREE.Fog(HAZE, 1e5, 2e5);
+lookReady = true; updateShadows();
 
 /* orbit */
 const VIEWS = { overview: [.8, 1.12, 64], front: [-.02, 1.38, 58], side: [-Math.PI / 2, 1.47, 62], top: [.8, .06, 72], belly: [.7, 2.85, 62] };
