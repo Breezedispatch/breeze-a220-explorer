@@ -749,15 +749,14 @@ function paintLoftTexture(st, a0, a1, W = 2048, H = 384) {
     }
   }
   ctx.putImageData(img, 0, 0);
-  /* skin detail: frame joints every 0.61 m, heavier splice joints, stringer lines and a crown-to-belly shading wash */
+  /* skin detail: the circumferential skin-panel joints every 3.05 m, four longitudinal lap joints and a crown-to-belly shading wash. A line
+     at every frame (0.61 m) and ten stringer lines made an even grid that read as computer generated; from outside the frames do not show */
   const X2u = X => (X - xmin) / (xmax - xmin) * (W - 1);
   ctx.lineWidth = Math.max(1, W / 2600);
-  ctx.strokeStyle = 'rgba(0,0,0,.05)';
-  for (let X = Math.ceil(xmin); X <= xmax; X += .61) { const u = X2u(X); ctx.beginPath(); ctx.moveTo(u, 0); ctx.lineTo(u, H); ctx.stroke(); }
-  ctx.strokeStyle = 'rgba(0,0,0,.085)';
+  ctx.strokeStyle = 'rgba(0,0,0,.06)';
   for (let X = Math.ceil(xmin); X <= xmax; X += 3.05) { const u = X2u(X); ctx.beginPath(); ctx.moveTo(u, 0); ctx.lineTo(u, H); ctx.stroke(); }
-  ctx.strokeStyle = 'rgba(0,0,0,.045)';
-  for (let k = 1; k < 10; k++) { const v = H * k / 10; ctx.beginPath(); ctx.moveTo(0, v); ctx.lineTo(W, v); ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(0,0,0,.035)';
+  for (const k of [2.3, 3.9, 6.1, 7.7]) { const v = H * k / 10; ctx.beginPath(); ctx.moveTo(0, v); ctx.lineTo(W, v); ctx.stroke(); }
   { const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, 'rgba(255,255,255,.035)'); g.addColorStop(.5, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(0,0,0,.035)');
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
   const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 16; tex.encoding = THREE.sRGBEncoding; return tex;
@@ -1852,7 +1851,8 @@ function buildEngine(side) {
     const xF = lx(4.00), len = .50;                                                    // cascade box: from the sleeve's forward edge aft 0.5 m, 3-4 cm inside the stowed sleeve
     const tr = new THREE.Mesh(new THREE.CylinderGeometry(1.07, .955, len, 64, 1, true), std(0xffffff, { map: tx, roughness: .7, metalness: .3, emissive: sys.color, emissiveIntensity: 0 }));
     tr.rotation.z = -Math.PI / 2; tr.position.set(xF - len / 2, droop(3.75), 0); tr.userData.skinPart = true; g.add(reg(sys, tr, 'Thrust reverser (cascade)', 1)); }
-  for (const X of [6.368, 5.019, 4.00]) { const sm = new THREE.Mesh(new THREE.TorusGeometry(rAt(X) + .003, .012, 6, 60), std(0x0e2350)); sm.rotation.y = Math.PI / 2; sm.position.set(lx(X), droop(X), 0); g.add(sm); skin.push(sm); }   // seams: inlet / fan cowl (ZS 678.9), fan cowl / reverser (ZS 732.0), sleeve (ZS 772)
+  { const seamM = std(0x020509, { roughness: 1, metalness: 0, envMapIntensity: 0 });   // matte near black: a gap, not a raised ring (it caught the sky and read light grey)
+    for (const X of [6.368, 5.019, 4.00]) { const sm = new THREE.Mesh(new THREE.TorusGeometry(rAt(X) + .0012, .007, 6, 60), seamM); sm.rotation.y = Math.PI / 2; sm.position.set(lx(X), droop(X), 0); g.add(sm); skin.push(sm); } }   // seams: inlet / fan cowl (ZS 678.9), fan cowl / reverser (ZS 732.0), sleeve (ZS 772)
   /* pylon, side profile from TTM ch. 01 Fig. 28: front tip on the fan cowl at ZS 679.1 (X 6.36), top rising to the wing's leading edge
      (the notch at ZS 795.2), then along the wing's lower skin to the aft tip at ZS 910.8 (X 0.48). Behind the nacelle the aft fairing hangs
      about 1.1 m below the wing (front face ZS 806.7, deepest near ZS 830, ZS 880.6 on the rising aft edge), its underside a metal heat shield
@@ -5097,7 +5097,16 @@ function skyCanvas(W, H, envGround) {   // equirectangular: the sky above the ho
       for (const dx of [-W, 0, W]) { const g = c.createRadialGradient(x + dx, y, 0, x + dx, y, rx); g.addColorStop(0, `rgba(255,255,255,${a})`); g.addColorStop(.6, `rgba(250,252,255,${a * .45})`); g.addColorStop(1, 'rgba(250,252,255,0)');
         c.save(); c.translate(x + dx, y); c.scale(1, ry / rx); c.translate(-(x + dx), -y); c.fillStyle = g; c.fillRect(x + dx - rx, y - rx, 2 * rx, 2 * rx); c.restore(); } } }
   if (envGround) { const gr = c.createLinearGradient(0, H / 2, 0, H); gr.addColorStop(0, '#b4b8bb'); gr.addColorStop(.06, '#a2a6a9'); gr.addColorStop(1, '#7a7e82'); c.fillStyle = gr; } else c.fillStyle = HAZE;
-  c.fillRect(0, H / 2, W, H / 2); return { cv, c };
+  c.fillRect(0, H / 2, W, H / 2);
+  /* the far side of the airfield on the horizon, washed out by the haze: a tree line all round, with a few clusters of hangars and terminal
+     blocks (a bare horizon read as an empty plane). Seeded, so the backdrop and the reflection agree */
+  { let seed = 3; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647, hy = H / 2, px = H / 180;   // px: pixels per degree
+    c.fillStyle = '#c3cedb'; c.beginPath(); c.moveTo(0, hy);
+    for (let x = 0; x <= W; x += 2) c.lineTo(x, hy - (.3 + .18 * Math.sin(x / W * 37) + .13 * Math.sin(x / W * 151 + 1.3) + .12 * rnd()) * px);
+    c.lineTo(W, hy); c.closePath(); c.fill();
+    for (let k = 0; k < 7; k++) { let x = rnd() * W; const n = 2 + Math.floor(rnd() * 5); for (let j = 0; j < n; j++) { const w = (.8 + rnd() * 3) * px, h = (.4 + rnd() * .8) * px, g = 190 + Math.floor(rnd() * 14);
+      c.fillStyle = `rgb(${g},${g + 9},${g + 20})`; c.fillRect(x, hy - h, w, h + 1); x += w + rnd() * 1.5 * px; } } }   // faint and low, as hangars a kilometre off look through haze
+  return { cv, c };
 }
 const SKY_ENV = (() => { const W = 1024, H = 512, { cv, c } = skyCanvas(W, H, true);
   const d = new THREE.Vector3(26, 34, -26).normalize(), sx = (Math.atan2(d.z, d.x) / (2 * Math.PI) + .5) * W, sy = (.5 - Math.asin(d.y) / Math.PI) * H;   // the key light's direction
@@ -5146,7 +5155,7 @@ function updateShadows() {
   hemiLight.groundColor.setHex(on ? 0x8d9195 : 0x16223a);   // outside, light bounced off the concrete lifts the undersides
   /* outside, the concrete apron under a daylight sky with haze at the horizon; inside views keep the dark blueprint grid. The fog object
      stays in the scene with a far range indoors, so switching views recompiles no materials */
-  if (lookReady) { scene.background = on ? SKY_BG : null; apron.visible = leadIn.visible = contact.plane.visible = on; grid.visible = shadow.visible = !on; scene.fog.near = on ? 70 : 1e5; scene.fog.far = on ? 520 : 2e5; contact.dirty = on; }
+  if (lookReady) { scene.background = on ? SKY_BG : null; apron.visible = leadIn.visible = wear.visible = contact.plane.visible = on; grid.visible = shadow.visible = !on; scene.fog.near = on ? 70 : 1e5; scene.fog.far = on ? 520 : 2e5; contact.dirty = on; }
   sun.color.setHex(on ? 0xfff1df : 0xffffff);   // outside, sunlight a touch warm against the cool sky fill
   for (const m of shadowCasters) { const mt = m.material, solid = on && mt.visible !== false && mt.opacity > .98 && !mt.isMeshBasicMaterial && !mt.isLineBasicMaterial;
     m.castShadow = solid; m.receiveShadow = solid; }
@@ -5172,6 +5181,23 @@ const apron = (() => { const N = 4, P = 512, S = N * P, cv = document.createElem
   m.rotation.x = -Math.PI / 2; m.position.y = GROUND_Y - .003; m.receiveShadow = true; scene.add(m); return m; })();
 const leadIn = new THREE.Mesh(new THREE.PlaneGeometry(240, .15), new THREE.MeshStandardMaterial({ color: 0xd9a400, roughness: .8 }));
 leadIn.rotation.x = -Math.PI / 2; leadIn.position.y = GROUND_Y - .001; leadIn.receiveShadow = true; scene.add(leadIn);
+/* stand wear: rubber laid down along the wheel paths of the lead-in line (nose and both main gears at their track and wheel spacing),
+   heaviest where aircraft stop, and drip stains under the engines, the main gear and the APU (a spotless stand read as new paving) */
+const wear = (() => { const L = 120, B = 30, W = 2048, H = 512, k = W / L, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
+  let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647, X = x => (x + L / 2) * k, Z = z => (z + B / 2) * k;
+  const tracks = [[0, GEAR.noseSpace, GEAR.noseW, GEAR.noseX], [GEAR.track, GEAR.mainSpace, GEAR.mainW, GEAR.mainX], [-GEAR.track, GEAR.mainSpace, GEAR.mainW, GEAR.mainX]];
+  c.filter = 'blur(1.2px)';
+  for (const [zc, sp, w, xs] of tracks) for (const s of [1, -1]) { const z = zc + s * sp;
+    for (let x = -L / 2; x < L / 2; x += .25) { const a = (.10 + .22 * Math.exp(-(((x - xs) / 16) ** 2))) * (.6 + .4 * Math.sin(x * .7 + z) * Math.sin(x * .23)) * (.7 + .3 * rnd());
+      c.fillStyle = `rgba(22,23,25,${Math.max(0, a)})`; c.fillRect(X(x), Z(z - w * .45), .3 * k, w * .9 * k); } }
+  c.filter = 'none';
+  const stain = (x, z, r, a) => { for (let i = 0; i < 5; i++) { const R = r * k * (.5 + rnd() * .6), cx = X(x + (rnd() - .5) * r), cz = Z(z + (rnd() - .5) * r), g = c.createRadialGradient(cx, cz, 0, cx, cz, R);
+    g.addColorStop(0, `rgba(30,28,26,${a})`); g.addColorStop(1, 'rgba(30,28,26,0)'); c.fillStyle = g; c.fillRect(cx - R, cz - R, 2 * R, 2 * R); } };
+  for (const s of [1, -1]) { stain(4.6, s * ENG.z, 1.1, .16); stain(GEAR.mainX, s * GEAR.track, .6, .1); }
+  stain(-18.6, 0, 1.0, .12);
+  const t = new THREE.CanvasTexture(cv); t.anisotropy = 8; t.encoding = THREE.sRGBEncoding;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(L, B), new THREE.MeshStandardMaterial({ map: t, transparent: true, depthWrite: false, roughness: .8, metalness: 0, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+  m.rotation.x = -Math.PI / 2; m.position.y = GROUND_Y - .0008; m.receiveShadow = true; scene.add(m); return m; })();
 scene.fog = new THREE.Fog(HAZE, 1e5, 2e5);
 /* contact shadow: the soft darkening of the ground under the aircraft from the sky it hides (the sun's shadow is sharp and falls to one side).
    The aircraft is rendered once from the ground looking up, each fragment darker the nearer it is to the ground (within 4.5 m), the image
@@ -5189,7 +5215,7 @@ const contact = (() => { const SIZE = 48, RES = 512, H = 4.5, mk = () => { const
   const quadScene = new THREE.Scene(), quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1); quadScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), blurM));
   const blur = (step, from, to, horiz) => { blurM.uniforms.tDiffuse.value = from.texture; blurM.uniforms.dir.value.set(horiz ? step / RES : 0, horiz ? 0 : step / RES); renderer.setRenderTarget(to); renderer.render(quadScene, quadCam); };
   return { plane, dirty: true, render() {
-    const hide = [apron, leadIn, grid, shadow, plane].filter(o => o.visible), bg = scene.background, clr = renderer.getClearAlpha(), cc = renderer.getClearColor(new THREE.Color());
+    const hide = [apron, leadIn, wear, grid, shadow, plane].filter(o => o.visible), bg = scene.background, clr = renderer.getClearAlpha(), cc = renderer.getClearColor(new THREE.Color());
     hide.forEach(o => { o.visible = false; }); scene.background = null; scene.overrideMaterial = depthM; renderer.setClearColor(0x000000, 0);
     renderer.setRenderTarget(rtA); renderer.clear(); renderer.render(scene, cam); scene.overrideMaterial = null;
     for (const s of [5, 3, 1.5]) { blur(s, rtA, rtB, true); blur(s, rtB, rtA, false); }
@@ -5236,7 +5262,7 @@ const ao = (() => { const KS = 16, kernel = [];
     const resized = nt.width !== W || nt.height !== H; if (resized) { nt.setSize(W, H); at.setSize(W, H); bt.setSize(W, H); blurM.uniforms.texel.value.set(1 / W, 1 / H); }
     const moved = resized || !primed || !lastView.equals(camera.matrixWorldInverse) || !lastProj.equals(camera.projectionMatrix) || !!caName;
     if (moved) { lastView.copy(camera.matrixWorldInverse); lastProj.copy(camera.projectionMatrix); primed = true;
-      const hide = [apron, leadIn, contact.plane, grid, shadow].filter(o => o.visible), bg = scene.background, fog = scene.fog.near;
+      const hide = [apron, leadIn, wear, contact.plane, grid, shadow].filter(o => o.visible), bg = scene.background, fog = scene.fog.near;
       hide.forEach(o => { o.visible = false; }); scene.background = null; scene.overrideMaterial = normM; const cc = renderer.getClearColor(new THREE.Color()), ca = renderer.getClearAlpha(); renderer.setClearColor(0x000000, 0);
       renderer.setRenderTarget(nt); renderer.clear(); renderer.render(scene, camera); scene.overrideMaterial = null; scene.background = bg; hide.forEach(o => { o.visible = true; }); renderer.setClearColor(cc, ca);
       aoM.uniforms.proj.value.copy(camera.projectionMatrix); aoM.uniforms.invProj.value.copy(camera.projectionMatrixInverse); pass(aoM, at); pass(blurM, bt);
