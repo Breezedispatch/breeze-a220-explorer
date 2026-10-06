@@ -1195,13 +1195,13 @@ function hullRing(st, cornerR, segs) {
   pts.push([yt, -W]); return pts;
 }
 /* the wing's lower surface height at (x, z) in the build frame (either wing), or null off the wing: the loft of buildWing, with its dihedral
-   and drop (rotation 0.088 about x, 0.75 m down) */
+   and drop (rotation WING.dih about x, WING.y0 down) */
 function wingLowerY(x, z) {
-  const th = .088, c = Math.cos(th), s = Math.sin(th), az = Math.abs(z); let v = az, y = null;
+  const th = WING.dih, c = Math.cos(th), s = Math.sin(th), az = Math.abs(z); let v = az, y = null;
   for (let it = 0; it < 3; it++) {
     const zAt = Math.max(v, 1.755), L = WING.le(zAt), C = L - WING.te(zAt), u = (L - x) / C; if (u < 0 || u > 1) return null;
-    const t = v >= 2.217 ? WING.tc(v) : .135 + .02 * (2.217 - v) / .87, dy = v >= 2.217 ? 0 : -.05 * (2.217 - v) / .87;
-    const yl = dy + C * (4 * .012 * u * (1 - u) - t * TH(u) * .5); v = (az + yl * s) / c; y = yl * c + v * s - .75; }
+    const t = WING.tc(Math.max(v, 2.217)), dy = v >= 2.217 ? 0 : -.05 * (2.217 - v) / .87;
+    const yl = dy + C * (4 * .012 * u * (1 - u) - t * TH(u) * .5); v = (az + yl * s) / c; y = yl * c + v * s + WING.y0; }
   return y;
 }
 
@@ -1284,11 +1284,13 @@ function buildFuselage() {
   /* ACP Fig. 8 cargo side view (FS-scaled; Fig. 2 and the CFRC agree within 0.15 m): the bottom rejoins the keel by X -3.3 and the side tip
      closes at X -4.1, so the aft cargo door (from X -5.5) sits on plain fuselage 1.4 m behind it. The first model ran it to X -8.2, 4 m too
      long, and its bulge covered the lower half of that door. */
-  const HULL_W = [[8.4, .12], [7.6, 1.0], [6.8, 1.40], [6.15, 1.60], [5.6, 1.78], [4.6, 1.84], [0.0, 1.84], [-0.4, 1.74], [-1.0, 1.60], [-2.2, 1.55], [-3.4, 1.40], [-3.9, 1.12], [-4.2, .90], [-4.5, .60]];
+  const HULL_W = [[8.4, .12], [7.6, 1.0], [6.8, 1.40], [6.15, 1.60], [5.6, 1.78], [4.6, 1.84], [0.0, 1.84], [-0.25, 1.80], [-0.55, 1.60], [-1.0, 1.57], [-2.2, 1.54], [-3.4, 1.40], [-3.9, 1.12], [-4.2, .90], [-4.5, .60]];   // within the fuselage's width just behind the wing's trailing edge (X -0.53), where nothing above hides its top edge
   const HULL_YB = [[8.4, -1.78], [7.6, -1.99], [6.8, -2.12], [5.1, -2.26], [2.8, -2.33], [1.0, -2.31], [-0.5, -2.25], [-1.7, -2.07], [-2.6, -1.95], [-3.3, -1.86], [-3.8, -1.74], [-4.2, -1.62], [-4.5, -1.50]];   // ends buried inside the fuselage
   /* top edge of the fairing sides: under the wing it runs up into the wing box (lower surface -0.67 to -0.85 at the root); elsewhere it stops
      where the fuselage is at least as wide as the fairing, so the edge is always buried */
-  const hullTop = (x, W) => (x <= 6.0 && x >= -.30) ? -.66 : Math.min(-.5, Math.max(-1.0, -1.861 * Math.sqrt(Math.max(0, 1 - ((W + .03) / 1.75) ** 2))));
+  const hullTop = (x, W) => { if (x <= 6.0 && x >= -.30) return -.66;
+    const wl = x > -.6 ? wingLowerY(x, W) : null; if (wl != null) return wl + .015;   // the last of the trailing edge: just inside the thin wing (at -0.66 it stood above it)
+    return Math.min(-.5, Math.max(-1.0, -1.861 * Math.sqrt(Math.max(0, 1 - ((W + .03) / 1.75) ** 2)))); };
   /* stations every 0.2 m, closing to 0.1 m through the chamfer round the main wheel bins */
   const hxs = []; for (let x = 8.4; x > 2.05; x = +(x - .2).toFixed(3)) hxs.push(x); for (let x = 2.0; x > -.75; x = +(x - .1).toFixed(3)) hxs.push(x); for (let x = -.8; x >= -4.5 - 1e-6; x = +(x - .2).toFixed(3)) hxs.push(x);
   const hst = hxs.map(x => { const W = splinePts(HULL_W, x); return { x, W, yb: splinePts(HULL_YB, x), yt: hullTop(x, W) }; });
@@ -1561,7 +1563,7 @@ function buildFuselage() {
   /* TTM ch. 33 Fig. 10: landing lights in the wing root leading edge, taxi lights at the wing roots, wing inspection lights on the
      fuselage sides ahead of the wing, logo lights on the stabilizer tips, tail nav and strobe on the tailcone, nose landing and taxi lights on the nose gear */
   const E2 = sysById.elec, lamp = (x, y, z, l, c = 0xfff4d0, r = .07) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 10), new THREE.MeshBasicMaterial({ color: c })); m.position.set(x, y, z); m.userData.skinPart = true; aircraft.add(reg(E2, m, l, 1)); };
-  for (const sd of [1, -1]) { lamp(WING.le(2.4) - .05, -.55, sd * 2.4, 'Landing light (wing root leading edge)'); lamp(8.6, .55, sd * 1.72, 'Wing inspection light', 0xfff4d0, .05); lamp(-17.4, 1.245, sd * 6.05, 'Logo light (stabilizer tip)', 0xfff4d0, .04);   /* sits on the stabilizer upper surface (it floated 7 cm above it) */ }
+  for (const sd of [1, -1]) { lamp(WING.le(2.4) - .05, WING.y0 + 2.4 * Math.sin(WING.dih) - .01, sd * 2.4, 'Landing light (wing root leading edge)'); lamp(8.6, .55, sd * 1.72, 'Wing inspection light', 0xfff4d0, .05); lamp(-17.4, 1.245, sd * 6.05, 'Logo light (stabilizer tip)', 0xfff4d0, .04);   /* sits on the stabilizer upper surface (it floated 7 cm above it) */ }
   /* wide taxi lights on the forward wing-to-body fairing (FCOM exterior lights): the round lens in a grey five-sided panel just ahead of and
      outboard of each main wheel bin in the underside photo (x 2.06, 1.35 m off the centreline) */
   for (const sd of [1, -1]) { const x = 2.06, z = sd * 1.35, yb = splinePts(FUS.HULL_YB, x), r = .60, W = splinePts(FUS.HULL_W, x), dz = Math.max(0, 1.35 - (W - r));
@@ -1588,14 +1590,18 @@ function buildFuselage() {
    0.10-0.12 m too far forward. Concave root fillet from X 6.307 at the fuselage side to the straight 29.5 deg leading edge at BL 2.217;
    trailing edge almost unswept to the kink at BL 6.19, 18.7 deg over the outboard flap, 21.4 deg from BL 12.25 (aileron) to the tip.
    Thickness from the ACP front view: about 13.5% at the root, 11% at the kink, 10% at the tip (the trace thinned it to 6.8%). */
+/* y0, dih: the wing's chord plane at the centreline and its dihedral. Set from the overwing exit (TTM ch. 01 Fig. 23 side view and N217BZ:
+   the wing-to-body fairing's seam runs about 0.1 m under the exit, the wing below it) and the TTM front view, which draws the root lower and
+   the dihedral steeper than y0 -0.75 / 0.088 did, while the tip keeps its ACP height (230.4-234.3 in). With the wing at full thickness the
+   old setting put the root's upper surface 2 cm above the exit sill. Lower still runs the gear's trunnion pins (y -0.31) out of the wing. */
 const WING = {
-  fus: 1.75, span: 17.54,
+  fus: 1.75, span: 17.54, y0: -.87, dih: .0949,
   le: z => z < 2.217 ? 5.321 + .986 * Math.min(1, (2.217 - z) / .462) ** 2 : (z <= 16 ? 5.321 - .5662 * (z - 2.217) : -2.483 - 1.48 * (z - 16)),
   te: z => z <= 6.192 ? -.526 - .0133 * (z - 1.816) : z <= 12.25 ? -.584 - .338 * (z - 6.192) : (z <= 16 ? -2.631 - .3925 * (z - 12.25) : -4.103 - .65 * (z - 16)),
   tc: z => z <= 2.5 ? .135 : z <= 6.19 ? .135 - .023 * (z - 2.5) / 3.69 : .112 - .012 * (Math.min(z, 16) - 6.19) / 9.81
 };
 /* winglet: flat run past the wing tip, blend radius, cant above the wing plane (rad) and straight length; buildWing and wingletTex share it */
-const WINGLET = { F: .20, R: .40, TH: .78, LEN: 1.74 };
+const WINGLET = { F: .205, R: .40, TH: .7725, LEN: 1.752 };   // TH + WING.dih = 49.7 deg above level; tip at BL 17.53, 232 in up
 /* nacelle: ACP K puts the inlet at X 7.18 (the DXF trace had 7.29, the same forward shift as the wing); length and centre BL 5.44 unchanged */
 const ENG = { x: 7.18, xr: 3.21, z: 5.44, y: -1.70, r: 1.205 };   // nacelle diameter 2.41 m (TTM ch. 71 leading particulars)   // y set for the 22.9-25.9 in nacelle ground clearance
 /* Ramp Servicing Publication BD500-3AB48-11800-00, Tables 3 and 5 (A220-300): W 133.4 in nose to nose gear, Z 602.6 in (15.306 m)
@@ -1643,12 +1649,13 @@ function buildWing() {
      edge it starts at the slat's trailing-edge line (the slats form the nose there), so no two surfaces lie on top of each other */
   const teCutX = z => (z > IFL[0] && z < IFL[1]) ? -.05 : (z > OFL[0] && z < OFL[1]) ? mfsTE(z) + .02 : (z > AIL[0] && z < AIL[1]) ? ailHinge(z) + .03 : null;
   const inSlat = z => SLATS.some(([a, b]) => z > a && z < b);
-  /* the root runs 0.4 m into the body and is thickened and lowered toward it (the blend under the wing-to-body fairing) */
-  const rootT = z => z >= 2.217 ? tc(z) : .135 + .02 * (2.217 - z) / .87, rootDy = z => z >= 2.217 ? 0 : -.05 * (2.217 - z) / .87;
+  /* the root runs 0.4 m into the body and is lowered toward it (the blend under the wing-to-body fairing). It was also thickened, which only
+     made up for the half-thick aerofoils; at full thickness it stood the root's top 3.6 cm higher, under the overwing exit */
+  const rootT = z => tc(Math.max(z, 2.217)), rootDy = z => z >= 2.217 ? 0 : -.05 * (2.217 - z) / .87;
   const wSec = (z, zAt = z) => { const L = le(zAt), C = L - te(zAt), cx = teCutX(z); return { v: z, le: L, chord: C, t: rootT(z), dy: rootDy(z), uc: cx == null ? null : (L - cx) / C, uf: inSlat(z) ? (L - slatTE(z)) / C + .004 : null }; };
   /* the stub inside the body keeps the root's lower surface (it fills the fuselage's curve under the wing) but its top drops just under
      the cabin floor (y -0.5): the wing box runs under the floor, and at full thickness the stub stood 0.4 m above it in the cabin view */
-  { const s = wSec(1.35, 1.755), cam = s.chord * .048 * .21, bot = s.dy + cam - .5 * s.t * s.chord, top = (-.52 + .75 - 1.35 * Math.sin(.088)) / Math.cos(.088);
+  { const s = wSec(1.35, 1.755), cam = s.chord * .048 * .21, bot = s.dy + cam - .5 * s.t * s.chord, top = (-.52 - WING.y0 - 1.35 * Math.sin(WING.dih)) / Math.cos(WING.dih);
     sec.push({ ...s, t: (top - bot) / s.chord, dy: (top + bot) / 2 - cam }); }
   for (const z of [1.755, 1.84, 1.86, 1.97, 1.99, 2.1, 2.217, 2.6, 3.2, 4.0, 4.78, 4.80, 5.2, 5.44, 5.78, 5.80, 6.192, 7.0, 7.9, 8.94, 8.96, 10.0, 11.0, 12.12, 12.14, 12.24, 12.26, 12.29, 12.31, 12.32, 12.34, 13.2, 14.2, 15.27, 15.29, 15.6, 15.98, 16]) sec.push(wSec(z));
   const wing = new THREE.Mesh(wingLoft(sec, (x, y, v) => [x, y, -v]), paint({ color: LIVERY.white, roughness: .45 }));
@@ -1660,7 +1667,7 @@ function buildWing() {
      16.2. The tip reaches BL 17.54 (35.1 m span, Fig. 23) with its top 5.9 m above the ground (ACP 230.4-234.3 in). The old winglet stood
      at 33 deg from vertical, 0.55 m short of the span and 0.15 m too tall. Plan from TTM Fig. 29 against the buttock line: the leading edge
      kinks to a 58 deg sweep at BL 16.25, the trailing edge to 39 deg at BL 16.63; tip chord 0.42 m, trailing edge tip X -5.08 */
-  const { F: WF, R: WR, TH: WTH, LEN: WLEN } = WINGLET, WS = WF + WR * WTH + WLEN, DI = .088;   // DI: the wing group's dihedral rotation, set below
+  const { F: WF, R: WR, TH: WTH, LEN: WLEN } = WINGLET, WS = WF + WR * WTH + WLEN, DI = WING.dih;   // DI: the wing group's dihedral rotation
   const wlPath = s => { if (s <= WF) return { o: s, h: 0, th: 0 }; s -= WF; if (s <= WR * WTH) { const th = s / WR; return { o: WF + WR * Math.sin(th), h: WR * (1 - Math.cos(th)), th }; } const d = s - WR * WTH; return { o: WF + WR * Math.sin(WTH) + d * Math.cos(WTH), h: WR * (1 - Math.cos(WTH)) + d * Math.sin(WTH), th: WTH }; };
   const wlBL = p => (16 + p.o) * Math.cos(DI) - p.h * Math.sin(DI);   // a winglet chord point's buttock line once the dihedral is applied
   const smin = (a, b, k) => { const q = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - q * q * k / 4; };   // the aft-most of two lines, filleted over k
@@ -1750,7 +1757,7 @@ function buildWing() {
   g.add(reg(sysById.ice, box(.35, .3, .3, sysMat(sysById.ice), le(6.2) - .55, -.05, -6.2), 'Wing anti-ice valve'));
   g.add(reg(sysById.ice, new THREE.Mesh(tube([[le(6.2) - .5, -.02, -6.2], [le(9.3) - .3, 0, -9.3], [le(12.5) - .26, 0, -12.5], [le(15.6) - .22, 0, -15.6]], .05), sysMat(sysById.ice)), 'Wing anti-ice duct (piccolo tube in the outboard slats)'));
 
-  g.position.set(0, -.75, 0); g.rotation.x = DI;   // dihedral set from the wing tip clearance (230.4-234.3 in); wingLowerY assumes the same 0.088
+  g.position.set(0, WING.y0, 0); g.rotation.x = DI;   // see WING.y0 / WING.dih
   return g;
 }
 
@@ -1998,8 +2005,8 @@ function buildGear() {
     const side = sd > 0 ? 'left' : 'right', T = T0.clone().setZ(sd * G.track), A = A0.clone().setZ(sd * G.track);
     const on = (t, dx = 0, dz = 0) => T.clone().addScaledVector(axU, t).add(V(dx, 0, sd * dz));         // point on the strut; dz positive = outboard
     // shock strut: trunnion cross-tube, main fitting (upper cylinder), gland nut, chromed sliding tube, axle yoke and axle
-    put(cyl(.085, .085, .66, strutM(), T.x, T.y, T.z, 'x', 16), 'Main gear', side);
-    for (const dx of [.30, -.30]) put(cyl(.11, .11, .09, strutM(), T.x + dx, T.y, T.z, 'x', 16), 'Main gear', side);   // forward and aft trunnion pin bosses (ACP gear isometric: a Y-yoke on two pins)
+    put(cyl(.075, .075, .56, strutM(), T.x, T.y, T.z, 'x', 16), 'Main gear', side);
+    for (const dx of [.25, -.25]) put(cyl(.09, .09, .08, strutM(), T.x + dx, T.y, T.z, 'x', 16), 'Main gear', side);   // forward and aft trunnion pin bosses (ACP gear isometric: a Y-yoke on two pins), inside the wing: at 70% chord its skin is only 8 cm above the pin axis
     { const y = .87 + .008325 * .985 + GROUND_Y; put(new THREE.Mesh(rbox(.06, .08, .05, .01), darkM()), 'Grounding point', side).position.copy(on((y - T.y) / axU.y, .06, -.165)); }   // ACP Table 9: MLG grounding lug 0.87 m up, on the inboard-forward face
     put(rodT(on(.02), on(1.72), .14, .118, strutM()), 'Main gear', side);
     put(rod(on(1.66), on(1.75), .135, strutM(), 20), 'Main gear', side);
@@ -2307,7 +2314,7 @@ function buildGear() {
 }
 
 /* a point inside the wing at span z (positive outboard) and chord fraction f (0 = LE), in world coordinates */
-function wingPt(z, f, side, dy = 0) { const le = WING.le(z), te = WING.te(z), x = le - f * (le - te); return [x, -.75 + Math.sin(.07) * z + dy, side * z]; }
+function wingPt(z, f, side, dy = 0) { const le = WING.le(z), te = WING.te(z), x = le - f * (le - te); return [x, WING.y0 + Math.sin(WING.dih) * z + dy, side * z]; }   // on the chord plane
 function buildInternalSystems() {
   const H = sysById.hyd, E = sysById.elec, P = sysById.pneu, F = sysById.fuel, A = sysById.ecs, X = sysById.oxy, FR = sysById.fire, S = sysById.fcs, N = sysById.nav, I = sysById.ind, CM = sysById.comm, AF = sysById.afcs, AP = sysById.apu, CG = sysById.cargo;
   const MG = GEAR.mainX, EZ = ENG.z, EY = ENG.y, EX = (ENG.x + ENG.xr) / 2;
