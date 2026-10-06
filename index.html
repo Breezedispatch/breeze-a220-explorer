@@ -1586,11 +1586,13 @@ function buildFuselage() {
    trailing edge almost unswept to the kink at BL 6.19, 18.7 deg over the outboard flap, 21.4 deg from BL 12.25 (aileron) to the tip.
    Thickness from the ACP front view: about 13.5% at the root, 11% at the kink, 10% at the tip (the trace thinned it to 6.8%). */
 const WING = {
-  fus: 1.75, span: 17.49,
+  fus: 1.75, span: 17.54,
   le: z => z < 2.217 ? 5.321 + .986 * Math.min(1, (2.217 - z) / .462) ** 2 : (z <= 16 ? 5.321 - .5662 * (z - 2.217) : -2.483 - 1.48 * (z - 16)),
   te: z => z <= 6.192 ? -.526 - .0133 * (z - 1.816) : z <= 12.25 ? -.584 - .338 * (z - 6.192) : (z <= 16 ? -2.631 - .3925 * (z - 12.25) : -4.103 - .65 * (z - 16)),
   tc: z => z <= 2.5 ? .135 : z <= 6.19 ? .135 - .023 * (z - 2.5) / 3.69 : .112 - .012 * (Math.min(z, 16) - 6.19) / 9.81
 };
+/* winglet: flat run past the wing tip, blend radius, cant above the wing plane (rad) and straight length; buildWing and wingletTex share it */
+const WINGLET = { F: .20, R: .40, TH: .78, LEN: 1.74 };
 /* nacelle: ACP K puts the inlet at X 7.18 (the DXF trace had 7.29, the same forward shift as the wing); length and centre BL 5.44 unchanged */
 const ENG = { x: 7.18, xr: 3.21, z: 5.44, y: -1.70, r: 1.205 };   // nacelle diameter 2.41 m (TTM ch. 71 leading particulars)   // y set for the 22.9-25.9 in nacelle ground clearance
 /* Ramp Servicing Publication BD500-3AB48-11800-00, Tables 3 and 5 (A220-300): W 133.4 in nose to nose gear, Z 602.6 in (15.306 m)
@@ -1611,14 +1613,14 @@ GEAR.mainY = GROUND_Y + GEAR.mainR - .02 + .008325 * GEAR.mainX;     // axle hei
 GEAR.noseY = GROUND_Y + GEAR.noseR - .013 + .008325 * GEAR.noseX;
 
 /* winglet paint: navy with the Breeze check on both faces, mid-span, long arm toward the tip and aft.
-   uv: u runs X -4.83 -> -2.38; v 0-0.5 = inboard face root->tip, 0.5-1 = outboard face root->tip (winglet height v 0 -> 1.49).
+   uv: u runs X -5.075 -> -2.483; v 0-0.5 = inboard face root->tip, 0.5-1 = outboard face root->tip (v 0 -> 1 along the winglet's 2.25 m path).
    inMirror / outMirror flip the drawing per face so the check reads correctly (the left wing is a mirrored copy, so it takes the opposite flags). */
 function wingletTex(inMirror, outMirror) {
   const Wc = 1024, Hc = 1024, cv = document.createElement('canvas'); cv.width = Wc; cv.height = Hc; const c = cv.getContext('2d');
   c.fillStyle = LIVERY.navy; c.fillRect(0, 0, Wc, Hc);
-  const X0 = -5.07, X1 = -2.483, VMAX = 2.165, wM = .56, span = 1.2;   // the ACP winglet: X range of its sections, length along its span (blend + straight)
+  const X0 = -5.075, X1 = -2.483, VMAX = WINGLET.F + WINGLET.R * WINGLET.TH + WINGLET.LEN, wM = .56, span = 1.2;   // X range of the winglet's sections, its length along its span (flat + blend + straight)
   const sx = wM / (X1 - X0) * Wc, sy = (wM / span / VMAX) * .5 * Hc;
-  const px = (-3.85 - X0) / (X1 - X0) * Wc, vPoint = .95 / VMAX;
+  const px = (-3.85 - X0) / (X1 - X0) * Wc, vPoint = 1.0 / VMAX;
   drawLogoCheck(c, px, Hc * (1 - (0 + vPoint * .5)), sx, sy, inMirror, LIVERY.pale);
   drawLogoCheck(c, px, Hc * (1 - (.5 + vPoint * .5)), sx, sy, outMirror, LIVERY.pale);   // the winglet check in the livery's light blue (N224BZ)
   const t = new THREE.CanvasTexture(cv); t.anisotropy = 8; t.encoding = THREE.sRGBEncoding; return t;   // sRGB: without it the navy rendered as a washed-out light blue
@@ -1646,28 +1648,33 @@ function buildWing() {
   const wing = new THREE.Mesh(wingLoft(sec, (x, y, v) => [x, y, -v]), paint({ color: LIVERY.white, roughness: .45 }));
   g.add(wing); skin.push(wing);
 
-  /* blended canted winglet (ACP p540 plan, p70 front view, table L and F): the root section continues the wing tip (chord 1.63, thickness
-     vertical, so no crack under the tip), turns up through a 0.55 m blend radius to 52 deg above level (38 deg from vertical), then runs
-     straight to the tip 1.47 m outboard and about 1.5 m up (top about 5.9 m above the ground); tip chord 0.46 m, trailing edge tip X -5.07 */
-  const WR = .55, WTH = .9, WLEN = 1.67, WS = WR * WTH + WLEN;
-  const wlPath = s => { if (s <= WR * WTH) { const th = s / WR; return { o: WR * Math.sin(th), h: WR * (1 - Math.cos(th)), th }; } const d = s - WR * WTH; return { o: WR * Math.sin(WTH) + d * Math.cos(WTH), h: WR * (1 - Math.cos(WTH)) + d * Math.sin(WTH), th: WTH }; };
-  const wlLE = bl => bl <= 16.67 ? le(16) - (3.38 + le(16)) * Math.max(0, (bl - 16) / .67) ** 1.4 : -3.38 - 1.23 * (bl - 16.67) / .79;
-  const wlTE = bl => bl <= 16.6 ? te(16) - (4.43 + te(16)) * Math.min(1, Math.max(0, bl - 16) / .2) : -4.43 - .64 * (bl - 16.6) / .85;   // with the small tip-fairing bump
-  const wlSecs = Array.from({ length: 11 }, (_, i) => { const s = WS * i / 10, bl = 16 + wlPath(s).o, L = wlLE(bl); return { v: s, le: L, chord: L - wlTE(bl), t: .10 - .02 * i / 10 }; });
+  /* blended canted winglet: the root section continues the wing tip (chord 1.63, thickness vertical, so no crack under the tip), runs flat
+     0.2 m past it, turns up through a 0.4 m blend radius to 44.7 deg above the wing plane, then runs straight to the tip. With the wing's
+     dihedral that is 49.7 deg above level, 40 deg from vertical, as the TTM ch. 01 Fig. 23 front view draws it; the turn-up starts near BL
+     16.2. The tip reaches BL 17.54 (35.1 m span, Fig. 23) with its top 5.9 m above the ground (ACP 230.4-234.3 in). The old winglet stood
+     at 33 deg from vertical, 0.55 m short of the span and 0.15 m too tall. Plan from TTM Fig. 29 against the buttock line: the leading edge
+     kinks to a 58 deg sweep at BL 16.25, the trailing edge to 39 deg at BL 16.63; tip chord 0.42 m, trailing edge tip X -5.08 */
+  const { F: WF, R: WR, TH: WTH, LEN: WLEN } = WINGLET, WS = WF + WR * WTH + WLEN, DI = .088;   // DI: the wing group's dihedral rotation, set below
+  const wlPath = s => { if (s <= WF) return { o: s, h: 0, th: 0 }; s -= WF; if (s <= WR * WTH) { const th = s / WR; return { o: WF + WR * Math.sin(th), h: WR * (1 - Math.cos(th)), th }; } const d = s - WR * WTH; return { o: WF + WR * Math.sin(WTH) + d * Math.cos(WTH), h: WR * (1 - Math.cos(WTH)) + d * Math.sin(WTH), th: WTH }; };
+  const wlBL = p => (16 + p.o) * Math.cos(DI) - p.h * Math.sin(DI);   // a winglet chord point's buttock line once the dihedral is applied
+  const smin = (a, b, k) => { const q = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - q * q * k / 4; };   // the aft-most of two lines, filleted over k
+  const wlTE = b => smin(te(16) - .357 * (b - 15.938), -4.35 - .805 * (b - 16.63), .12);
+  const wlLE = b => Math.max(smin(5.321 - .5662 * (b / Math.cos(DI) - 2.217), -3.28 - 1.598 * (b - 16.63), .15), wlTE(b) + .42);
+  const wlSecs = Array.from({ length: 21 }, (_, i) => { const s = WS * i / 20, b = wlBL(wlPath(s)), L = wlLE(b); return { v: s, le: L, chord: L - wlTE(b), t: .10 - .02 * i / 20 }; });
   const wl = new THREE.Mesh(wingLoft(wlSecs, (x, y, s) => { const p = wlPath(s); return [x, p.h + Math.cos(p.th) * y, -(16 + p.o) + Math.sin(p.th) * y]; }), paint({ map: wingletTex(true, false) }));   // right wing: check reads correctly on both faces (the left wing gets its own, below)
   wl.userData.winglet = true; g.add(wl); skin.push(wl);
   /* wingtip lights: in the tip fairing at the winglet root leading edge (N211BZ: the green unit sits at the base of the winglet, not at its
      tip); the forward navigation light plus a white anti-collision strobe beside it. The left copy is recoloured red in buildAircraft. */
   const nav = new THREE.Mesh(new THREE.SphereGeometry(.05, 14, 10), new THREE.MeshBasicMaterial({ color: 0x22ff55 }));
-  nav.scale.set(1.5, .8, .8); nav.position.set(-2.50, .06, -16.09); nav.name = 'navlight'; g.add(nav);
+  nav.scale.set(1.5, .8, .8); nav.position.set(-2.52, .02, -16.09); nav.name = 'navlight'; g.add(nav);   // on the flat tip's leading edge (X -2.53 there)
   const strobe = new THREE.Mesh(new THREE.SphereGeometry(.042, 14, 10), new THREE.MeshBasicMaterial({ color: 0xf6f8ff }));
-  strobe.scale.set(1.4, .8, .8); strobe.position.set(-2.57, .13, -16.15); strobe.name = 'strobe'; g.add(strobe);
+  strobe.scale.set(1.4, .8, .8); strobe.position.set(-2.57, .025, -16.19); strobe.name = 'strobe'; g.add(strobe);
   /* static dischargers: three along the aileron trailing edge and three on the winglet trailing edge (N211BZ winglet close-up) */
   const wickM = std(0x1b1e23, { roughness: .6, transparent: false }), wickG = new THREE.CylinderGeometry(.0035, .005, .13, 6).rotateZ(Math.PI / 2).translate(-.065, 0, 0);   // the aileron's own three are added to it, below, so they move with it
   { const wm = wickM, wg = wickG;
     /* winglet: take the trailing edge straight from the winglet mesh (the aft-most vertex at each height), so the wicks sit on it exactly */
     const wp = wl.geometry.attributes.position, wlTEAt = h => { let b = null; for (let i = 0; i < wp.count; i++) { const y = wp.getY(i); if (Math.abs(y - h) < .06 && (!b || wp.getX(i) < b.x)) b = { x: wp.getX(i), y, z: wp.getZ(i) }; } return b; };
-    for (const i of [4, 6, 8]) { const p = wlTEAt(wlPath(WS * i / 10).h); if (p) { const w = new THREE.Mesh(wg, wm); w.position.set(p.x + .01, p.y, p.z); g.add(w); } }   // at the winglet's own sections, where its mesh has vertices
+    for (const i of [8, 12, 16]) { const p = wlTEAt(wlPath(WS * i / 20).h); if (p) { const w = new THREE.Mesh(wg, wm); w.position.set(p.x + .01, p.y, p.z); g.add(w); } }   // at the winglet's own sections, where its mesh has vertices
     { const w = new THREE.Mesh(wg, wm); w.position.set(te(15.65), 0, -15.65); g.add(w); } }   // and one on the fixed tip trailing edge outboard of the aileron
 
   /* flap track fairings: ACP p540 stations BL 4.79 / 7.60 / 10.42, their tips 0.77 / 0.76 / 0.67 m aft of the trailing edge. Each canoe is split
@@ -1733,7 +1740,7 @@ function buildWing() {
   g.add(reg(sysById.ice, box(.35, .3, .3, sysMat(sysById.ice), le(6.2) - .55, -.05, -6.2), 'Wing anti-ice valve'));
   g.add(reg(sysById.ice, new THREE.Mesh(tube([[le(6.2) - .5, -.02, -6.2], [le(9.3) - .3, 0, -9.3], [le(12.5) - .26, 0, -12.5], [le(15.6) - .22, 0, -15.6]], .05), sysMat(sysById.ice)), 'Wing anti-ice duct (piccolo tube in the outboard slats)'));
 
-  g.position.set(0, -.75, 0); g.rotation.x = .088;   // dihedral set from the wing tip clearance (230.4-234.3 in)
+  g.position.set(0, -.75, 0); g.rotation.x = DI;   // dihedral set from the wing tip clearance (230.4-234.3 in); wingLowerY assumes the same 0.088
   return g;
 }
 
