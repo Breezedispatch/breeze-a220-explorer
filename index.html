@@ -1870,7 +1870,7 @@ function gearPose(eL, eR, eN, dN) {                  // eL/eR/eN: main left / ma
   for (const f of GEAR_RIG.flaps) {                  // main gear lower doors: open (standing against the channel's aft wall) except gear up; the lower
     // leg crosses the channel until e 0.92, so they shut over its last few degrees. Shut gear down they blocked the way the leg folds in.
     const e = f.leg === 'left' ? eL : eR, o = 1 - smooth01((e - .93) / .05);
-    f.g.quaternion.setFromAxisAngle(f.axis, f.sign * o * Math.PI / 2); }
+    f.g.quaternion.setFromAxisAngle(f.axis, f.sign * o * (Math.PI / 2 + .3)); }   // a little past square: tucked behind the channel's aft wall (square to it, it showed as blue slivers)
 }
 function buildGear() {
   /* A220-300 landing gear (Liebherr-Aerospace). Stations, track and spacings: RSP Tables 3 and 5; tyres: EASA TCDS; shapes from photographs
@@ -1959,27 +1959,35 @@ function buildGear() {
     /* ---- the wheel bin: a cylinder round the retracted axle, from its roof above the inner wheel down to its rim on the chamfer (the same
        cylinder is cut out of the fairing skin in buildFuselage), with the black brush seal round the opening. On its outboard side it opens
        into the leg's channel: bin and slot are one keyhole-shaped recess (TTM ch. 01 Fig. 26), the seal stopping at the channel's walls ---- */
-    { const b = mainBin(sd), e1 = V(1, 0, 0), e2 = new THREE.Vector3().crossVectors(b.dir, e1).normalize(), rim = b.face + GEAR_FAIR.proud + .004;
-      const frB = gearFrame(sd), inKey = (p, m) => { const g = frB.fromW(p), bd = gearBand(frB, g.s, true); return g.s > 0 && g.x > bd.a - .05 - m && g.x < bd.f + .01 + m; };   // in the channel (walls at bd.a - 0.05, bd.f + 0.01)
+    { const b = mainBin(sd), e1 = V(1, 0, 0), e2 = new THREE.Vector3().crossVectors(b.dir, e1).normalize();
+      /* worked in the gear frame: angle f round the retracted axle in its (x, s) plane, depth d in from the chamfer. The channel opens across
+         f between the angles where the cylinder meets the slot's aft and forward edges, which are the channel's walls */
+      const frB = gearFrame(sd), x0 = G.mainX, R = b.R, F = .12, dF = b.face + GEAR_FAIR.proud - (b.top + F);   // dF: depth where the fillet into the roof starts
+      const edgeX = (s, k) => { const bd = gearBand(frB, s, true); return k ? bd.f : bd.a; };
+      const meet = k => { let lo = k ? 0 : Math.PI / 2, hi = k ? Math.PI / 2 : Math.PI;                          // forward wall in the first quadrant, aft wall in the second
+        const g = f => x0 + R * Math.cos(f) - edgeX(R * Math.sin(f), k), g0 = g(lo) > 0; for (let it = 0; it < 40; it++) { const m = (lo + hi) / 2; if ((g(m) > 0) === g0) lo = m; else hi = m; } return (lo + hi) / 2; };
+      const fF = meet(1), fA = meet(0), onBin = (f, d) => { const p = frB.toW(x0 + R * Math.cos(f), R * Math.sin(f), d); p.y = Math.min(p.y, -.66); return p; };   // kept under the cabin floor slab (-0.65)
+      const geo = (pos, idx) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g; };
+      const linerM = M(0x6e665a, { roughness: 1, metalness: 0, envMapIntensity: .35, side: THREE.DoubleSide });   // warm grey liner (airBaltic hangar photo; tan in N215BZ), dark: the model casts no shadow into it
       /* the liner: a well of revolution round the retracted axle, straight from the rim to near the roof, then rounded into it (12 cm fillet,
-         clear of the inner tyre); seen through the open bin it reads as the smooth lined bowl of the hangar photo. Its straight wall is left
-         out across the channel (down to the channel's back wall, where the fillet starts) */
-      const NS = 180, F = .12, prof = [[rim, b.R], [b.top + F, b.R]];
-      for (let k = 1; k <= 6; k++) { const a = k / 6 * Math.PI / 2; prof.push([b.top + F - F * Math.sin(a), b.R - F + F * Math.cos(a)]); }
-      prof.push([b.top, 0]);
-      const pos = [], idx = [], P = prof.length, V3 = i => new THREE.Vector3(pos[3 * i], pos[3 * i + 1], pos[3 * i + 2]);
-      for (let k = 0; k <= NS; k++) { const f = k / NS * Math.PI * 2, c = Math.cos(f), s2 = Math.sin(f);
-        for (const [a, r] of prof) { const p = b.axle.clone().addScaledVector(e1, c * r).addScaledVector(e2, s2 * r).addScaledVector(b.dir, a); p.y = Math.min(p.y, -.66); pos.push(...p.toArray()); } }   // roof kept under the cabin floor slab (-0.65)
-      for (let k = 0; k < NS; k++) for (let j = 0; j < P - 1; j++) { const a = k * P + j, c = a + P;
-        if (j === 0 && inKey(V3(a).add(V3(c)).add(V3(a + 1)).add(V3(c + 1)).multiplyScalar(.25), 0)) continue;
-        idx.push(a, c, a + 1, a + 1, c, c + 1); }
-      const wg = new THREE.BufferGeometry(); wg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); wg.setIndex(idx); wg.computeVertexNormals();
-      const ring1 = []; for (let k = 0; k < NS; k++) { const f = k / NS * Math.PI * 2; ring1.push(b.axle.clone().addScaledVector(e1, Math.cos(f) * b.R).addScaledVector(e2, Math.sin(f) * b.R).addScaledVector(b.dir, rim)); }
-      put(new THREE.Mesh(wg, M(0x6e665a, { roughness: 1, metalness: 0, envMapIntensity: .35, side: THREE.DoubleSide })), 'Main wheel bin', null);   // warm grey liner (airBaltic hangar photo; tan in N215BZ), dark: the model casts no shadow into it
-      { const keep = ring1.map(p => !inKey(p, .045)), k0 = Math.max(0, keep.findIndex((v, i) => v && !keep[(i + NS - 1) % NS])), arc = [], sealM = M(0x0d0f12, { roughness: 1, metalness: 0 });
-        for (let i = 0; i < NS && keep[(k0 + i) % NS]; i++) arc.push(ring1[(k0 + i) % NS].clone().addScaledVector(b.dir, -.034));
-        put(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(arc, false), 160, .042, 8, false), sealM), 'Wheel bin seal', null);   // mostly sunk in the chamfer: a black ring round the tyre
-        for (const p of [arc[0], arc[arc.length - 1]]) put(new THREE.Mesh(new THREE.SphereGeometry(.042, 10, 8), sealM), 'Wheel bin seal', null).position.copy(p); }
+         clear of the inner tyre); seen through the open bin it reads as the smooth lined bowl of the hangar photo. The straight wall runs round
+         the far side from one channel wall to the other, ending exactly on them; the fillet and roof, behind the channel's back wall, are whole */
+      { const NA = 150, ND = 6, pos = [], idx = [];
+        for (let i = 0; i <= NA; i++) { const f = fA + (fF + 2 * Math.PI - fA) * i / NA; for (let j = 0; j <= ND; j++) pos.push(...onBin(f, -.004 + (dF + .004) * j / ND).toArray()); }
+        for (let i = 0; i < NA; i++) for (let j = 0; j < ND; j++) { const a = i * (ND + 1) + j, c = a + ND + 1; idx.push(a, c, a + 1, a + 1, c, c + 1); }
+        put(new THREE.Mesh(geo(pos, idx), linerM), 'Main wheel bin', null); }
+      { const NS = 120, prof = [[b.top + F, b.R]], pos = [], idx = [];
+        for (let k = 1; k <= 6; k++) { const a = k / 6 * Math.PI / 2; prof.push([b.top + F - F * Math.sin(a), b.R - F + F * Math.cos(a)]); }
+        prof.push([b.top, 0]); const P = prof.length;
+        for (let k = 0; k <= NS; k++) { const f = k / NS * Math.PI * 2, c = Math.cos(f), s2 = Math.sin(f);
+          for (const [a, r] of prof) { const p = b.axle.clone().addScaledVector(e1, c * r).addScaledVector(e2, s2 * r).addScaledVector(b.dir, a); p.y = Math.min(p.y, -.66); pos.push(...p.toArray()); } }
+        for (let k = 0; k < NS; k++) for (let j = 0; j < P - 1; j++) { const a = k * P + j, c = a + P; idx.push(a, c, a + 1, a + 1, c, c + 1); }
+        put(new THREE.Mesh(geo(pos, idx), linerM), 'Main wheel bin', null); }
+      // the brush seal: mostly sunk in the chamfer, a black ring round the tyre, its rounded ends butting the channel's walls
+      { const NA = 140, dA = .07, sealM = M(0x0d0f12, { roughness: 1, metalness: 0 }), arc = [];
+        for (let i = 0; i <= NA; i++) arc.push(onBin(fA + dA + (fF + 2 * Math.PI - fA - 2 * dA) * i / NA, .03));
+        put(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(arc, false), 160, .042, 8, false), sealM), 'Wheel bin seal', null);
+        for (const p of [arc[0], arc[NA]]) put(new THREE.Mesh(new THREE.SphereGeometry(.042, 10, 8), sealM), 'Wheel bin seal', null).position.copy(p); }
       { const s = .78, p = frB.toW(frB.legX(s), s, GEAR_FAIR.chan - .14); put(box(.24, .12, .18, darkM(), ...p.toArray()), 'Uplock', null); }   // on the channel's back wall over the leg, clear of the inner tyre (in the bin, 6 cm from its roof, the tyre ran into it)
       for (const [rr, l] of [[.50, 'Wheel well overheat loop A'], [.44, 'Wheel well overheat loop B']]) {   // FIDEX loops ring the top of each wheel bin
         const pts = []; for (let k = 0; k <= 32; k++) { const f = k / 32 * Math.PI * 2; pts.push(b.axle.clone().addScaledVector(b.dir, b.top + .05).addScaledVector(e1, Math.cos(f) * rr).addScaledVector(e2, Math.sin(f) * rr).toArray()); }
@@ -2035,31 +2043,46 @@ function buildGear() {
         for (const [s0, s1, span] of parts) { const rows = Math.max(6, Math.round((s1 - s0) / .025));
           const o = grid(rows, 26, s0, s1, span, at(0)), geo = mesh(o.pos, outward(o.pos, o.idx));
           const sk = new THREE.Mesh(geo, outM), ik = new THREE.Mesh(geo, inM); ik.userData.skinPart = true; aircraft.add(sk, ik); skin.push(sk, ik); } }
+      /* the bay's linings (jambs, channel, roof): near-black and matte, so the openings read as depth (at 0x2b3139, a colour taken as linear,
+         with the environment's reflections a lit wall read as a grey panel standing in the slot) */
+      const bayM = M(0x050608, { roughness: 1, metalness: 0, envMapIntensity: .1, side: THREE.DoubleSide });
       // the slot's jambs: dark walls 12 cm deep along both sides of the door opening in the bulge, so gear down the slot reads as an opening
       // rather than the bare edge of a sheet
       { const pos = [], idx = [], N = 40, depth = .12, quadStrip = pts => { const b0 = pos.length / 3; pts.forEach(([x, s]) => { const d = skinD(x, s); pos.push(...fr.toW(x, s, d - .002).toArray(), ...fr.toW(x, s, d + depth).toArray()); });
           for (let k = 0; k < pts.length - 1; k++) { const a = b0 + 2 * k; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); } };
         for (const side of ['a', 'f']) quadStrip(Array.from({ length: N + 1 }, (_, k) => { const s = GF.sBlue + (GF.sTop - GF.sBlue) * k / N; return [gearBand(fr, s)[side], s]; }));
-        put(new THREE.Mesh(mesh(pos, idx), M(0x2b3139, { roughness: .9 })), 'Main gear bay', null); }
+        put(new THREE.Mesh(mesh(pos, idx), bayM), 'Main gear bay', null); }
       /* the leg's channel. The slot runs straight out of the bin: bin and slot are one keyhole-shaped recess (TTM ch. 01 Fig. 26), so the
-         lower leg, torque links and brake cables have a way in beside the tyres. Side walls along the slot's edges from just inside the bin
-         up to where the slot meets the wing, and a back wall deep enough to clear everything on the leg, lined like the bin. Points keep
-         their x through the swing, so nothing on the leg crosses the side walls. */
-      const chanM = M(0x6e665a, { roughness: 1, metalness: 0, envMapIntensity: .35, side: THREE.DoubleSide }), R = fr.R, DW = GF.chan;
-      const wallX = (s, k) => { const bd = gearBand(fr, s, true); return k ? bd.f + .01 : bd.a - .05; };   // the aft wall clears the open lower door
-      const binS = x => Math.sqrt(Math.max(0, R * R - (x - x0) ** 2)) - .015;                             // the bin wall's s at x
+         lower leg, torque links and brake cables have a way in beside the tyres. Side walls stand on the slot's edges, exactly where the fairing
+         is cut and the bin's wall ends, from the bin up to where the slot meets the wing; a back wall at the depth where the bin's wall turns
+         into its roof closes it. Dark like the jambs, so the keyhole reads as one opening. Points keep their x through the swing, so nothing
+         on the leg crosses the side walls. Below the bulge the walls start at the fairing skin, in it under the jambs (clear of the scoop). */
+      const chanM = bayM, R = fr.R, bn = mainBin(sd), DW = bn.face + GF.proud - (bn.top + .12);
+      const wallX = (s, k) => { const bd = gearBand(fr, s); return k ? bd.f : bd.a; };                  // with the scoop's flare (the jambs' line), so the scoop stays inside
+      const binS = k => { let lo = 0, hi = R; for (let it = 0; it < 30; it++) { const m = (lo + hi) / 2; if ((wallX(m, k) - x0) ** 2 + m * m < R * R) lo = m; else hi = m; } return lo; };   // s where wall k meets the bin
       let sW = .8; while (sW < GF.sTop && !base((gearBand(fr, sW).a + gearBand(fr, sW).f) / 2, sW).wing) sW += .02; sW += .06;   // the slot reaches the wing here
       const P = (x, s, d) => { const p = fr.toW(x, s, d); p.y = Math.min(p.y, -.66); return p; };       // kept under the cabin floor slab, as the bin roof
       { const pos = [], idx = [], NV = 40, ND = 8;
-        for (const k of [0, 1]) { const b0 = pos.length / 3;
-          for (let i = 0; i <= NV; i++) { const s0w = binS(wallX(.6, k)), s = s0w + (sW - s0w) * i / NV, x = wallX(s, k), d0 = skinD(x, s) + .04 + .05 * smooth01((s - GF.sBlue) / .1);   // behind the closed doors and the scoop's rims (its flare overlaps the walls)
+        for (const k of [0, 1]) { const b0 = pos.length / 3, s0w = binS(k);
+          for (let i = 0; i <= NV; i++) { const s = s0w + (sW - s0w) * i / NV, x = wallX(s, k), d0 = skinD(x, s) + .12 * smooth01((s - GF.sBlue + .06) / .1);
             for (let j = 0; j <= ND; j++) pos.push(...P(x, s, d0 + (DW - d0) * j / ND).toArray()); }
           for (let i = 0; i < NV; i++) for (let j = 0; j < ND; j++) { const a = b0 + i * (ND + 1) + j, b = a + ND + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); } }
-        { const b0 = pos.length / 3, NU = 12;                                                              // the back wall
-          for (let i = 0; i <= NV; i++) for (let j = 0; j <= NU; j++) { const t = i / NV, u = j / NU, x6 = wallX(.6, 0) + (wallX(.6, 1) - wallX(.6, 0)) * u, s0b = binS(x6), s = s0b + (sW - s0b) * t;
-            pos.push(...P(wallX(s, 0) + (wallX(s, 1) - wallX(s, 0)) * u, s, DW).toArray()); }
+        { const b0 = pos.length / 3, NU = 16, sA = binS(0), sF = binS(1), fA = Math.atan2(sA, wallX(sA, 0) - x0), fF = Math.atan2(sF, wallX(sF, 1) - x0);   // the back wall: from the bin's arc up to sW
+          for (let i = 0; i <= NV; i++) for (let j = 0; j <= NU; j++) { const t = i / NV, u = j / NU, f = fA + (fF - fA) * u, sb = R * Math.sin(f), s = sb + (sW - sb) * t;
+            const u0 = (x0 + R * Math.cos(f) - wallX(sb, 0)) / (wallX(sb, 1) - wallX(sb, 0)), uu = u0 + (u - u0) * t;   // on the arc at the bottom, edge to edge on the walls
+            pos.push(...P(wallX(s, 0) + (wallX(s, 1) - wallX(s, 0)) * uu, s, DW).toArray()); }
           for (let i = 0; i < NV; i++) for (let j = 0; j < NU; j++) { const a = b0 + i * (NU + 1) + j, b = a + NU + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); } }
         put(new THREE.Mesh(mesh(pos, idx), chanM), 'Main gear bay', null); }
+      /* edge seals along both sides of the channel, from the bin's seal up to where the white bulge takes over the slot's edge: a black strip
+         3 cm wide lying on the fairing over its cut edge (cut through the paint texture, that edge steps texel by texel close up). With the
+         bin's seal they outline the keyhole; gear up they are the two seams either side of the shut lower door (N217BZ climbing out) */
+      { const pos = [], idx = [], NV = 24, sealM = M(0x0d0f12, { roughness: 1, metalness: 0, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
+        for (const k of [0, 1]) { const out = k ? 1 : -1, s0e = binS(k) + .02, b0 = pos.length / 3; let s1e = .7;
+          while (s1e < 1.2 && gap(wallX(s1e, k) + out * .03, s1e) < .01) s1e += .01;                      // the bulge stands clear of the fairing from here
+          for (let i = 0; i <= NV; i++) { const s = s0e + (s1e - s0e) * i / NV, x = wallX(s, k);
+            for (const w of [0, .03]) { const xx = x + out * w; pos.push(...fr.toW(xx, s, skinD(xx, s) - .004).toArray()); } }
+          for (let i = 0; i < NV; i++) { const a = b0 + 2 * i; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); } }
+        put(new THREE.Mesh(mesh(pos, idx), sealM), 'Wheel bin seal', null); }
       // the bay roof seen through the open slot: just off the wing's lower skin and the fairing's side wall, wherever the bulge stands clear of
       // them, across the whole hollow under the bulge (lining only the wing, and only over the slot, left the blue side wall showing through it)
       { const NU = 30, NV = 40, s0 = 1.0, s1 = GF.sTop + .12, pos = [], idx = [], ok = [];
@@ -2067,7 +2090,7 @@ function buildGear() {
           for (let j = 0; j <= NU; j++) { const x = xa + (xf - xa) * j / NU, b = base(x, s); pos.push(...fr.toW(x, s, b.d - .02).toArray());
             ok.push(b.d - skinD(x, s) > .06 && (b.wing || x < wallX(s, 0) || x > wallX(s, 1))); } }   // not across the leg's channel, where the leg swings through
         for (let i = 0; i < NV; i++) for (let j = 0; j < NU; j++) { const a = i * (NU + 1) + j, b = a + NU + 1; if (ok[a] && ok[b] && ok[a + 1] && ok[b + 1]) idx.push(a, b, a + 1, a + 1, b, b + 1); }
-        put(new THREE.Mesh(mesh(pos, idx), M(0x2b3139, { roughness: .9 })), 'Main gear bay', null); }
+        put(new THREE.Mesh(mesh(pos, idx), bayM), 'Main gear bay', null); }
       // the doors: lower (blue, from the bin rim to the fairing side), middle (the white box), upper
       const gp = .012, xs = (u, s) => { const bd = gearBand(fr, s); return bd.a + gp + (bd.f - bd.a - 2 * gp) * u; };
       { const blueLin = new THREE.Color(LIVERY.body).convertSRGBToLinear(), inM = M(0x9aa1a8, { roughness: .8 }), thk = .03;   // inner faces light grey (airBaltic, door from inboard); dark, the open scoop read as a hole
