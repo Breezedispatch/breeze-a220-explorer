@@ -1124,14 +1124,15 @@ const GEAR_FAIR = {
   sB: [1.0, 1.9],                      // the band widens from the first to the second between these s
   s0: .80,                             // the bulge starts here, rising out of the chamfer before the fairing turns up into its side wall
   sBlue: .84,                          // the blue lower door panel runs from the bin rim to here; the white box above it (0.84 m above the axle gear down)
-  box: .18, sBox: 1.35, sShelf: 1.55,  // the box: its outer face at this depth up to sBox, stepping in to the door plane by sShelf
+  box: .10, sBox: 1.35, sShelf: 1.55,  // the scoop: its outer face at this depth (0.53 m outboard of the leg gear down) up to sBox, stepping in to the door plane by sShelf
   rise: [.78, 1.2],                    // over this s the box face rises from the chamfer to its depth, so the white bulge grows out of the blue
                                        // fairing round the slot (it started at full depth and rose out of the side wall from a point)
-  flare: .06, flareS: [.85, 1.5],      // at its base the bulge is this much wider than the slot each side, narrowing to it over flareS (0.24 left a
-                                       // flat white ledge round the open slot that read as a loose sheet)
+  flare: .35, flareS: [1.0, 1.25],     // the bulge's flat underside reaches this far beyond the slot each side, from flareS[1] up: a broad flat
+                                       // underside with the slot cut in it, as in the airBaltic hangar photo (a narrow bulge hung its sides down
+                                       // like a pod round the slot); below flareS[0] it is the slot alone, where it rises out of the fairing
   s2: 2.75,                            // closing into the wing from the trunnion (s 2.77) on: past it only the pin bosses need cover, the wing is 5 cm away
   depth: .465,                         // door plane depth: just clear of the main fitting (radius 0.14 about the leg axis at d 0.635)
-  rho: .20, k: .18,                    // curvature of the bulge's sides as they turn up to the wing and the fairing side (radius at the edge), and the fillet blend
+  rho: .40, k: .18,                    // curvature of the bulge's sides as they turn up to the wing and the fairing side (radius at the edge), and the fillet blend
   sTop: 2.88                           // the door runs just past the trunnion, where gear down the leg passes through; its top tucks into the wing
 };
 function smooth01(t) { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); }
@@ -1852,8 +1853,8 @@ function gearPose(eL, eR, eN, dN) {                  // eL/eR/eN: main left / ma
     const B = moved(r.B, r.leg), d = B.clone().sub(r.A).normalize();
     setRod(r.body, r.A, r.A.clone().addScaledVector(d, r.len)); setRod(r.rod, r.A.clone().addScaledVector(d, r.len * .8), B); }
   for (const dr of GEAR_RIG.doors) dr.piv.quaternion.setFromAxisAngle(dr.axis, dr.sign * (dr.fwd ? dN * dr.open : (1 - Math.min(1, eN * 1.4)) * dr.open));
-  for (const f of GEAR_RIG.flaps) {                  // main gear lower doors: shut gear up and gear down, swung in only while the lower leg passes (e 0.59 to 0.92)
-    const e = f.leg === 'left' ? eL : eR, o = smooth01((e - .45) / .1) * (1 - smooth01((e - .93) / .05));
+  for (const f of GEAR_RIG.flaps) {                  // main gear lower doors: shut only gear up; gear down the lined opening beside the bin shows (airBaltic hangar, N215BZ)
+    const e = f.leg === 'left' ? eL : eR, o = 1 - smooth01((e - .93) / .05);
     f.g.quaternion.setFromAxisAngle(f.axis, f.sign * o * 1.4); }
 }
 function buildGear() {
@@ -1916,6 +1917,13 @@ function buildGear() {
     { const yk = new THREE.Mesh(rbox(.30, .46, .27, .05), strutM()); yk.position.copy(on(2.60)); yk.rotation.z = -rake; put(yk, 'Main gear', side); }
     put(cyl(.064, .064, 2 * G.mainSpace + .08, strutM(), A.x, A.y, A.z, 'z', 16), 'Main gear', side);
     for (const dx of [-.15, -.11]) put(rod(on(.25, dx, .05), on(2.30, dx + .03, .04), .013, darkM(), 8), null, side);   // brake harness and hydraulic lines clamped down the fitting
+    /* the electric brake cables: four black flexible hoses down the front of the leg from a junction block to the axle, held by two
+       clamp bars (airBaltic CS300 main gear, front view) */
+    { const hoseM = M(0x16181b, { roughness: .8, metalness: .1 });
+      put(new THREE.Mesh(rbox(.10, .12, .20, .02), darkM()), 'Brake cables', side).position.copy(on(1.42, .15, 0));
+      for (const dz of [-.075, -.025, .025, .075]) { const pts = [on(1.45, .16, dz), on(1.75, .19, dz * 1.1), on(2.15, .18, dz * 1.2), on(2.50, .16, dz * 1.3)].map(p => p.toArray());
+        put(new THREE.Mesh(tube(pts, .022), hoseM), 'Brake cables', side); }
+      for (const t of [1.80, 2.22]) { const c = new THREE.Mesh(new THREE.BoxGeometry(.03, .025, .26), strutM()); c.position.copy(on(t, .20, 0)); c.rotation.z = -rake; put(c, 'Brake cables', side); } }
     // torque links on the aft face: a scissor from the fitting to the axle yoke
     { const p1 = on(1.60, -.13), pa = on(1.98, -.30), p2 = on(2.38, -.14);
       put(rod(p1, pa, .03, strutM(), 10), 'Torque links', side); put(rod(pa, p2, .03, strutM(), 10), 'Torque links', side);
@@ -1971,13 +1979,15 @@ function buildGear() {
       const memo = new Map(), base = (x, s) => { const k = x.toFixed(4) + ',' + s.toFixed(4); let r = memo.get(k);
         if (!r) { const Q = fr.toW(x, s, 0), f = dFair(x, Q), w = dWing(x, Q); r = { d: Math.min(f, w), wing: w < f }; memo.set(k, r); } return r; };
       const Ec = s => s <= GF.sBox ? GF.box * smooth01((s - GF.rise[0]) / (GF.rise[1] - GF.rise[0])) : s < GF.sShelf ? GF.box + (GF.depth - GF.box) * smooth01((s - GF.sBox) / (GF.sShelf - GF.sBox)) : s <= GF.s2 ? GF.depth : GF.depth + 6 * (s - GF.s2) ** 2;
-      const flareW = s => GF.flare * (1 - smooth01((s - GF.flareS[0]) / (GF.flareS[1] - GF.flareS[0])));
-      const E = (x, s) => { const bd = gearBand(fr, s), w = flareW(s), t = Math.max(bd.a - w - x, x - bd.f - w, 0); return Ec(s) + t * t / (2 * GF.rho); };   // parabolic sides: no kink (a quarter circle then a straight slope creased the white sides)
+      const flareW = s => GF.flare * smooth01((s - GF.flareS[0]) / (GF.flareS[1] - GF.flareS[0]));
+      const teX = WING.te(2.5) + .45;             // the bulge closes before the wing's trailing edge (nothing to blend into behind it)
+      const E = (x, s) => { const bd = gearBand(fr, s), w = flareW(s), t = Math.max(bd.a - w - x, x - bd.f - w, 0), te = Math.max(0, teX - x);
+        return Ec(s) + t * t / (2 * GF.rho) + 8 * te * te; };   // parabolic sides: no kink (a quarter circle then a straight slope creased the white sides)
       const smin = (a, b, k) => { if (k <= 0) return Math.min(a, b); const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k / 4; };
       const skinD = (x, s) => smin(E(x, s), base(x, s).d, GF.k * smooth01((s - GF.s0) / .4));
       const gap = (x, s) => base(x, s).d - skinD(x, s);                              // how far the skin stands proud of the fairing or wing
       const edge = (s, x, dir) => { if (gap(x, s) < EPS) return x;                    // from x, step out to where the bulge has blended into what is under it
-        for (let k = 0; k < 60; k++) { const xb = x + dir * .02; if (gap(xb, s) < EPS) { let lo = x, hi = xb; for (let it = 0; it < 10; it++) { const m = (lo + hi) / 2; if (gap(m, s) < EPS) hi = m; else lo = m; } return hi; } x = xb; }
+        for (let k = 0; k < 110; k++) { const xb = x + dir * .02; if (gap(xb, s) < EPS) { let lo = x, hi = xb; for (let it = 0; it < 10; it++) { const m = (lo + hi) / 2; if (gap(m, s) < EPS) hi = m; else lo = m; } return hi; } x = xb; }
         return x; };
       const mesh = (pos, idx) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g; };
       const grid = (rows, cols, s0, s1, span, f) => { const pos = [], idx = [];       // rows along s, columns across each row's [x0, x1]
@@ -2034,7 +2044,8 @@ function buildGear() {
           loop.forEach((k, m) => { const k2 = loop[(m + 1) % loop.length], b0 = ep.length / 3; ep.push(...V3(pos[0], k), ...V3(pos[0], k2), ...V3(pos[1], k2), ...V3(pos[1], k)); ei.push(b0, b0 + 1, b0 + 2, b0, b0 + 2, b0 + 3); });
           if (!low) { put(new THREE.Mesh(mesh(down(pos[0]), idx), outM), label, side); put(new THREE.Mesh(mesh(down(pos[1]), idx), inM), label, side); put(new THREE.Mesh(mesh(down(ep), ei), outM), label, side); return; }
           /* the lower door is hinged to the fairing along its forward edge, not carried by the leg: gear down the photos show no panel on the
-             lower leg, gear up the blue panel is shut. It swings in only while the lower leg passes through (gearPose). */
+             lower leg and the lined opening beside the bin open (airBaltic hangar, N215BZ); gear up the blue panel is shut (N217BZ). It shuts
+             only at the end of the retraction (gearPose). */
           const h0 = new THREE.Vector3(...V3(pos[0], NU * (NV + 1))), h1 = new THREE.Vector3(...V3(pos[0], NU * (NV + 1) + NV)), axis = h1.clone().sub(h0).normalize();
           const rel = arr => { for (let i = 0; i < arr.length; i += 3) { arr[i] -= h0.x; arr[i + 1] -= h0.y; arr[i + 2] -= h0.z; } return arr; };
           const c = new THREE.Vector3(...V3(pos[0], (NU >> 1) * (NV + 1) + (NV >> 1))).sub(h0), dc = fr.fromW(c.clone().applyAxisAngle(axis, .5).add(h0)).d - fr.fromW(c.clone().add(h0)).d;
@@ -2044,12 +2055,18 @@ function buildGear() {
         panel(0, GF.sBlue, 'Main gear lower door (on the fairing)', true);
         panel(GF.sBlue + gp, 1.62, 'Main gear leg door (middle)', false);
         panel(1.62 + gp, GF.sTop, 'Main gear leg door (upper)', false);
-        // hazard stripes along the forward edge of the upper and middle panels, on the inside face: seen with the gear down, hidden gear up (video)
-        { const pos = [], uv = [], idx = [], N = 24, sA = 1.45, sB = GF.sTop - .04;
-          for (let k = 0; k <= N; k++) { const s = sA + (sB - sA) * k / N, xo = xs(1, s); for (const [w, u] of [[.075, 0], [0, 1]]) { const x = xo - w; pos.push(...fr.toW(x, s, skinD(x, s) + thk + .003).toArray()); uv.push(u, k / N); } }
+        /* hazard stripes on the scoop's aft rim: a flange 7 cm deep along the middle panel's aft edge, facing aft gear down, sunk in the slot's
+           jamb gear up (airBaltic CS300 hangar photo; the gear-swing video) */
+        { const pos = [], uv = [], idx = [], N = 20, sA = GF.sBlue + 2 * gp, sB = 1.62 - gp;
+          for (let k = 0; k <= N; k++) { const s = sA + (sB - sA) * k / N, x = xs(0, s), d = skinD(x, s); pos.push(...fr.toW(x + .002, s, d - .002).toArray(), ...fr.toW(x + .002, s, d + .07).toArray()); uv.push(0, k / N, 1, k / N); }
           for (let k = 0; k < N; k++) { const a = 2 * k; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
           const g = mesh(down(pos), idx); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-          put(new THREE.Mesh(g, M(0xffffff, { map: stripeTex, roughness: .5, polygonOffset: true, polygonOffsetFactor: -2 })), 'Main gear leg door (upper)', side); } } }
+          put(new THREE.Mesh(g, M(0xffffff, { map: stripeTex, roughness: .5 })), 'Main gear leg door (middle)', side); }
+        /* the door link: a grey arm from the leg, 0.9 m above the axle, out to the scoop's foot (airBaltic CS300, front view) */
+        { const sF = GF.sBlue + .06, xF = (gearBand(fr, sF).a + gearBand(fr, sF).f) / 2, foot = new THREE.Vector3(...down(fr.toW(xF, sF, skinD(xF, sF) + thk + .02).toArray()));
+          const legP = T.clone().addScaledVector(axU, (A.clone().sub(T).length()) - .9).add(V(0, 0, sd * .09));
+          put(rod(legP, foot, .03, strutM(), 10), 'Main gear leg door (middle)', side);
+          for (const p of [legP, foot]) put(new THREE.Mesh(new THREE.SphereGeometry(.045, 12, 8), strutM()), 'Main gear leg door (middle)', side).position.copy(p); } } }
   }
 
   /* ================= NOSE GEAR ================= */
