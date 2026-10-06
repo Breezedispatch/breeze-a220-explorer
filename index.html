@@ -1634,6 +1634,13 @@ function wingletTex(inMirror, outMirror) {
   drawLogoCheck(c, px, Hc * (1 - (.5 + vPoint * .5)), sx, sy, outMirror, LIVERY.pale);   // the winglet check in the livery's light blue (N224BZ)
   const t = new THREE.CanvasTexture(cv); t.anisotropy = 8; t.encoding = THREE.sRGBEncoding; return t;   // sRGB: without it the navy rendered as a washed-out light blue
 }
+/* the wing's walkway stencil, black on clear; mirror for the left wing, a mirrored copy of the right */
+function noStepTex(mirror) {
+  const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 76; const c = cv.getContext('2d');
+  if (mirror) { c.translate(cv.width, 0); c.scale(-1, 1); }
+  c.fillStyle = '#16191d'; c.font = 'bold 56px "Arial Narrow", Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('NO STEP OUTSIDE THIS AREA', 512, 40);
+  const t = new THREE.CanvasTexture(cv); t.anisotropy = 8; t.encoding = THREE.sRGBEncoding; return t;
+}
 function buildWing() {
   const W = WING, le = W.le, te = W.te;
   const g = new THREE.Group();
@@ -1751,6 +1758,34 @@ function buildWing() {
   [[6.33, 7.74], [7.74, 9.15], [9.15, 10.57], [10.57, 11.98]].forEach(([a, b], i) => spoiler(a + .01, b - .01, mfsHinge, mfsTE, `Multifunction spoiler ${i + 1}`));   // four MFS over the outboard flap
   SLATS.forEach(([a, b], i) => slat(a + .02, b - .02, i ? 'Outboard slat (anti-iced)' : 'Inboard slat'));   // one inboard of the engine, three outboard (the anti-iced ones)
   for (const z of [4, 8.5, 13.5]) g.add(reg(S, box(.28, .1, .28, sysMat(S), (le(z) + te(z)) / 2 - .15, -.005, -z), 'Remote electronic unit'));   // mid-chord, inside the box (te + 2.0 put the outboard one ahead of the leading edge)
+  /* fuel tank access panels on the lower skin (TTM ch. 57 Fig. 3): TTM ch. 01 Fig. 29 draws an oval in each rib bay of the box, about 0.65 m
+     apart, at 30% chord inboard and 35% outboard; outlined like the other panel gaps, clear of the pylon and the flap track fairings */
+  { const ring = Array.from({ length: 41 }, (_, i) => [Math.cos(i / 40 * Math.PI * 2), Math.sin(i / 40 * Math.PI * 2)]);
+    for (let z = 2.75; z <= 15.0; z += .65) {
+      if (Math.abs(z - ENG.z) < .6 || [4.79, 7.60, 10.42].some(f => Math.abs(z - f) < .3)) continue;
+      const ch = le(z) - te(z), u = .30 + .05 * (z - 2.75) / 12.25, x = le(z) - u * ch, y = ch * (4 * .012 * u * (1 - u) - .5 * tc(z) * TH(u)) - .004;
+      const ax = Math.min(.17, ch * .06), az = Math.min(.24, ch * .085);   // half-axes, chordwise and spanwise, shrinking toward the tip
+      const e = new THREE.Line(new THREE.BufferGeometry().setFromPoints(ring.map(([c, s]) => new THREE.Vector3(x + ax * c, y, -(z + az * s)))), gapM);
+      g.add(e); windows.push(e); } }
+  /* the walkway boundary on the upper skin: a black line just behind the slats from the root nearly to the tip, with NO STEP OUTSIDE THIS
+     AREA stencilled along its aft side every couple of metres (Air France F-HZUM and QantasLink VH-X4I window views) */
+  { const up = (x, z) => { const ch = le(z) - te(z), u = Math.min(1, Math.max(0, (le(z) - x) / ch)); return ch * (4 * .012 * u * (1 - u) + .5 * tc(z) * TH(u)); };
+    const lineX = z => slatTE(z) - .07, z0 = 2.25, z1 = 15.6;
+    const lineM = std(0x16191d, { roughness: .7, transparent: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+    { const pos = [], idx = [], N = Math.round((z1 - z0) / .1);
+      for (let i = 0; i <= N; i++) { const z = z0 + (z1 - z0) * i / N, dx = lineX(z + .05) - lineX(z - .05), L = Math.hypot(dx, .1), nx = .1 / L * .016, nz = -dx / L * .016;
+        for (const s of [1, -1]) { const px = lineX(z) + s * nx, pz = z + s * nz; pos.push(px, up(px, pz) + .002, -pz); } }
+      for (let i = 0; i < N; i++) { const a = 2 * i; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
+      const m = new THREE.Mesh(geo, lineM); m.userData.skinPart = true; g.add(m); skin.push(m); }
+    const stM = new THREE.MeshBasicMaterial({ map: noStepTex(false), transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+    for (const zc of [3.0, 5.6, 8.2, 10.8, 13.4]) {   // each a strip lying on the curved skin just aft of the line (a flat plane sank into it at one end); text top toward the line
+      const N = 12, half = .45, pos = [], uv = [], idx = [];
+      for (let i = 0; i <= N; i++) { const z = zc - half + 2 * half * i / N, c = Math.cos(Math.atan2(lineX(z + .05) - lineX(z - .05), .1));
+        for (const [v, off] of [[0, .125], [1, .05]]) { const x = lineX(z) - off / c; pos.push(x, up(x, z) + .003, -z); uv.push(i / N, v); } }
+      for (let i = 0; i < N; i++) { const a = 2 * i; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(idx);
+      const st = new THREE.Mesh(geo, stM); st.userData.stencil = true; g.add(st); windows.push(st); } }
 
   // hydraulic run, anti-ice duct, bleed duct along the wing
   g.add(reg(sysById.hyd, new THREE.Mesh(tube([[le(2.2) - 2.8, 0, -2.2], [le(8) - 1.9, 0, -8], [le(15) - 1.0, 0, -15]], .04), sysMat(sysById.hyd)), 'Hydraulic run to surfaces'));
@@ -3008,11 +3043,13 @@ function buildCabin() {
 function buildAircraft() {
   buildFuselage(); buildTail();
   const rw = buildWing(), lw = new THREE.Group(); lw.scale.z = -1; const lwc = rw.clone(); lw.add(lwc);
-  lwc.traverse(o => { if (o.userData && o.userData.winglet) { o.material = o.material.clone(); o.material.map = wingletTex(false, true); } });   /* mirrored wing: its own winglet check orientation */
+  lwc.traverse(o => { if (o.userData && o.userData.winglet) { o.material = o.material.clone(); o.material.map = wingletTex(false, true); }
+    if (o.userData && o.userData.stencil) { if (!lwc.userData.stencilM) { lwc.userData.stencilM = o.material.clone(); lwc.userData.stencilM.map = noStepTex(true); } o.material = lwc.userData.stencilM; } });   /* mirrored wing: its own winglet check orientation and stencils that read the right way round */
   aircraft.add(rw, lw);
   rw.children.forEach((m, i) => {
     const c = lwc.children[i];
     if (m.userData.systemId) { c.userData.skinPart = m.userData.skinPart; reg(sysById[m.userData.systemId], c, m.userData.label, m.userData.baseOpacity); }
+    else if (windows.includes(m)) windows.push(c);   // decals and drawn lines (stencils, access panels): hidden in the x-ray views, never made opaque with the skin
     else if (m.isMesh && m.name !== 'navlight') skin.push(c);
   });
   /* parts nested on the moving surfaces (the flap-track fairing tails, the panel-gap lines) need their left-wing twins listed as well, so the
