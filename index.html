@@ -1127,23 +1127,26 @@ const GEAR_FAIR = {
   sB: [1.0, 1.9],                      // the band widens from the first to the second between these s
   s0: .80,                             // the bulge starts here, rising out of the chamfer before the fairing turns up into its side wall
   sBlue: .84,                          // the blue lower door panel runs from the bin rim to here; the white box above it (0.84 m above the axle gear down)
-  box: .05, sBox: 1.42, lip: .25,      // the scoop: its outer face at this depth (0.58 m outboard of the leg gear down) up to its top lip, at sBox
-  shelf: .20,                          // on the aft edge and lip lower on the forward edge, stepping in to the door plane over this much s (N217BZ
-                                       // side view: the lip runs from 1.39 m above the axle at the aft edge down to 1.16 m at the forward edge)
-  lean: .13,                           // gear down the scoop's face leans out this much from its foot to its lip, so seen from behind its striped
-                                       // rim rises outboard from the floor's corner (airBaltic aft view: more, about 0.4 m; gear up that much would
-                                       // hang the lip well below the fairing line, so this is a compromise)
+  box: .22, sBox: 1.42, lip: .25,      // the scoop: its outer face at this depth (0.42 m outboard of the leg gear down) up to its top lip, at sBox
+  shelf: .45,                          // on the aft edge and lip lower on the forward edge, ramping in to the door plane over this much s (N217BZ
+                                       // side view: the lip runs from 1.39 m above the axle at the aft edge down to 1.16 m at the forward edge).
+                                       // Gear up the scoop lies under the leg, so these set how far the bulge hangs below the wing root: at
+                                       // box 0.05 and a 0.20 step it hung as a box with a sheer outboard face, where climb-out photos (airBaltic
+                                       // YL-CSB from behind) show the wing root running into the fairing in one smooth curve
+  lean: 0,                             // gear down the scoop's face leans out this much from its foot to its lip, so seen from behind its striped
+                                       // rim rises outboard from the floor's corner (airBaltic aft view: more; gear up that hangs the lip lower)
   scoop: .10, scoopW: .12,             // and curved across: its aft edge stands out furthest, its forward side curves back this much toward the
                                        // leg, so gear down it is a shell concave to the rear with its rim at the aft edge; it flares straight
                                        // out from its foot to this much wider each side at the lip (about 0.9 m fore-aft: N217BZ, airBaltic hangar)
   rise: [.78, 1.2],                    // over this s the box face rises from the chamfer to its depth, so the white bulge grows out of the blue
                                        // fairing round the slot (it started at full depth and rose out of the side wall from a point)
-  flare: .35, flareS: [1.0, 1.25],     // the bulge's flat underside reaches this far beyond the slot each side, from flareS[1] up: a broad flat
+  flare: .25, flareS: [1.0, 1.25],     // the bulge's flat underside reaches this far beyond the slot each side, from flareS[1] up: a broad flat
                                        // underside with the slot cut in it, as in the airBaltic hangar photo (a narrow bulge hung its sides down
                                        // like a pod round the slot); below flareS[0] it is the slot alone, where it rises out of the fairing
   s2: 2.75,                            // closing into the wing from the trunnion (s 2.77) on: past it only the pin bosses need cover, the wing is 5 cm away
   depth: .465,                         // door plane depth: just clear of the main fitting (radius 0.14 about the leg axis at d 0.635)
-  rho: .40, k: .18,                    // curvature of the bulge's sides as they turn up to the wing and the fairing side (radius at the edge), and the fillet blend
+  rho: .70, k: .40,                    // curvature of the bulge's sides as they turn up to the wing and the fairing side (radius at the edge), and the fillet
+                                       // blend: gentle, so gear up the bulge blends into the wing rather than hanging as a pod
   sTop: 2.88                           // the door runs just past the trunnion, where gear down the leg passes through; its top tucks into the wing
 };
 function smooth01(t) { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); }
@@ -1156,11 +1159,11 @@ function gearFrame(sd) {
     fromW: p => { const vy = p.y - O.y, vz = p.z - O.z; return { x: p.x, s: vy * es.y + vz * es.z, d: -(vy * n.y + vz * n.z) }; },
     legX: s => G.mainX + (G.mainTrunX - G.mainX) * s / sT };
 }
-function gearBand(f, s, plain) {         // fore-aft edges of the door band (the leg's slot) at s; plain: without the scoop's widening (the fairing cuts)
+function gearBand(f, s) {               // fore-aft edges of the door band (the leg's slot) at s
   const GF = GEAR_FAIR, w = smooth01((s - GF.sB[0]) / (GF.sB[1] - GF.sB[0])), lx = f.legX(s);
-  // the scoop's flare: straight from its foot to its lip (so its striped aft rim runs straight), gone over the shelf above; the fairing's own cut
-  // stays plain (cut wider near its side wall the slot's edges frayed), and the door overlaps it there
-  const fl = top => plain ? 0 : GF.scoopW * Math.max(0, Math.min(1, (s - GF.sBlue) / (top - GF.sBlue))) * (1 - smooth01((s - top) / GF.shelf));
+  // the scoop's flare: straight from its foot to its lip (so its striped aft rim runs straight), gone over the ramp above. Small where the slot
+  // leaves the fairing (2 cm by s 0.95), where the edge seals cover the cut
+  const fl = top => GF.scoopW * Math.max(0, Math.min(1, (s - GF.sBlue) / (top - GF.sBlue))) * (1 - smooth01((s - top) / GF.shelf));
   return { a: lx - GF.aftB - (GF.aft - GF.aftB) * w - fl(GF.sBox), f: lx + GF.fwdB + (GF.fwd - GF.fwdB) * w + fl(GF.sBox - GF.lip) };
 }
 function fairChamfer(x) { const [a, b, c, d] = GEAR_FAIR.cx; return x <= a || x >= d ? 0 : x < b ? smooth01((x - a) / (b - a)) : x > c ? smooth01((d - x) / (d - c)) : 1; }
@@ -1226,7 +1229,7 @@ function buildFuselage() {
       for (let j = 0; j < Ht; j++) { const a = Math.PI * 2 * (1 - j / (Ht - 1)), y = f.cy + f.ry * Math.cos(a), z = f.rz * Math.sin(a); if (y > -.6) continue;
         P.set(x, y, z); let cut = false;
         for (const b of bins) { q.copy(P).sub(b.axle); const s = q.dot(b.dir); if (s > b.top - .02 && q.addScaledVector(b.dir, -s).length() < b.R + .02) { cut = true; break; } }
-        if (!cut) { const g = frames[z > 0 ? 0 : 1].fromW(P), bd = gearBand(frames[z > 0 ? 0 : 1], g.s, true);   // the slot the leg and tyres swing through
+        if (!cut) { const g = frames[z > 0 ? 0 : 1].fromW(P), bd = gearBand(frames[z > 0 ? 0 : 1], g.s);   // the slot the leg and tyres swing through
           if (g.s > 0 && g.s < 2.2 && g.d > -.1 && g.d < 1.6 && x > bd.a - .03 && x < bd.f + .03) cut = true; }
         if (cut) d[(j * Wt + i) * 4 + 3] = 0; } }
     c.putImageData(img, 0, 0); map.needsUpdate = true; fus.material.alphaTest = .05; fus.material.needsUpdate = true; }   // low threshold: the x-ray views fade the skin to 0.12 and it must stay visible
@@ -1309,7 +1312,7 @@ function buildFuselage() {
         for (let j = 0; j < H; j++) {
           const f = (1 - (j + .5) / H) * (n - 1), k0 = Math.min(n - 2, Math.floor(f)), t = f - k0;   // canvas rows run opposite to texture v
           const y = pts[k0][0] + (pts[k0 + 1][0] - pts[k0][0]) * t, z = pts[k0][1] + (pts[k0 + 1][1] - pts[k0][1]) * t;
-          P.set(x, y, z); const fr = frames[z > 0 ? 0 : 1], g = fr.fromW(P), bd = gearBand(fr, g.s, true), dx = x - GEAR.mainX;
+          P.set(x, y, z); const fr = frames[z > 0 ? 0 : 1], g = fr.fromW(P), bd = gearBand(fr, g.s), dx = x - GEAR.mainX;   // the full slot, as the channel's walls (cut plain, the scoop's flare left a strip of fairing showing in the channel)
           const cut = (Math.abs(g.d) < .2 && dx * dx + g.s * g.s < (fr.R + .006) ** 2) || (g.s > 0 && g.s < 2.0 && g.d > -.2 && g.d < 1.4 && x > bd.a - .006 && x < bd.f + .006);
           if (cut) d[(j * W + i) * 4 + 3] = 0;
         }
@@ -1963,7 +1966,7 @@ function buildGear() {
       /* worked in the gear frame: angle f round the retracted axle in its (x, s) plane, depth d in from the chamfer. The channel opens across
          f between the angles where the cylinder meets the slot's aft and forward edges, which are the channel's walls */
       const frB = gearFrame(sd), x0 = G.mainX, R = b.R, F = .12, dF = b.face + GEAR_FAIR.proud - (b.top + F);   // dF: depth where the fillet into the roof starts
-      const edgeX = (s, k) => { const bd = gearBand(frB, s, true); return k ? bd.f : bd.a; };
+      const edgeX = (s, k) => { const bd = gearBand(frB, s); return k ? bd.f : bd.a; };
       const meet = k => { let lo = k ? 0 : Math.PI / 2, hi = k ? Math.PI / 2 : Math.PI;                          // forward wall in the first quadrant, aft wall in the second
         const g = f => x0 + R * Math.cos(f) - edgeX(R * Math.sin(f), k), g0 = g(lo) > 0; for (let it = 0; it < 40; it++) { const m = (lo + hi) / 2; if ((g(m) > 0) === g0) lo = m; else hi = m; } return (lo + hi) / 2; };
       const fF = meet(1), fA = meet(0), onBin = (f, d) => { const p = frB.toW(x0 + R * Math.cos(f), R * Math.sin(f), d); p.y = Math.min(p.y, -.66); return p; };   // kept under the cabin floor slab (-0.65)
