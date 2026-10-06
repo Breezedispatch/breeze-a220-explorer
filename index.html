@@ -166,6 +166,7 @@
   .c-bars{position:absolute;left:0;right:0;height:0;background:#02060c;transition:height .7s ease;pointer-events:none}
   .c-bars.t{top:0} .c-bars.b{bottom:0}
   body.intro .c-bars{height:8vh}
+  .c-dip{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}   /* cuts in the gear step dip to black */
   .c-slide{position:absolute;inset:0;display:none;align-items:center;justify-content:center;pointer-events:auto;background:radial-gradient(130% 130% at 50% 30%,#0a2647 0%,#071a33 45%,#051833 100%)}
   body.course .c-slide.show{display:flex}
   .c-slide .inner{text-align:center;padding:40px;max-width:900px}
@@ -5235,7 +5236,7 @@ const wear = (() => { const L = 120, B = 30, W = 2048, H = 512, k = W / L, cv = 
    - toward -z: an asphalt taxiway, the terminal apron with five gates and three airliners on them, the terminal (a glass airside front
      under an overhanging roof, jet bridges) and the control tower behind it;
    - toward +z: grass, a service road, the hangar apron and three maintenance hangars with their doors toward the stand;
-   - behind the tail the taxilane, grass and the cargo terminal; ahead of the nose grass out to a runway 400 m off; floodlight masts round
+   - behind the tail the taxilane, grass and the cargo terminal; ahead of the nose a taxiway out to the runway (centreline x 230, along z); floodlight masts round
      the stand, a fuel farm and belts of trees beyond.
    The ground is one painted 1.2 km square (grass, asphalt, concrete) with the sun shadows of everything on it painted in, cast along the
    sun's direction (the shadow map covers only the aircraft). The parts are built as ordinary meshes in a scratch group and merged into
@@ -5420,10 +5421,10 @@ const airport = (() => {
     for (let k = 0; k < 14; k++) { const z = -70 + k * 9 + rnd() * 3, x = X + 12 + rnd() * 10; box(2.4, 1.6, 1.6, uldM, x, 0, z, rnd() * .3); }
   }
 
-  /* ---- fuel farm and its pump house, beyond the hangars ---- */
+  /* ---- fuel farm and its pump house, beyond the hangars, clear of the runway ---- */
   { const tankM = mat({ color: lin('#e9eaeb'), roughness: .5, metalness: .2 }), topM = mat({ color: lin('#b9bec3'), roughness: .5, metalness: .3 });
-    for (const [x, z] of [[235, 210], [270, 210], [252.5, 245]]) { mesh(new THREE.CylinderGeometry(11, 11, 13, 32), tankM, x, G0 + 6.5, z); mesh(new THREE.ConeGeometry(11.2, 1.6, 32), topM, x, G0 + 13.8, z); shade(circFoot(x, z, 11, 16), 14); }
-    box(10, 4, 6, plainM, 292, 0, 255); }
+    for (const [x, z] of [[-245, 205], [-210, 205], [-227.5, 240]]) { mesh(new THREE.CylinderGeometry(11, 11, 13, 32), tankM, x, G0 + 6.5, z); mesh(new THREE.ConeGeometry(11.2, 1.6, 32), topM, x, G0 + 13.8, z); shade(circFoot(x, z, 11, 16), 14); }
+    box(10, 4, 6, plainM, -190, 0, 245); }
 
   /* ---- floodlight masts round the stand, heads tipped down toward it; their shadows fall across the apron, so they are drawn on it ---- */
   const lampM = mat({ color: lin('#dfe3e6'), roughness: .3, metalness: .2 }), decalM = new THREE.MeshBasicMaterial({ color: 0x0e1622, transparent: true, opacity: .45, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
@@ -5439,6 +5440,11 @@ const airport = (() => {
   const yellowM = mat({ color: 0xd9a400, roughness: .8, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }), whiteM = mat({ color: lin('#e9eaea'), roughness: .8, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
   const line = (x0, z0, x1, z1, m, w = .15, y = G0 - .03) => mesh(new THREE.PlaneGeometry(w, Math.hypot(x1 - x0, z1 - z0)), m, (x0 + x1) / 2, y, (z0 + z1) / 2, Math.atan2(x1 - x0, z1 - z0), -Math.PI / 2);
   line(-185, -81, 135, -81, yellowM); line(-110, -185, -110, 152, yellowM);
+  line(22, 0, 125, 0, yellowM, .15, G0 - .001); line(125, 0, 195, 0, yellowM);                                                                       // from the stand's lead-in out to the runway,
+  for (let k = 0; k < 12; k++) { const a0 = k / 12 * Math.PI / 2, a1 = (k + 1) / 12 * Math.PI / 2; line(195 + 35 * Math.sin(a0), 35 - 35 * Math.cos(a0), 195 + 35 * Math.sin(a1), 35 - 35 * Math.cos(a1), yellowM); }   // turning onto its centreline
+  { const rwyM = mat({ color: lin('#46494c'), roughness: .9, envMapIntensity: .3 });                                                            // the runway carries on past the painted square
+    for (const s of [1, -1]) { mesh(new THREE.PlaneGeometry(45, 900), rwyM, 230, G0 - .04, s * 1050, 0, -Math.PI / 2); for (const x of [209, 251]) line(x, s * 600, x, s * 1500, whiteM, .9);
+      for (let z = 600; z < 1500; z += 50) line(230, s * z, 230, s * (z + 30), whiteM, .9); } }
   for (const xc of [-130, -80, -30, 20, 70]) { line(xc, -81, xc, -153.2, yellowM); line(xc - 2, -153.2, xc + 2, -153.2, whiteM, .3); }   // stop line under the nose wheels
   for (const z of [-161, -167]) line(TX0, z, TX1, z, whiteM); for (let x = TX0; x < TX1; x += 9) line(x, -164, x + 3, -164, whiteM);
   for (const z of [94.4, 103.6]) line(-160, z, 135, z, whiteM); for (let x = -160; x < 135; x += 9) line(x, 99, x + 3, 99, whiteM);
@@ -5446,7 +5452,7 @@ const airport = (() => {
 
   /* ---- trees in belts beyond the buildings ---- */
   const trees = [], belt = (x0, x1, z0, z1, n) => { for (let i = 0; i < n; i++) trees.push([x0 + rnd() * (x1 - x0), z0 + rnd() * (z1 - z0), 3.5 + rnd() * 3.5]); };
-  belt(-340, 340, -345, -300, 70); belt(-320, 220, 255, 300, 55); belt(-420, -365, -300, 300, 50); belt(470, 540, -420, 420, 60); belt(180, 330, 290, 325, 18);
+  belt(-340, 180, -345, -300, 55); belt(285, 400, -345, -300, 14);   // clear of the runway and its approach belt(-320, 160, 255, 300, 55); belt(-420, -365, -300, 300, 50); belt(470, 540, -420, 420, 60); belt(320, 400, 290, 330, 18);
   /* a lumpy canopy (a sphere pushed in and out), darker underneath where the foliage shades itself: smooth balls read as lollipops */
   { const geo = new THREE.IcosahedronGeometry(1, 2), p = geo.attributes.position, v = new THREE.Vector3(), cols = [];
     for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const n = .8 + .14 * Math.sin(v.x * 5.1 + v.y * 3.7) + .1 * Math.sin(v.z * 6.3 - v.y * 2.4) + .06 * Math.sin(v.x * 11 + v.z * 9);
@@ -5466,7 +5472,7 @@ const airport = (() => {
     for (let i = 0; i < N; i += 14) { c.fillStyle = (i / 14) % 2 ? 'rgba(235,240,190,.06)' : 'rgba(20,40,10,.05)'; c.fillRect(i, 0, 14, N); }                       // mown stripes, 8 m
     for (let i = 0; i < 1400; i++) { const x = rnd() * N, y = rnd() * N, r = 5 + rnd() * 45, gr = c.createRadialGradient(x, y, 0, x, y, r);
       gr.addColorStop(0, rnd() < .55 ? 'rgba(168,160,96,.2)' : 'rgba(46,70,30,.18)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gr; c.fillRect(x - r, y - r, 2 * r, 2 * r); }
-    const ASPH = [[-185, 135, -100, -62], [-125, -95, -185, 152], [125, 135, -100, 104], [-160, 135, 94, 104], [-600, 600, -252, -240], [380, 425, -600, 600]];
+    const ASPH = [[-185, 135, -100, -62], [-125, -95, -185, 152], [125, 135, -100, 104], [-160, 135, 94, 104], [-600, 600, -252, -240], [207.5, 252.5, -600, 600], [125, 208, -11.5, 11.5], [180, 208, -11.5, 50]];   // ... the runway, the taxiway out to it and the fillet of its turn
     for (const r of ASPH) { rect(...r, '#46494c');
       for (let i = 0; i < (r[1] - r[0]) * (r[3] - r[2]) / 60; i++) { c.fillStyle = `rgba(${rnd() < .5 ? '255,255,255' : '0,0,0'},${.04 + rnd() * .06})`; c.fillRect(cx(r[0] + rnd() * (r[1] - r[0])), cz(r[2] + rnd() * (r[3] - r[2])), 1 + rnd() * 3, 1 + rnd() * 3); }
       c.strokeStyle = 'rgba(15,15,15,.35)'; c.lineWidth = 1; for (let i = 0; i < (r[1] - r[0]) * (r[3] - r[2]) / 900; i++) { let x = cx(r[0] + rnd() * (r[1] - r[0])), y = cz(r[2] + rnd() * (r[3] - r[2])); c.beginPath(); c.moveTo(x, y); for (let s = 0; s < 6; s++) { x += (rnd() - .5) * 8; y += (rnd() - .5) * 8; c.lineTo(x, y); } c.stroke(); } }   // crack sealing
@@ -5476,8 +5482,8 @@ const airport = (() => {
       c.fillStyle = 'rgba(70,70,70,.35)'; for (let x = r[0]; x <= r[1]; x += 5) c.fillRect(cx(x), cz(r[2]), 1, (r[3] - r[2]) * k); for (let z = r[2]; z <= r[3]; z += 5) c.fillRect(cx(r[0]), cz(z), (r[1] - r[0]) * k, 1); }
     for (const r of [[-185, 135, -150, -120]]) for (let i = 0; i < 40; i++) { const x = cx(r[0] + rnd() * (r[1] - r[0])), y = cz(r[2] + rnd() * (r[3] - r[2])), R = 3 + rnd() * 9, gr = c.createRadialGradient(x, y, 0, x, y, R);
       gr.addColorStop(0, 'rgba(40,36,32,.22)'); gr.addColorStop(1, 'rgba(40,36,32,0)'); c.fillStyle = gr; c.fillRect(x - R, y - R, 2 * R, 2 * R); }        // drips on the gate stands
-    for (const r of [[TX0 - 7, TX1 + 7, TZ - TD - 7, TZ], [-160, 120, 150, 215], [-320, -250, -100, 100], [215, 305, 185, 280], [-62, -18, -268, -242]]) rect(...r, '#8f908e');   // building pads
-    rect(381, 382, -600, 600, '#e6e6e2'); rect(423, 424, -600, 600, '#e6e6e2'); for (let z = -600; z < 600; z += 50) rect(402, 403, z, z + 30, '#e6e6e2');   // runway edges and centreline
+    for (const r of [[TX0 - 7, TX1 + 7, TZ - TD - 7, TZ], [-160, 120, 150, 215], [-320, -250, -100, 100], [-262, -180, 190, 255], [-62, -18, -268, -242]]) rect(...r, '#8f908e');   // building pads
+    rect(208.5, 209.5, -600, 600, '#e6e6e2'); rect(250.5, 251.5, -600, 600, '#e6e6e2'); for (let z = -600; z < 600; z += 50) rect(229.5, 230.5, z, z + 30, '#e6e6e2');   // runway edges and centreline
     c.fillStyle = 'rgba(14,20,30,.5)'; c.beginPath(); for (const s of shadows) { s.forEach(([x, z], i) => i ? c.lineTo(cx(x), cz(z)) : c.moveTo(cx(x), cz(z))); c.closePath(); } c.fill('nonzero');
   });
   mesh(new THREE.PlaneGeometry(S, S), mat({ map: tex(site), roughness: .95, envMapIntensity: .3 }), 0, G0 - .04, 0, 0, -Math.PI / 2);
@@ -5508,7 +5514,8 @@ const contact = (() => { const SIZE = 48, RES = 512, H = 4.5, mk = () => { const
     fragmentShader: 'uniform sampler2D tDiffuse; uniform vec2 dir; varying vec2 vUv; void main() { vec4 s = texture2D(tDiffuse, vUv) * .227027; s += (texture2D(tDiffuse, vUv + dir * 1.384615) + texture2D(tDiffuse, vUv - dir * 1.384615)) * .316216; s += (texture2D(tDiffuse, vUv + dir * 3.230769) + texture2D(tDiffuse, vUv - dir * 3.230769)) * .070270; gl_FragColor = s; }' });
   const quadScene = new THREE.Scene(), quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1); quadScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), blurM));
   const blur = (step, from, to, horiz) => { blurM.uniforms.tDiffuse.value = from.texture; blurM.uniforms.dir.value.set(horiz ? step / RES : 0, horiz ? 0 : step / RES); renderer.setRenderTarget(to); renderer.render(quadScene, quadCam); };
-  return { plane, dirty: true, render() {
+  return { plane, dirty: true, at(x, z) { plane.position.x = cam.position.x = x; plane.position.z = cam.position.z = z; cam.updateMatrixWorld(); this.dirty = true; },   // follow an aircraft that moves (the gear course step)
+    render() {
     const hide = [apron, leadIn, wear, airport, grid, shadow, plane].filter(o => o.visible), bg = scene.background, clr = renderer.getClearAlpha(), cc = renderer.getClearColor(new THREE.Color());
     hide.forEach(o => { o.visible = false; }); scene.background = null; scene.overrideMaterial = depthM; renderer.setClearColor(0x000000, 0);
     renderer.setRenderTarget(rtA); renderer.clear(); renderer.render(scene, cam); scene.overrideMaterial = null;
@@ -6346,7 +6353,12 @@ function caBag() {
   g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   return { m: g, he, v: new THREE.Vector3(), w: new THREE.Vector3(), rest: false };
 }
-const _bc = new THREE.Vector3(), _bq = new THREE.Quaternion(), _bu = new THREE.Vector3(0, 1, 0);
+const _bc = new THREE.Vector3(), _bq = new THREE.Quaternion(), _bu = new THREE.Vector3(0, 1, 0), _fq = new THREE.Quaternion(), _fz = new THREE.Vector3(0, 0, 1);
+/* keep the sun's shadow box and the contact shadow on an aircraft that has moved off the stand (x, z); (0, 0) puts them back */
+function caFollow(x, z) {
+  sun.target.position.set(x, 0, z); sun.target.updateMatrixWorld(); contact.at(x, z);
+  if (x || z) sun.position.set(26 + x, 34, -26 + z); else updateShadows();   // updateShadows sets the sun for the current view
+}
 function caBagStep(b, dt) {
   const m = b.m, G = GROUND_Y;
   if (!b.rest) { m.position.addScaledVector(b.v, dt); b.v.y -= 9.81 * dt;
@@ -6678,19 +6690,67 @@ const CA_EFFECTS = {
       if (legs.right.length) caState.legs.push({ rec: caPivotGroup(legs.right, new THREE.Vector3(G.mainTrunX, G.mainTrunY, -G.track), X), amp: -G.mainUp, k: 'm' });
       if (legs.nose.length) caState.legs.push({ rec: caPivotGroup(legs.nose, new THREE.Vector3(G.noseTrunX, G.noseTrunY, 0), Z), amp: G.noseUp, k: 'n' });
       caState.restoreFns = caState.restoreFns || []; caState.restoreFns.push(() => gearPose(0, 0, 0, 0));
-      caState.pose = { y: aircraft.position.y, rz: aircraft.rotation.z, sh: shadow.material.opacity };
+      /* the flight: the aircraft taxis out from the stand, lines up on the runway (centreline x 230, along z), takes off and retracts the
+         gear in the climb; then, on final approach, extends it, lands and rolls out. It really moves here (the old loop lifted it straight off
+         the stand), so the sun's shadow box and the contact shadow follow it and the camera follows it: drag to look round, each shot resets
+         the angle. Cuts dip to black. Pitch turns about the main wheels' contact point, so rotation does not drop the tail into the runway */
+      const F = caState.flight = { p: aircraft.position.clone(), r: aircraft.rotation.clone(), shot: -1, d: 0, ws: 0, loops: 0, lastT: 0, wheels: [],
+        C: new THREE.Vector3(G.mainX, G.mainY - G.mainR, 0), o: new THREE.Object3D(), dip: document.createElement('div'),
+        beacons: aircraft.children.filter(o => o.isMesh && o.material && o.material.isMeshBasicMaterial && o.geometry.type === 'SphereGeometry' && Math.abs(o.position.x - 4) < 1e-6 && o.material.color.getHex() === 0xff4040) };
+      F.o.scale.copy(aircraft.scale);
+      for (const sys of SYSTEMS) for (const m of sys.meshes) { const l = m.userData.label;   // tyres, drums, faces and caps roll on their axles (in the leg pivots now)
+        if (['Main wheel', 'Main wheel hub cap', 'Nose wheel', 'Nosewheel cap'].includes(l)) F.wheels.push({ m, q: m.quaternion.clone(), R: l.startsWith('Main') ? G.mainR : G.noseR }); }
+      F.dip.className = 'c-dip'; courseWrap.prepend(F.dip);
+      caState.restoreFns.push(() => { for (const w of F.wheels) w.m.quaternion.copy(w.q); for (const b of F.beacons) b.material.color.setHex(0xff4040);
+        aircraft.position.copy(F.p); aircraft.rotation.copy(F.r); contact.plane.material.opacity = .62; caFollow(0, 0); intro.fan = 1; F.dip.remove(); });
     },
     update(dt) {
-      caT += dt; const T = caT % 10;
-      // nose forward doors open, legs travel (the nose a touch behind the mains), doors close; then the reverse
-      const e = T < 1.3 ? 0 : T < 3.7 ? ease(seg(T, 1.3, 3.7)) : T < 6.1 ? 1 : T < 8.4 ? 1 - ease(seg(T, 6.1, 8.4)) : 0;
-      const eN = T < 1.5 ? 0 : T < 3.8 ? ease(seg(T, 1.5, 3.8)) : T < 6.0 ? 1 : T < 8.3 ? 1 - ease(seg(T, 6.0, 8.3)) : 0;
-      const dN = T < 1.0 ? 0 : T < 1.5 ? ease(seg(T, 1.0, 1.5)) : T < 3.8 ? 1 : T < 4.3 ? 1 - ease(seg(T, 3.8, 4.3)) : T < 5.5 ? 0 : T < 6.0 ? ease(seg(T, 5.5, 6.0)) : T < 8.3 ? 1 : T < 8.8 ? 1 - ease(seg(T, 8.3, 8.8)) : 0;
+      const L = 46.5, F = caState.flight, D2R = Math.PI / 180; caT += dt; const T = caT % L; if (T < F.lastT) F.loops++; F.lastT = T;
+      let x = 0, z = 0, h = 0, psi = 0, th = 0, v = 0, ground = true, shot, fan, txt, e = 0, eN = 0, dN = 0;
+      if (T < 8.5) {                                                                                     // off the stand: away along the lead-in at up to 9 m/s
+        shot = 0; const t = Math.max(0, T - 1.5); x = t < 5.625 ? .8 * t * t : 25.3 + 9 * (t - 5.625); v = T < 1.5 ? 0 : Math.min(9, 1.6 * t); fan = 2.5;
+        txt = T < 1.5 ? 'Gear down and locked: engines running, cleared to taxi' : 'Taxiing out to the runway';
+      } else if (T < 15.5) {                                                                             // the taxiway's last stretch and the turn onto the runway, 35 m radius
+        shot = 1; const u = 10 * (T - 8.5); v = 10; fan = 2.5;
+        if (u < 15) x = 180 + u; else { const f = (u - 15) / 35; x = 195 + 35 * Math.sin(f); z = 35 - 35 * Math.cos(f); psi = -f; }
+        txt = 'Lining up on the runway';
+      } else if (T < 35.5) {                                                                             // takeoff roll, rotation at 26.9 s, liftoff, gear up in the climb
+        shot = 2; const t = T - 15.5, tv = 58 / 4.2; psi = -Math.PI / 2; x = 230; fan = 6;
+        v = Math.min(68, 10 + 4.2 * t); z = 35 + (t < tv ? 10 * t + 2.1 * t * t : 10 * tv + 2.1 * tv * tv + 68 * (t - tv));
+        th = 11 * D2R * ease(seg(T, 26.9, 29.9));
+        if (T > 28.2) { ground = false; const a = T - 28.2; h = a < 2 ? 9 * a * a / 4 : 9 + 9 * (a - 2); }
+        e = ease(seg(T, 30.3, 32.6)); eN = ease(seg(T, 30.5, 32.8)); dN = T < 30 ? 0 : T < 30.5 ? ease(seg(T, 30, 30.5)) : T < 32.8 ? 1 : T < 33.3 ? 1 - ease(seg(T, 32.8, 33.3)) : 0;
+        txt = T < 26.9 ? 'Takeoff roll' : T < 28.2 ? 'Rotation' : T < 30 ? 'Liftoff, positive climb' : T < 30.5 ? 'Gear lever UP: the nose gear forward doors open' : T < 32.8 ? 'Retracting: mains swing inboard, the nose gear folds forward' : T < 33.3 ? 'Nose gear forward doors close' : 'Gear up and locked: main tyres ride exposed in their bins, sealed by brushes';
+      } else {                                                                                           // final approach on a 3 degree path, flare, touchdown at 43.5 s, rollout
+        shot = 3; const td = 43.5, tau = td - T; psi = -Math.PI / 2; x = 230; fan = 3.5;
+        if (T < td) { v = 62; z = -40 - 62 * tau; ground = false;
+          if (tau > 1.5) h = 3.25 * tau; else { const s = tau / 1.5; h = (s * s * s - 2 * s * s + s) * .9 + (-2 * s * s * s + 3 * s * s) * 4.875 + (s * s * s - s * s) * 4.875; }   // flare: sink eases to 0.6 m/s
+          th = (3.5 + 2.5 * ease(seg(T, td - 1.5, td))) * D2R; }
+        else { const r = T - td; v = 62 - 3.5 * r; z = -40 + 62 * r - 1.75 * r * r; th = 6 * D2R * (1 - ease(seg(r, 0, 2))); fan = 4; }   // nose lowered, reversers
+        e = 1 - ease(seg(T, 37, 39.3)); eN = 1 - ease(seg(T, 37.1, 39.4)); dN = T < 36.5 ? 0 : T < 37 ? ease(seg(T, 36.5, 37)) : T < 39.4 ? 1 : T < 39.9 ? 1 - ease(seg(T, 39.4, 39.9)) : 0;
+        txt = T < 36.5 ? 'On final approach' : T < 37 ? 'Gear lever DOWN: the nose gear forward doors open' : T < 39.4 ? 'Extending: gear free of the uplocks, falling and driven down' : T < 39.9 ? 'Nose gear forward doors close' : T < td ? 'Gear down and locked' : 'Touchdown and rollout';
+      }
       for (const l of caState.legs) l.rec.piv.quaternion.setFromAxisAngle(l.rec.axis, l.amp * (l.k === 'n' ? eN : e));
-      gearPose(e, e, eN, dN);
-      caLive(T < 1.0 ? 'Gear down and locked' : T < 1.5 ? 'Gear lever UP: the nose gear forward doors open' : T < 3.8 ? 'Retracting: mains swing inboard, the nose gear folds forward' : T < 4.3 ? 'Nose gear forward doors close' : T < 5.5 ? 'Gear up and locked: main tyres ride exposed in their bins, sealed by brushes' : T < 6.0 ? 'Gear lever DOWN: the nose gear forward doors open' : T < 8.3 ? 'Extending: gear free of the uplocks, falling and driven down' : T < 8.8 ? 'Nose gear forward doors close' : 'Gear down and locked');
-      // the aircraft lifts off and rotates nose-up as the gear comes up, then settles back for the extension
-      aircraft.position.y = caState.pose.y + e * 3.2; aircraft.rotation.z = caState.pose.rz + e * .10; shadow.material.opacity = caState.pose.sh * (1 - e * .7);
+      gearPose(e, e, eN, dN); caLive(txt); intro.fan = fan;
+      /* place it: yaw psi, pitch th about the main wheels' contact point, height h over the ramp */
+      const o = F.o, b = F.r, c1 = new THREE.Vector3(), c0 = new THREE.Vector3();
+      o.position.set(0, F.p.y, 0); o.rotation.set(b.x, psi, b.z + th); o.updateMatrix(); c1.copy(F.C).applyMatrix4(o.matrix);
+      o.rotation.set(b.x, psi, b.z); o.updateMatrix(); c0.copy(F.C).applyMatrix4(o.matrix);
+      aircraft.position.set(x + c0.x - c1.x, F.p.y + h + c0.y - c1.y, z + c0.z - c1.z); aircraft.rotation.set(b.x, psi, b.z + th);
+      if (ground) F.ws = v; else F.ws *= Math.exp(-dt * 1.5); F.d += F.ws * dt;                       // wheels roll on the ground and spin down once airborne
+      for (const w of F.wheels) w.m.quaternion.copy(w.q).premultiply(_fq.setFromAxisAngle(_fz, -F.d / w.R));
+      for (let k = 0; k < F.beacons.length; k++) F.beacons[k].material.color.setHex((T + k * .55) % 1.1 < .12 ? 0xff3a2a : 0x4a0d0d);
+      caFollow(aircraft.position.x, aircraft.position.z);
+      const co = ground ? Math.max(0, Math.min(1, 1 - (v - 8) / 6)) : 0;                                // the soft contact shadow fades as it speeds up (it is redrawn every frame meanwhile)
+      contact.plane.material.opacity = .62 * co; contact.plane.visible = co > .01; if (co > .01) contact.dirty = true;
+      /* camera: a cut (or, onto the runway, a swing) to each shot's angle; then it follows the aircraft */
+      if (shot === 2 && T > 29.2) shot = 4;                                                             // after liftoff the camera drops a little below, into view of the gear bays
+      if (shot !== F.shot) { const A = [[.62, 1.45, 52], [1.15, 1.42, 55], [.25, 1.5, 48], [.8, 1.5, 52], [.3, 1.68, 40]][shot]; want.t = A[0]; want.p = A[1]; want.r = A[2];
+        if ((shot !== 2 && shot !== 4) || F.shot < 0) { cam.t = want.t; cam.p = want.p; cam.r = want.r; } else normalizeTheta(); F.shot = shot; }
+      target.set(aircraft.position.x, aircraft.position.y - .6, aircraft.position.z); wantTarget.copy(target);
+      camera.position.set(target.x + cam.r * Math.sin(cam.p) * Math.cos(cam.t), target.y + cam.r * Math.cos(cam.p), target.z + cam.r * Math.sin(cam.p) * Math.sin(cam.t)); camera.lookAt(target);
+      const dip = c => Math.max(0, 1 - Math.abs(T - c) / .45);
+      F.dip.style.opacity = Math.max(dip(8.5), dip(35.5), T > L - .45 ? (T - (L - .45)) / .45 : 0, F.loops && T < .45 ? 1 - T / .45 : 0).toFixed(3);
     }
   },
   /* RAT: door opens, the turbine swings down on its arm from the fairing and spins up */
