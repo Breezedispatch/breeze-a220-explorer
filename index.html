@@ -844,7 +844,7 @@ function loft(stations, segs = 40, a0 = 0, a1 = Math.PI * 2) {
   return g;
 }
 /* hull loft for the wing-to-body fairing: each station is a rounded-bottom trough of half-width W, bottom yb, top yt (inside the fuselage) */
-function hullLoft(stations, cornerR = .32, segs = 10) {
+function hullLoft(stations, cornerR = .32, segs = 10, ringFn = null) {
   const pos = [];
   const ringPts = (st) => {
     const pts = [], W = st.W, yb = st.yb, yt = st.yt, r = Math.min(cornerR, W * .45), flat = W - r;
@@ -856,7 +856,7 @@ function hullLoft(stations, cornerR = .32, segs = 10) {
     return pts;
   };
   let n = 0; const uv = [], xs = stations.map(q => q.x), xmin = Math.min(...xs), xmax = Math.max(...xs);
-  for (const st of stations) { const pts = ringPts(st); n = pts.length; pts.forEach(([y, z], i) => { pos.push(st.x, y, z); uv.push((st.x - xmin) / (xmax - xmin), i / (n - 1)); }); }
+  for (const st of stations) { const pts = ringFn ? ringFn(st) : ringPts(st); n = pts.length; pts.forEach(([y, z], i) => { pos.push(st.x, y, z); uv.push((st.x - xmin) / (xmax - xmin), i / (n - 1)); }); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   g.setIndex(indexRings(stations.length, n, false)); g.computeVertexNormals(); return g;
 }
@@ -1091,12 +1091,86 @@ const CABIN_WINDOWS = [...Array.from({ length: 17 }, (_, k) => DOOR1_X - 1.19 - 
    left EXPOSED in flight with a brush seal round it (no wheel doors, like the 737). Underside photo of an A220-300 in flight
    (JetBlue N3145J planform, Wikimedia Commons): bins at the main axle station, visible tyre centres 1.045 m either side of the
    centreline, openings about 1.37 m across including the seal. The bin is a cylinder round the retracted axle line, so it is
-   derived from the gear geometry (GEAR, below) rather than set by hand. sd = +1 left, -1 right. */
+   derived from the gear geometry (GEAR, below) rather than set by hand. sd = +1 left, -1 right.
+   The opening is a tight fit: in the gear-swing video (A220 L/G operation, hangar, 2023) the retracted tyre fills it, flush with the fairing,
+   with only the black brush seal showing round it. */
 function mainBin(sd) {
   const G = GEAR, a = G.mainUp, L = G.mainTrunY - G.mainY;                          // trunnion height above the axle
   const axle = new THREE.Vector3(G.mainX, G.mainTrunY - L * Math.cos(a), sd * (G.track - L * Math.sin(a)));   // rotation about x keeps the axle's x
   const dir = new THREE.Vector3(0, -Math.sin(a), sd * Math.cos(a));                 // retracted axle direction, toward the outer wheel: down and outboard
-  return { axle, dir, R: G.mainR + .07, top: -(G.mainSpace + G.mainW / 2 + .06) };  // bin radius (tyre + clearance), and its roof beyond the inner wheel
+  return { axle, dir, R: G.mainR + .045, face: G.mainSpace + G.mainW / 2, top: -(G.mainSpace + G.mainW / 2 + .06) };   // bin radius (tyre + seal), outer tyre face, roof beyond the inner wheel
+}
+
+/* ---- the wing-to-body fairing round the main gear ----
+   Gear up, each main leg lies under the wing root tilted 22 deg (it swings 68 deg) with its outer tyre at the fairing's lower corner. Three
+   shapes follow from that (gear-swing video; TTM ch. 01 Fig. 26, the fairing panels with the round bin and the leg slot rising from it):
+   - the fairing's lower corner is cut back, round the bins, to a flat chamfer square to the retracted axle through the outer tyre's face,
+     so the tyre sits flush in a round bin;
+   - outboard of the fairing the retracted leg hangs below the wing, so the fairing swells into a bulge along it, blending into the wing;
+   - the leg door is the part of that bulge the leg carries: a band from the bin up to the trunnion, wide enough at the bin for the tyres to
+     swing through and narrowing to the leg above it (the S-shaped seam in the video). Built from the same surface, it closes flush.
+   Positions are given in the retracted-gear frame of each side: x (fore-aft, as the aircraft), s along the retracted leg from the outer
+   tyre's centre toward the trunnion, d depth in from the chamfer plane. */
+const GEAR_FAIR = {
+  cx: [-.45, -.05, 1.35, 1.80],        // the chamfer fades in between the first two x and out between the last two (full round the bins)
+  r1: 1.0, r2: .26,                    // fillet radii: keel to chamfer, chamfer to the fairing side wall
+  proud: .01,                          // the chamfer sits this far proud of the tyre face
+  binHalf: .565, aft: .40, fwd: .44,   // door band: half-width at the bin; behind and ahead of the leg higher up
+  sB: [.9, 1.9],                       // the band narrows from the bin width to the leg between these s
+  s0: .9, s1: 1.9, s2: 2.75,           // bulge: flush on the chamfer up to s0, out to the door plane by s1, closing into the wing from the
+                                       // trunnion (s 2.77) on: past it only the trunnion pin bosses need cover, and the wing is 5 cm away
+  depth: .465,                         // door plane depth: just clear of the main fitting (radius 0.14 about the leg axis at d 0.635)
+  rho: .32, k: .12,                    // edge radius where the bulge turns up to meet the wing and the fairing side, and the fillet blend
+  sTop: 2.88                           // the door runs just past the trunnion, where gear down the leg passes through; its top tucks into the wing
+};
+function smooth01(t) { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); }
+function gearFrame(sd) {
+  const G = GEAR, b = mainBin(sd), a = G.mainUp;
+  const n = b.dir.clone(), es = new THREE.Vector3(0, Math.cos(a), sd * Math.sin(a)), O = b.axle.clone().addScaledVector(n, b.face + GEAR_FAIR.proud);
+  const T = new THREE.Vector3(G.mainTrunX, G.mainTrunY, sd * G.track), sT = T.clone().sub(O).dot(es);
+  return { sd, n, es, O, sT, R: b.R,
+    toW: (x, s, d) => new THREE.Vector3(x, O.y + s * es.y - d * n.y, O.z + s * es.z - d * n.z),
+    fromW: p => { const vy = p.y - O.y, vz = p.z - O.z; return { x: p.x, s: vy * es.y + vz * es.z, d: -(vy * n.y + vz * n.z) }; },
+    legX: s => G.mainX + (G.mainTrunX - G.mainX) * s / sT };
+}
+function gearBand(f, s) {                // fore-aft edges of the door band at s
+  const GF = GEAR_FAIR, w = smooth01((s - GF.sB[0]) / (GF.sB[1] - GF.sB[0])), lx = f.legX(s), x0 = GEAR.mainX;
+  return { a: x0 - GF.binHalf + (lx - GF.aft - x0 + GF.binHalf) * w, f: x0 + GF.binHalf + (lx + GF.fwd - x0 - GF.binHalf) * w };
+}
+function fairChamfer(x) { const [a, b, c, d] = GEAR_FAIR.cx; return x <= a || x >= d ? 0 : x < b ? smooth01((x - a) / (b - a)) : x > c ? smooth01((d - x) / (d - c)) : 1; }
+/* the chamfered lower corner on the left side, wall bottom to keel, as segs + 1 points [y, z] spaced evenly along it */
+function chamferCurve(W, yb, segs) {
+  const f = gearFrame(1), phi = Math.PI / 2 - GEAR.mainUp, m = Math.tan(phi), cp = Math.cos(phi), sp = Math.sin(phi), { r1, r2 } = GEAR_FAIR;
+  const zk = f.O.z + (yb - f.O.y) / m, yw = f.O.y + (W - f.O.z) * m;                       // the chamfer meets the keel line and the side wall
+  const t1 = r1 * Math.tan(phi / 2), t2 = r2 * Math.tan((Math.PI / 2 - phi) / 2);
+  const B = [W - t2 * cp, yw - t2 * sp], C = [zk + t1 * cp, yb + t1 * sp];                // [z, y]: chamfer line from B down to C
+  const L2 = r2 * (Math.PI / 2 - phi), L0 = Math.hypot(B[0] - C[0], B[1] - C[1]), L1 = r1 * phi, Lt = L2 + L0 + L1, pts = [];
+  for (let i = 0; i <= segs; i++) { const l = Lt * i / segs; let z, y;
+    if (l <= L2) { const th = -l / r2; z = W - r2 + r2 * Math.cos(th); y = yw + t2 + r2 * Math.sin(th); }                         // fillet: side wall to chamfer
+    else if (l <= L2 + L0) { const t = (l - L2) / L0; z = B[0] + (C[0] - B[0]) * t; y = B[1] + (C[1] - B[1]) * t; }               // the chamfer
+    else { const th = -Math.PI / 2 + phi * (1 - (l - L2 - L0) / L1); z = zk - t1 + r1 * Math.cos(th); y = yb + r1 + r1 * Math.sin(th); }   // fillet: chamfer to keel
+    pts.push([y, z]); }
+  return pts;
+}
+/* one fairing station as a ring of [y, z] in the hullLoft layout: top of the left wall, left corner, keel, right corner, top of the right wall */
+function hullRing(st, cornerR, segs) {
+  const { x, W, yb, yt } = st, r = Math.min(cornerR, W * .45), c = fairChamfer(x);
+  let side = []; for (let i = 0; i <= segs; i++) { const a = i / segs * Math.PI / 2; side.push([yb + r - r * Math.sin(a), W - r + r * Math.cos(a)]); }
+  if (c > 0) { const ch = chamferCurve(W, yb, segs); side = side.map((p, i) => [p[0] + (ch[i][0] - p[0]) * c, p[1] + (ch[i][1] - p[1]) * c]); }
+  const z1 = side[segs][1], pts = [[yt, W], ...side];
+  for (let i = 1; i < 8; i++) pts.push([yb, z1 - 2 * z1 * i / 8]);
+  for (let i = segs; i >= 0; i--) pts.push([side[i][0], -side[i][1]]);
+  pts.push([yt, -W]); return pts;
+}
+/* the wing's lower surface height at (x, z) in the build frame (either wing), or null off the wing: the loft of buildWing, with its dihedral
+   and drop (rotation 0.088 about x, 0.75 m down) */
+function wingLowerY(x, z) {
+  const th = .088, c = Math.cos(th), s = Math.sin(th), az = Math.abs(z); let v = az, y = null;
+  for (let it = 0; it < 3; it++) {
+    const zAt = Math.max(v, 1.755), L = WING.le(zAt), C = L - WING.te(zAt), u = (L - x) / C; if (u < 0 || u > 1) return null;
+    const t = v >= 2.217 ? WING.tc(v) : .135 + .02 * (2.217 - v) / .87, dy = v >= 2.217 ? 0 : -.05 * (2.217 - v) / .87;
+    const yl = dy + C * (4 * .012 * u * (1 - u) - t * TH(u) * .5); v = (az + yl * s) / c; y = yl * c + v * s - .75; }
+  return y;
 }
 
 /* fuselage profile tables: [X, value] from nose (X=19.345) to tail (X=-19.35) */
@@ -1121,12 +1195,13 @@ function buildFuselage() {
   /* the main wheel bins and the gear bays behind the fairing slots reach up through the fuselage's own lower skin (it runs inside the
      fairing), so the skin is opened there too; texels map to the skin exactly as in paintLoftTexture */
   { const map = fus.material.map, cv = map.image, c = cv.getContext('2d'), Wt = cv.width, Ht = cv.height, img = c.getImageData(0, 0, Wt, Ht), d = img.data;
-    const xs = st.map(q => q.x), xmin = Math.min(...xs), xmax = Math.max(...xs), bins = [1, -1].map(mainBin), P = new THREE.Vector3(), q = new THREE.Vector3();
-    for (let i = 0; i < Wt; i++) { const x = xmin + (xmax - xmin) * i / (Wt - 1); if (x < -.2 || x > 1.8) continue; const f = fusAt(st, x);
+    const xs = st.map(q => q.x), xmin = Math.min(...xs), xmax = Math.max(...xs), bins = [1, -1].map(mainBin), frames = [1, -1].map(gearFrame), P = new THREE.Vector3(), q = new THREE.Vector3();
+    for (let i = 0; i < Wt; i++) { const x = xmin + (xmax - xmin) * i / (Wt - 1); if (x < -.2 || x > 1.9) continue; const f = fusAt(st, x);
       for (let j = 0; j < Ht; j++) { const a = Math.PI * 2 * (1 - j / (Ht - 1)), y = f.cy + f.ry * Math.cos(a), z = f.rz * Math.sin(a); if (y > -.6) continue;
         P.set(x, y, z); let cut = false;
         for (const b of bins) { q.copy(P).sub(b.axle); const s = q.dot(b.dir); if (s > b.top - .02 && q.addScaledVector(b.dir, -s).length() < b.R + .02) { cut = true; break; } }
-        if (!cut && x > .24 && x < 1.58 && Math.abs(z) > 1.40 && y > -1.49 && y < -.71) cut = true;
+        if (!cut) { const g = frames[z > 0 ? 0 : 1].fromW(P), bd = gearBand(frames[z > 0 ? 0 : 1], g.s);   // the slot the leg and tyres swing through
+          if (g.s > 0 && g.s < 2.2 && g.d > -.1 && g.d < 1.6 && x > bd.a - .03 && x < bd.f + .03) cut = true; }
         if (cut) d[(j * Wt + i) * 4 + 3] = 0; } }
     c.putImageData(img, 0, 0); map.needsUpdate = true; fus.material.alphaTest = .05; fus.material.needsUpdate = true; }   // low threshold: the x-ray views fade the skin to 0.12 and it must stay visible
   // radome: painted Breeze blue to the tip (N218BZ in overcast light; the grey seen on N211BZ was sun glare)
@@ -1182,41 +1257,42 @@ function buildFuselage() {
   /* top edge of the fairing sides: under the wing it runs up into the wing box (lower surface -0.67 to -0.85 at the root); elsewhere it stops
      where the fuselage is at least as wide as the fairing, so the edge is always buried */
   const hullTop = (x, W) => (x <= 6.0 && x >= -.30) ? -.66 : Math.min(-.5, Math.max(-1.0, -1.861 * Math.sqrt(Math.max(0, 1 - ((W + .03) / 1.75) ** 2))));
-  const hst = []; for (let x = 8.4; x >= -4.5 - 1e-6; x -= .2) { const W = splinePts(HULL_W, x); hst.push({ x: +x.toFixed(3), W, yb: splinePts(HULL_YB, x), yt: hullTop(x, W) }); }
+  /* stations every 0.2 m, closing to 0.1 m through the chamfer round the main wheel bins */
+  const hxs = []; for (let x = 8.4; x > 2.05; x = +(x - .2).toFixed(3)) hxs.push(x); for (let x = 2.0; x > -.75; x = +(x - .1).toFixed(3)) hxs.push(x); for (let x = -.8; x >= -4.5 - 1e-6; x = +(x - .2).toFixed(3)) hxs.push(x);
+  const hst = hxs.map(x => { const W = splinePts(HULL_W, x); return { x, W, yb: splinePts(HULL_YB, x), yt: hullTop(x, W) }; });
   FUS.hull = hst; FUS.HULL_W = HULL_W; FUS.HULL_YB = HULL_YB;
-  /* ring layout of hullLoft with segs = 14: index 0 edge, 1..15 first corner arc, 15..23 the flat keel, 23..37 second arc, 38 edge.
-     That lets the keel be addressed in texture space, so the wheel bays can be cut straight through the skin. */
-  const HSEG = 14, HRING = 2 * HSEG + 11, KEEL_V0 = (HSEG + 1) / (HRING - 1), KEEL_V1 = (HSEG + 9) / (HRING - 1);
-  FUS.keelV = (x, z) => { const W = splinePts(HULL_W, x), flat = W - Math.min(.60, W * .45);
-    return KEEL_V0 + (KEEL_V1 - KEEL_V0) * (flat - z) / (2 * flat); };
+  /* ring layout of hullLoft with segs = 20: index 0 edge, 1..21 first corner (or the chamfer round the bins), 21..29 the flat keel, 29..49
+     second corner, 50 edge. Every texel of the skin maps back to its point through hullRing, so the bins and the leg slots can be cut straight
+     through it. */
+  const HSEG = 20, ring = st => hullRing(st, .60, HSEG);
+  FUS.ringAt = x => { const W = splinePts(HULL_W, x); return ring({ x, W, yb: splinePts(HULL_YB, x), yt: hullTop(x, W) }); };   // the section at x, as [y, z] points
+  FUS.fairY = (x, z) => {                                  // the fairing's underside height at (x, z), following the corners and the chamfer; null beyond its width
+    const pts = FUS.ringAt(x), az = Math.abs(z);
+    for (let i = 1; i < HSEG + 6; i++) { const [y0, z0] = pts[i], [y1, z1] = pts[i + 1]; if (z0 !== z1 && (z0 - az) * (z1 - az) <= 0) return y0 + (y1 - y0) * (az - z0) / (z1 - z0); }
+    return null; };
   const hullTex = (() => {
     const W = 2048, H = 512, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
     const xs = hst.map(q => q.x), xmin = Math.min(...xs), xmax = Math.max(...xs);
     for (let i = 0; i < W; i++) { const x = xmin + (xmax - xmin) * i / (W - 1); c.fillStyle = paintColor(x, splinePts(HULL_YB, x)); c.fillRect(i, 0, 1, H); }
-    /* cut the main wheel bins and the strut slots right through the skin. Every texel is mapped back to its point on the fairing (the same
-       ring layout as hullLoft) and removed if it lies inside a bin cylinder, or in the slot the retracted leg and its doors pass through */
-    { const img = c.getImageData(0, 0, W, H), d = img.data, bins = [1, -1].map(mainBin), G = GEAR, slope = Math.tan(Math.PI / 2 - G.mainUp);
-      const P = new THREE.Vector3(), q = new THREE.Vector3();
+    /* cut the main wheel bins and the leg slots right through the skin. Every texel is mapped back to its point on the fairing (the same
+       ring layout as hullLoft) and removed if it lies in a bin, or in the band the leg door covers (the slot the leg and tyres swing through) */
+    { const img = c.getImageData(0, 0, W, H), d = img.data, frames = [1, -1].map(gearFrame), P = new THREE.Vector3();
       for (let i = 0; i < W; i++) {
         const x = xmin + (xmax - xmin) * (i + .5) / W; if (x < -.3 || x > 1.9) continue;      // bins and slots lie between x 0 and 1.6
-        const Wx = splinePts(HULL_W, x), yb = splinePts(HULL_YB, x), yt = hullTop(x, Wx), r = Math.min(.60, Wx * .45), flat = Wx - r;
-        const pts = [[yt, Wx]]; for (let k = 0; k <= HSEG; k++) { const a = k / HSEG * Math.PI / 2; pts.push([yb + r - r * Math.sin(a), Wx - r + r * Math.cos(a)]); }
-        for (let k = 1; k < 8; k++) pts.push([yb, flat - 2 * flat * k / 8]);
-        for (let k = 0; k <= HSEG; k++) { const a = k / HSEG * Math.PI / 2; pts.push([yb + r - r * Math.cos(a), -(Wx - r) - r * Math.sin(a)]); }
-        pts.push([yt, -Wx]); const n = pts.length;
+        const Wx = splinePts(HULL_W, x), pts = ring({ x, W: Wx, yb: splinePts(HULL_YB, x), yt: hullTop(x, Wx) }), n = pts.length;
         for (let j = 0; j < H; j++) {
           const f = (1 - (j + .5) / H) * (n - 1), k0 = Math.min(n - 2, Math.floor(f)), t = f - k0;   // canvas rows run opposite to texture v
           const y = pts[k0][0] + (pts[k0 + 1][0] - pts[k0][0]) * t, z = pts[k0][1] + (pts[k0 + 1][1] - pts[k0][1]) * t;
-          P.set(x, y, z); let cut = false;
-          for (const b of bins) { q.copy(P).sub(b.axle); const s = q.dot(b.dir); if (s > b.top && q.addScaledVector(b.dir, -s).length() < b.R + .012) { cut = true; break; } }
-          if (!cut) { const az = Math.abs(z); if (az > 1.28 && x > .30 && x < 1.56 && Math.abs(y - (G.mainTrunY - (G.track - az) * slope - .10)) < .30) cut = true; }
+          P.set(x, y, z); const fr = frames[z > 0 ? 0 : 1], g = fr.fromW(P), bd = gearBand(fr, g.s), dx = x - GEAR.mainX;
+          const cut = (Math.abs(g.d) < .2 && dx * dx + g.s * g.s < (fr.R + .006) ** 2) || (g.s > 0 && g.s < 2.0 && g.d > -.2 && g.d < 1.4 && x > bd.a - .006 && x < bd.f + .006);
           if (cut) d[(j * W + i) * 4 + 3] = 0;
         }
       }
       c.putImageData(img, 0, 0); }
     const t = new THREE.CanvasTexture(cv); t.anisotropy = 16; t.encoding = THREE.sRGBEncoding; return t;
   })();
-  const fair = new THREE.Mesh(hullLoft(hst, .60, HSEG), paint({ map: hullTex, roughness: .42, transparent: false, alphaTest: .05, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 })); aircraft.add(fair); skin.push(fair);   // offset: its upper edge blends into the fuselage skin
+  const fair = new THREE.Mesh(hullLoft(hst, .60, HSEG, ring), paint({ map: hullTex, roughness: .42, transparent: false, alphaTest: .05, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 })); aircraft.add(fair); skin.push(fair);   // offset: its upper edge blends into the fuselage skin
+  FUS.fair = fair;
   const fst = hst.map(h => ({ x: h.x, r: 1, cy: h.yb + .45, ry: .45, rz: h.W, cz: 0 })); FUS.fst = fst;
 
   // cabin windows: 11 x 16 in, 0.60 m pitch, skipping the doors and the overwing exits; drawn as rounded panes on the skin
@@ -1254,10 +1330,10 @@ function buildFuselage() {
     // the strip lies on the flat fairing keel over the wing box
     const NU = 48, NV = 8, pos = [], uv = [];
     for (let i = 0; i <= NU; i++) {
-      const x = x0 + (x1 - x0) * i / NU, W = splinePts(HULL_W, x), wz = Math.min(halfZ, W - .2), yb = splinePts(HULL_YB, x), r = Math.min(.60, W * .45), flat = W - r;
+      const x = x0 + (x1 - x0) * i / NU, W = splinePts(HULL_W, x), wz = Math.min(halfZ, W - .2);
       for (let j = 0; j <= NV; j++) {
-        const t = j / NV, z = -wz + 2 * wz * t, az = Math.abs(z), ph = az > flat ? Math.asin(Math.min(1, (az - flat) / r)) : 0;   // follow the fairing's rounded corners (flat at keel height, the letter ends hung up to 10 cm below them)
-        pos.push(x, yb + r - r * Math.cos(ph) - .004, z); uv.push(i / NU, t);
+        const t = j / NV, z = -wz + 2 * wz * t;   // follow the fairing's underside: its rounded corners, and at the aft end the chamfer round the bins
+        pos.push(x, FUS.fairY(x, z) - .004, z); uv.push(i / NU, t);
       }
     }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
@@ -1832,19 +1908,6 @@ function buildGear() {
       put(cyl(.024, .024, .12, darkM(), pa.x, pa.y, pa.z, 'z', 10), 'Torque links', side); }
     // wheels: outer (outboard) and inner on the common axle
     for (const k of [1, -1]) wheel(A.x, A.y, sd * (G.track + k * G.mainSpace), G.mainR, G.mainW, G.mainRim, sd * k, 'Main wheel', side, null, true);
-    /* leg doors (three per side, AFM CDL 32-10): fixed to the outboard face of the strut. Upper and middle panels flat; the lower panel kinks
-       outboard, with a concave lower edge that closes against the tyre bin when retracted. Hazard stripes on the forward edge (photos). */
-    { const zD = sd * (G.track + .155), dm = () => paint({ color: LIVERY.white, emissive: sys.color, emissiveIntensity: 0 });
-      const panelGeo = (y0, y1, fwd, aft, arc) => { const s = new THREE.Shape(); s.moveTo(sx(y0) - aft, y0); s.lineTo(sx(y0) + fwd, y0); s.lineTo(sx(y1) + fwd, y1);
-        if (arc) { const xm = (sx(y1) + fwd + sx(y1) - aft) / 2; s.quadraticCurveTo(xm, y1 + arc, sx(y1) - aft, y1); } else s.lineTo(sx(y1) - aft, y1); s.closePath();
-        const g = new THREE.ExtrudeGeometry(s, { depth: .024, bevelEnabled: false }); g.translate(0, 0, -.012); return g; };
-      const up = new THREE.Mesh(panelGeo(-.46, -1.38, .58, .42), dm()); up.position.z = zD; put(up, 'Main gear leg door (upper)', side);   // its top tucks into the wing (from -0.52 a slit of daylight showed above it)
-      const mid = new THREE.Mesh(panelGeo(-1.40, -1.80, .56, .44), dm()); mid.position.z = zD; put(mid, 'Main gear leg door (middle)', side);
-      const hinge = new THREE.Group(); hinge.position.set(0, -1.82, zD); hinge.rotation.x = -sd * .12; aircraft.add(hinge);   // a slight kink: retracted, it closes the slot in the fairing side
-      const lo = new THREE.Mesh(panelGeo(0, -.42, .46, .56, .16).translate(0, 0, 0), dm()); lo.geometry.translate(sx(-1.82) - sx(0), 0, 0);   // shape built at y 0, shifted to the strut line at the hinge
-      hinge.add(lo); put(lo, 'Main gear leg door (lower)', side);
-      const st = new THREE.Mesh(new THREE.PlaneGeometry(.07, .84), M(0xffffff, { map: stripeTex, roughness: .5, polygonOffset: true, polygonOffsetFactor: -2 }));
-      st.position.set(sx(-.95) + .545, -.95, zD + sd * .014); st.rotation.set(0, sd > 0 ? 0 : Math.PI, -rake); put(st, 'Main gear leg door (upper)', side); }
     /* side stay: two-piece folding brace from the bay structure at the fairing side down to the inboard face of the main fitting; it is
        locked straight when the gear is down and folds upward into the wing root as the leg swings in. Downlock springs along it (photos). */
     { const U = V(.85, -1.20, sd * 1.86), P = on((-1.95 - T.y) / axU.y, 0, -.13), L = U.distanceTo(P), m1 = new THREE.Mesh(new THREE.CylinderGeometry(.052, .052, 1, 12), strutM()), m2 = new THREE.Mesh(new THREE.CylinderGeometry(.058, .058, 1, 12), strutM());
@@ -1857,48 +1920,97 @@ function buildGear() {
     { const body = put(new THREE.Mesh(new THREE.CylinderGeometry(.062, .062, 1, 14), strutM()), 'Main gear retraction actuator', null), r = put(new THREE.Mesh(new THREE.CylinderGeometry(.036, .036, 1, 12), chromeM()), 'Main gear retraction actuator', null);
       GEAR_RIG.rods.push({ A: V(1.38, -.38, sd * 2.45), B: on(.42, 0, -.15), len: .56, leg: side, body, rod: r }); }
     // trunnion fitting: fixed structure in the wing box around the pin (not moving)
-    { const ft = new THREE.Mesh(rbox(.46, .10, .40, .03), strutM()); ft.position.set(T.x, T.y - .03, T.z); put(ft, 'Main gear trunnion fitting', null); }   // in the 0.17 m-deep wing box, showing only below it in the bay roof: at 0.26 m tall, 6 cm up, it came 10 cm through the upper skin
+    { const ft = new THREE.Mesh(rbox(.46, .10, .26, .03), strutM()); ft.position.set(T.x, T.y - .03, T.z); put(ft, 'Main gear trunnion fitting', null); }   // in the 0.17 m-deep wing box, showing only below it in the bay roof: at 0.26 m tall, 6 cm up, it came 10 cm through the upper skin; at 0.40 m across it poked out past the end of the gear bulge
 
-    /* ---- the wheel bin: a cylinder round the retracted axle, from its roof above the inner wheel down to where it pierces the fairing (the same
+    /* ---- the wheel bin: a cylinder round the retracted axle, from its roof above the inner wheel down to its rim on the chamfer (the same
        cylinder is cut out of the fairing skin in buildFuselage), with the black brush seal round the opening ---- */
-    { const b = mainBin(sd), e1 = V(1, 0, 0), e2 = new THREE.Vector3().crossVectors(b.dir, e1).normalize();
-      const surfY = (x, z) => { const W = splinePts(FUS.HULL_W, x), yb = splinePts(FUS.HULL_YB, x), r = Math.min(.6, W * .45), dz = Math.abs(z) - (W - r); return dz <= 0 ? yb : dz >= r ? 99 : yb + r - Math.sqrt(r * r - dz * dz); };
+    { const b = mainBin(sd), e1 = V(1, 0, 0), e2 = new THREE.Vector3().crossVectors(b.dir, e1).normalize(), rim = b.face + GEAR_FAIR.proud + .004;
       const NS = 72, ring0 = [], ring1 = [];
       for (let k = 0; k < NS; k++) { const f = k / NS * Math.PI * 2, off = e1.clone().multiplyScalar(Math.cos(f) * b.R).addScaledVector(e2, Math.sin(f) * b.R), Pt = s => b.axle.clone().add(off).addScaledVector(b.dir, s);
-        let lo = b.top, hi = 1.8; for (let it = 0; it < 32; it++) { const mid = (lo + hi) / 2, p = Pt(mid); if (p.y > surfY(p.x, p.z)) lo = mid; else hi = mid; }
-        const r0 = Pt(b.top); r0.y = Math.min(r0.y, -.66); ring0.push(r0); ring1.push(Pt(hi + .006)); }   // roof kept under the cabin floor slab (-0.65): its rim reached -0.59
+        const r0 = Pt(b.top); r0.y = Math.min(r0.y, -.66); ring0.push(r0); ring1.push(Pt(rim)); }   // roof kept under the cabin floor slab (-0.65): its rim reached -0.59
       const pos = [], idx = []; for (let k = 0; k < NS; k++) pos.push(...ring0[k].toArray(), ...ring1[k].toArray());
       for (let k = 0; k < NS; k++) { const a = 2 * k, c = 2 * ((k + 1) % NS); idx.push(a, c, a + 1, c, c + 1, a + 1); }
       const cen = b.axle.clone().addScaledVector(b.dir, b.top), c0 = pos.length / 3; cen.y = Math.min(cen.y, -.66); pos.push(...cen.toArray()); for (let k = 0; k < NS; k++) idx.push(c0, 2 * k, 2 * ((k + 1) % NS));   // roof
       const wg = new THREE.BufferGeometry(); wg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); wg.setIndex(idx); wg.computeVertexNormals();
       put(new THREE.Mesh(wg, M(0x8f938e, { roughness: .9, metalness: .05 })), 'Main wheel bin', null);           // grey liner: light in hangar photos, reads dark in flight
-      const seal = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ring1.map(p => p.clone().addScaledVector(b.dir, -.012)), true), 144, .042, 8, true), M(0x0d0f12, { roughness: 1, metalness: 0 }));
+      const seal = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ring1.map(p => p.clone().addScaledVector(b.dir, -.034)), true), 144, .042, 8, true), M(0x0d0f12, { roughness: 1, metalness: 0 }));   // mostly sunk in the chamfer: a black ring round the tyre
       put(seal, 'Wheel bin seal', null);
       put(box(.24, .12, .18, darkM(), ...b.axle.clone().addScaledVector(b.dir, b.top + .08).addScaledVector(e2, .36 * sd).toArray()), 'Uplock', null);   // e2 flips with the side: * sd keeps the two uplocks mirror images
       for (const [rr, l] of [[.50, 'Wheel well overheat loop A'], [.44, 'Wheel well overheat loop B']]) {   // FIDEX loops ring the top of each wheel bin
         const pts = []; for (let k = 0; k <= 32; k++) { const f = k / 32 * Math.PI * 2; pts.push(b.axle.clone().addScaledVector(b.dir, b.top + .05).addScaledVector(e1, Math.cos(f) * rr).addScaledVector(e2, Math.sin(f) * rr).toArray()); }
         aircraft.add(reg(FR, new THREE.Mesh(tube(pts, .02), sysMat(FR)), l)); } }
-    /* gear bay under the wing root: the retracted leg lies in a bay between the wing box and the leg doors, which close its underside flush.
-       Its forward, aft and outboard walls follow the edges of the retracted doors (so the doors fill the opening exactly) up into the wing;
-       with the gear down the underside is open and dark, as in the photos (the dark slot at the outboard corner of the fairing). */
-    { const q = new THREE.Quaternion().setFromAxisAngle(V(1, 0, 0), sd * G.mainUp), piv = V(G.mainTrunX, G.mainTrunY, sd * G.track), zD = sd * (G.track + .155);
-      const ret = p => p.clone().sub(piv).applyQuaternion(q).add(piv);
-      const wl = z => -.745 + (Math.abs(z) - 1.8) * .162;                                            // wing lower surface near the root (measured on the model)
-      const N = 10, ys = Array.from({ length: N + 1 }, (_, k) => -.50 - (2.24 - .50) * k / N);
-      const F = ys.map(y => ret(V(sx(y) + .61, y, zD))), R = ys.map(y => ret(V(sx(y) - .59, y, zD))), top = p => V(p.x, wl(p.z) + .10, p.z);
-      const outM = paint({ color: LIVERY.white, emissive: sys.color, emissiveIntensity: 0, side: THREE.FrontSide }), inM = M(0x353b43, { roughness: .9, side: THREE.BackSide });
-      const strip = (bot, cen) => { const pos = [], idx = []; bot.forEach(p => pos.push(...p.toArray(), ...top(p).toArray()));
-        for (let k = 0; k < bot.length - 1; k++) { const a = 2 * k; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
-        const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
-        const n = new THREE.Vector3().fromBufferAttribute(g.attributes.normal, 0), p0 = bot[0].clone().sub(cen); if (n.dot(p0) < 0) { g.setIndex(idx.map((v, i) => idx[i - i % 3 + (2 - i % 3)])); g.computeVertexNormals(); }   // outward normals
-        put(new THREE.Mesh(g, outM.clone()), 'Main gear bay', null); put(new THREE.Mesh(g, inM.clone()), 'Main gear bay', null); };
-      const cen = F[3].clone().add(R[3]).multiplyScalar(.5).setY(-.7);
-      strip(F, cen); strip(R, cen); strip([R[0], F[0]], cen);
-      { const pos = [], idx = []; for (let k = 0; k <= N; k++) { pos.push(R[k].x, wl(R[k].z) - .06, R[k].z, F[k].x, wl(F[k].z) - .06, F[k].z); /* clear of the (thicker) wing's lower skin: at 1.5 cm it met it outboard and flickered */ if (k < N) { const a = 2 * k; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); } }
-        const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
-        put(new THREE.Mesh(g, M(0x2b3139, { roughness: .9 })), 'Main gear bay', null); } }                  // bay roof under the wing box
-    /* the gear bay behind the slot in the fairing side (where the leg passes in): a dark box seen from inside */
-    { const bay = new THREE.Mesh(new THREE.BoxGeometry(1.30, .74, .40), M(0x2b3139, { roughness: .9, side: THREE.BackSide })); bay.position.set(.91, -1.10, sd * 1.63); put(bay, 'Main gear bay', null); }
+    /* ---- the bulge under the wing root and the leg doors (see GEAR_FAIR) ----
+       The skin is a height field over the chamfer plane: at each (x, s) its depth is the outermost of the fairing or wing and the bulge round
+       the retracted leg, blended with a fillet where they meet. The fixed part is fairing, painted with it; the doors are the band of it the
+       leg carries (three panels, AFM CDL 32-10), built gear-up and turned back to the gear-down pose, so they close flush. Gear down, the
+       slot they leave shows a dark bay. */
+    { const GF = GEAR_FAIR, fr = gearFrame(sd), n = fr.n, Dz = -n.z, Dy = -n.y, x0 = G.mainX, EPS = .002;
+      const rings = new Map(), ringAt = x => { const k = x.toFixed(4); if (!rings.has(k)) rings.set(k, FUS.ringAt(x)); return rings.get(k); };
+      const dFair = (x, Q) => { const pts = ringAt(x); let best = Infinity;          // along -n to the fairing's section at x (the ray stays at this x)
+        for (let i = 0; i < pts.length - 1; i++) { const [y0, z0] = pts[i], [y1, z1] = pts[i + 1], ez = z1 - z0, ey = y1 - y0, den = Dz * ey - Dy * ez; if (Math.abs(den) < 1e-9) continue;
+          const wz = z0 - Q.z, wy = y0 - Q.y, t = (wz * ey - wy * ez) / den, u = (wz * Dy - wy * Dz) / den; if (t > -.05 && u >= 0 && u <= 1 && t < best) best = t; }
+        return best; };
+      const dWing = (x, Q) => { let t0 = 0;                                            // along -n to the wing's lower surface
+        for (let t = .025; t <= 2.2; t += .025) { const wy = wingLowerY(x, Q.z + Dz * t); if (wy != null && Q.y + Dy * t >= wy) {
+          let a = t0, b = t; for (let it = 0; it < 12; it++) { const m = (a + b) / 2, w2 = wingLowerY(x, Q.z + Dz * m); if (w2 != null && Q.y + Dy * m >= w2) b = m; else a = m; } return b; } t0 = t; }
+        return Infinity; };
+      const memo = new Map(), base = (x, s) => { const k = x.toFixed(4) + ',' + s.toFixed(4); let r = memo.get(k);
+        if (!r) { const Q = fr.toW(x, s, 0), f = dFair(x, Q), w = dWing(x, Q); r = { d: Math.min(f, w), wing: w < f }; memo.set(k, r); } return r; };
+      const Ec = s => s <= GF.s0 ? 0 : s < GF.s1 ? GF.depth * smooth01((s - GF.s0) / (GF.s1 - GF.s0)) : s <= GF.s2 ? GF.depth : GF.depth + 6 * (s - GF.s2) ** 2;
+      const E = (x, s) => { const bd = gearBand(fr, s), t = Math.max(bd.a - x, x - bd.f, 0); return Ec(s) + (t < GF.rho ? GF.rho - Math.sqrt(GF.rho * GF.rho - t * t) : GF.rho + 3 * (t - GF.rho)); };
+      const smin = (a, b, k) => { if (k <= 0) return Math.min(a, b); const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k / 4; };
+      const skinD = (x, s) => smin(E(x, s), base(x, s).d, GF.k * smooth01((s - GF.s0) / .4));
+      const gap = (x, s) => base(x, s).d - skinD(x, s);                              // how far the skin stands proud of the fairing or wing
+      const edge = (s, x, dir) => { if (gap(x, s) < EPS) return x;                    // from x, step out to where the bulge has blended into what is under it
+        for (let k = 0; k < 60; k++) { const xb = x + dir * .02; if (gap(xb, s) < EPS) { let lo = x, hi = xb; for (let it = 0; it < 10; it++) { const m = (lo + hi) / 2; if (gap(m, s) < EPS) hi = m; else lo = m; } return hi; } x = xb; }
+        return x; };
+      const mesh = (pos, idx) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g; };
+      const grid = (rows, cols, s0, s1, span, f) => { const pos = [], idx = [];       // rows along s, columns across each row's [x0, x1]
+        for (let i = 0; i <= rows; i++) { const s = s0 + (s1 - s0) * i / rows, [xa, xb] = span(s); for (let j = 0; j <= cols; j++) pos.push(...f(xa + (xb - xa) * j / cols, s).toArray()); }
+        for (let i = 0; i < rows; i++) for (let j = 0; j < cols; j++) { const a = i * (cols + 1) + j, b = a + cols + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); }
+        return { pos, idx }; };
+      const bodyLin = new THREE.Color(LIVERY.body).convertSRGBToLinear();
+      // fixed bulge: the cheeks either side of the door band, and the end that closes into the wing beyond the trunnion
+      { const outM = paint({ color: bodyLin, roughness: .42, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), inM = std(0x353b43, { roughness: .9 });
+        const sLo = GF.s0 - .04, at = d => (x, s) => fr.toW(x, s, skinD(x, s) + d);
+        let sEnd = GF.sTop; while (sEnd < 4 && gap((gearBand(fr, sEnd).a + gearBand(fr, sEnd).f) / 2, sEnd) > EPS) sEnd += .02;
+        const parts = [[sLo, GF.sTop, s => { const bd = gearBand(fr, s); return [edge(s, bd.a, -1), bd.a]; }],
+                       [sLo, GF.sTop, s => { const bd = gearBand(fr, s); return [bd.f, edge(s, bd.f, 1)]; }],
+                       [GF.sTop, sEnd + .02, s => { const bd = gearBand(fr, s), xc = (bd.a + bd.f) / 2; return [edge(s, xc, -1), edge(s, xc, 1)]; }]];
+        for (const [s0, s1, span] of parts) { const rows = Math.max(4, Math.round((s1 - s0) / .05));
+          const o = grid(rows, 12, s0, s1, span, at(0)); const sk = new THREE.Mesh(mesh(o.pos, o.idx), outM); aircraft.add(sk); skin.push(sk);
+          const i = grid(rows, 12, s0, s1, span, at(.02)); const ik = new THREE.Mesh(mesh(i.pos, i.idx), inM); ik.userData.skinPart = true; aircraft.add(ik); skin.push(ik); } }
+      // the bay roof seen through the open slot: just below the wing's lower skin, wherever the bulge stands clear of it
+      { const NU = 12, NV = 40, s0 = 1.0, s1 = GF.sTop + .12, pos = [], idx = [], ok = [];
+        for (let i = 0; i <= NV; i++) { const s = s0 + (s1 - s0) * i / NV, bd = gearBand(fr, s);
+          for (let j = 0; j <= NU; j++) { const x = bd.a + .03 + (bd.f - bd.a - .06) * j / NU, b = base(x, s); pos.push(...fr.toW(x, s, b.d - .02).toArray()); ok.push(b.wing && b.d - skinD(x, s) > .06); } }
+        for (let i = 0; i < NV; i++) for (let j = 0; j < NU; j++) { const a = i * (NU + 1) + j, b = a + NU + 1; if (ok[a] && ok[b] && ok[a + 1] && ok[b + 1]) idx.push(a, b, a + 1, a + 1, b, b + 1); }
+        put(new THREE.Mesh(mesh(pos, idx), M(0x2b3139, { roughness: .9 })), 'Main gear bay', null); }
+      // the doors: lower (its bottom edge curved round the bin, its lip standing out over the outer tyre gear down), middle, upper
+      { const outM = paint({ color: bodyLin, roughness: .42, emissive: sys.color, emissiveIntensity: 0 }), inM = M(0x353b43, { roughness: .9 }), thk = .03, gp = .012;
+        const q = new THREE.Quaternion().setFromAxisAngle(V(1, 0, 0), -sd * G.mainUp), piv = V(G.mainTrunX, G.mainTrunY, sd * G.track);
+        const down = arr => { const p = new THREE.Vector3(); for (let i = 0; i < arr.length; i += 3) { p.set(arr[i], arr[i + 1], arr[i + 2]).sub(piv).applyQuaternion(q).add(piv); arr[i] = p.x; arr[i + 1] = p.y; arr[i + 2] = p.z; } return arr; };
+        const rimS = x => Math.sqrt(Math.max(0, fr.R * fr.R - (x - x0) ** 2)) + gp;
+        const xs = (u, s) => { const bd = gearBand(fr, s); return bd.a + gp + (bd.f - bd.a - 2 * gp) * u; };
+        const panel = (sLo, sHi, label, low) => {
+          const NU = 16, NV = Math.max(6, Math.round((sHi - (low ? .3 : sLo)) / .05)), pos = [[], []], idx = [];
+          for (let i = 0; i <= NU; i++) { const u = i / NU; let sb = sLo; if (low) { sb = .3; for (let it = 0; it < 5; it++) sb = rimS(xs(u, sb)); }
+            for (let j = 0; j <= NV; j++) { const s = sb + (sHi - sb) * j / NV, x = xs(u, s), d = skinD(x, s); pos[0].push(...fr.toW(x, s, d).toArray()); pos[1].push(...fr.toW(x, s, d + thk).toArray()); } }
+          for (let i = 0; i < NU; i++) for (let j = 0; j < NV; j++) { const a = i * (NV + 1) + j, b = a + NV + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); }
+          const loop = []; for (let i = 0; i <= NU; i++) loop.push(i * (NV + 1)); for (let j = 1; j <= NV; j++) loop.push(NU * (NV + 1) + j);
+          for (let i = NU - 1; i >= 0; i--) loop.push(i * (NV + 1) + NV); for (let j = NV - 1; j > 0; j--) loop.push(j);
+          const ep = [], ei = [], V3 = (arr, k) => arr.slice(3 * k, 3 * k + 3);       // the panel's edges, closing outer skin to inner
+          loop.forEach((k, m) => { const k2 = loop[(m + 1) % loop.length], b0 = ep.length / 3; ep.push(...V3(pos[0], k), ...V3(pos[0], k2), ...V3(pos[1], k2), ...V3(pos[1], k)); ei.push(b0, b0 + 1, b0 + 2, b0, b0 + 2, b0 + 3); });
+          put(new THREE.Mesh(mesh(down(pos[0]), idx), outM), label, side); put(new THREE.Mesh(mesh(down(pos[1]), idx), inM), label, side); put(new THREE.Mesh(mesh(down(ep), ei), outM), label, side); };
+        panel(0, 1.35, 'Main gear leg door (lower)', true);
+        panel(1.35 + gp, 2.05, 'Main gear leg door (middle)', false);
+        panel(2.05 + gp, GF.sTop, 'Main gear leg door (upper)', false);
+        // hazard stripes along the forward edge of the upper and middle panels, on the inside face: seen with the gear down, hidden gear up (video)
+        { const pos = [], uv = [], idx = [], N = 24, sA = 1.45, sB = GF.sTop - .04;
+          for (let k = 0; k <= N; k++) { const s = sA + (sB - sA) * k / N, xo = xs(1, s); for (const [w, u] of [[.075, 0], [0, 1]]) { const x = xo - w; pos.push(...fr.toW(x, s, skinD(x, s) + thk + .003).toArray()); uv.push(u, k / N); } }
+          for (let k = 0; k < N; k++) { const a = 2 * k; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
+          const g = mesh(down(pos), idx); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+          put(new THREE.Mesh(g, M(0xffffff, { map: stripeTex, roughness: .5, polygonOffset: true, polygonOffsetFactor: -2 })), 'Main gear leg door (upper)', side); } } }
   }
 
   /* ================= NOSE GEAR ================= */
