@@ -5132,14 +5132,12 @@ function skyCanvas(W, H, envGround) {   // equirectangular: the sky above the ho
         c.save(); c.translate(x + dx, y); c.scale(1, ry / rx); c.translate(-(x + dx), -y); c.fillStyle = g; c.fillRect(x + dx - rx, y - rx, 2 * rx, 2 * rx); c.restore(); } } }
   if (envGround) { const gr = c.createLinearGradient(0, H / 2, 0, H); gr.addColorStop(0, '#b4b8bb'); gr.addColorStop(.06, '#a2a6a9'); gr.addColorStop(1, '#7a7e82'); c.fillStyle = gr; } else c.fillStyle = HAZE;
   c.fillRect(0, H / 2, W, H / 2);
-  /* the far side of the airfield on the horizon, washed out by the haze: a tree line all round, with a few clusters of hangars and terminal
-     blocks (a bare horizon read as an empty plane). Seeded, so the backdrop and the reflection agree */
+  /* the country beyond the airfield, washed out by the haze: a low tree line all round (a bare horizon read as an empty plane; the airport's
+     own buildings are modelled, in `airport`). Seeded, so the backdrop and the reflection agree */
   { let seed = 3; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647, hy = H / 2, px = H / 180;   // px: pixels per degree
     c.fillStyle = '#c3cedb'; c.beginPath(); c.moveTo(0, hy);
     for (let x = 0; x <= W; x += 2) c.lineTo(x, hy - (.3 + .18 * Math.sin(x / W * 37) + .13 * Math.sin(x / W * 151 + 1.3) + .12 * rnd()) * px);
-    c.lineTo(W, hy); c.closePath(); c.fill();
-    for (let k = 0; k < 7; k++) { let x = rnd() * W; const n = 2 + Math.floor(rnd() * 5); for (let j = 0; j < n; j++) { const w = (.8 + rnd() * 3) * px, h = (.4 + rnd() * .8) * px, g = 190 + Math.floor(rnd() * 14);
-      c.fillStyle = `rgb(${g},${g + 9},${g + 20})`; c.fillRect(x, hy - h, w, h + 1); x += w + rnd() * 1.5 * px; } } }   // faint and low, as hangars a kilometre off look through haze
+    c.lineTo(W, hy); c.closePath(); c.fill(); }
   return { cv, c };
 }
 const SKY_ENV = (() => { const W = 1024, H = 512, { cv, c } = skyCanvas(W, H, true);
@@ -5189,7 +5187,7 @@ function updateShadows() {
   hemiLight.groundColor.setHex(on ? 0x8d9195 : 0x16223a);   // outside, light bounced off the concrete lifts the undersides
   /* outside, the concrete apron under a daylight sky with haze at the horizon; inside views keep the dark blueprint grid. The fog object
      stays in the scene with a far range indoors, so switching views recompiles no materials */
-  if (lookReady) { scene.background = on ? SKY_BG : null; apron.visible = leadIn.visible = wear.visible = airport.visible = contact.plane.visible = on; grid.visible = shadow.visible = !on; scene.fog.near = on ? 70 : 1e5; scene.fog.far = on ? 520 : 2e5; contact.dirty = on; }
+  if (lookReady) { scene.background = on ? SKY_BG : null; apron.visible = leadIn.visible = wear.visible = airport.visible = contact.plane.visible = on; grid.visible = shadow.visible = !on; scene.fog.near = on ? 110 : 1e5; scene.fog.far = on ? 850 : 2e5; contact.dirty = on; }
   sun.color.setHex(on ? 0xfff1df : 0xffffff);   // outside, sunlight a touch warm against the cool sky fill
   for (const m of shadowCasters) { const mt = m.material, solid = on && mt.visible !== false && mt.opacity > .98 && !mt.isMeshBasicMaterial && !mt.isLineBasicMaterial;
     m.castShadow = solid; m.receiveShadow = solid; }
@@ -5210,11 +5208,11 @@ const apron = (() => { const N = 4, P = 512, S = N * P, cv = document.createElem
     for (let k = 0; k < 6; k++) { const s = 90 + Math.random() * 40; c.fillStyle = `rgba(${s},${s},${s},${.03 + Math.random() * .05})`; c.beginPath(); c.ellipse(i * P + Math.random() * P, j * P + Math.random() * P, 30 + Math.random() * 140, 15 + Math.random() * 80, Math.random() * 3, 0, 7); c.fill(); } }
   const im = c.getImageData(0, 0, S, S), d = im.data; for (let i = 0; i < d.length; i += 4) { const n = (Math.random() - .5) * 16; d[i] += n; d[i + 1] += n; d[i + 2] += n; } c.putImageData(im, 0, 0);
   c.strokeStyle = 'rgba(60,62,64,.55)'; c.lineWidth = 3; for (let i = 0; i <= N; i++) { const q = Math.min(S - 1.5, Math.max(1.5, i * P)); c.beginPath(); c.moveTo(q, 0); c.lineTo(q, S); c.moveTo(0, q); c.lineTo(S, q); c.stroke(); }   // the slab joints
-  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(55, 55); t.anisotropy = 8; t.encoding = THREE.sRGBEncoding;
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(1100, 1100), new THREE.MeshStandardMaterial({ map: t, color: 0xc8c8c6, roughness: .92, metalness: 0, envMapIntensity: .4 }));
-  m.rotation.x = -Math.PI / 2; m.position.y = GROUND_Y - .003; m.receiveShadow = true; scene.add(m); return m; })();
-const leadIn = new THREE.Mesh(new THREE.PlaneGeometry(240, .15), new THREE.MeshStandardMaterial({ color: 0xd9a400, roughness: .8 }));
-leadIn.rotation.x = -Math.PI / 2; leadIn.position.y = GROUND_Y - .001; leadIn.receiveShadow = true; scene.add(leadIn);
+  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(11, 6.6); t.anisotropy = 8; t.encoding = THREE.sRGBEncoding;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(220, 132), new THREE.MeshStandardMaterial({ map: t, color: 0xc8c8c6, roughness: .92, metalness: 0, envMapIntensity: .4 }));
+  m.rotation.x = -Math.PI / 2; m.position.set(15, GROUND_Y - .003, 4); m.receiveShadow = true; scene.add(m); return m; })();   // the stand's apron, x -95 to 125, z -62 to 70; the airport's ground lies round it
+const leadIn = new THREE.Mesh(new THREE.PlaneGeometry(132, .15), new THREE.MeshStandardMaterial({ color: 0xd9a400, roughness: .8 }));
+leadIn.rotation.x = -Math.PI / 2; leadIn.position.set(-44, GROUND_Y - .001, 0);   // from the taxilane centreline (x -110) to just past the stop line leadIn.receiveShadow = true; scene.add(leadIn);
 /* stand wear: rubber laid down along the wheel paths of the lead-in line (nose and both main gears at their track and wheel spacing),
    heaviest where aircraft stop, and drip stains under the engines, the main gear and the APU (a spotless stand read as new paving) */
 const wear = (() => { const L = 120, B = 30, W = 2048, H = 512, k = W / L, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
@@ -5232,56 +5230,267 @@ const wear = (() => { const L = 120, B = 30, W = 2048, H = 512, k = W / L, cv = 
   const t = new THREE.CanvasTexture(cv); t.anisotropy = 8; t.encoding = THREE.sRGBEncoding;
   const m = new THREE.Mesh(new THREE.PlaneGeometry(L, B), new THREE.MeshStandardMaterial({ map: t, transparent: true, depthWrite: false, roughness: .8, metalness: 0, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
   m.rotation.x = -Math.PI / 2; m.position.y = GROUND_Y - .0008; m.receiveShadow = true; scene.add(m); return m; })();
-/* the airport round the stand, set well back so the haze softens it and it frames the aircraft without competing: three maintenance
-   hangars across the apron, the terminal with jet bridges and the control tower on the other side, a cargo shed beyond the tail and apron
-   floodlight masts. Plain shapes with painted faces: at 150 m and more, nothing finer than a door leaf or a glazing bay shows */
-const airport = (() => { const g = new THREE.Group(), G0 = GROUND_Y;
-  const tex = (w, h, draw, rx = 1, ry = 1) => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; draw(cv.getContext('2d'), w, h);
-    const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); return t; };
-  const mat = o => new THREE.MeshStandardMaterial(Object.assign({ roughness: .85, metalness: 0, envMapIntensity: .5 }, o));
-  const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); g.add(o); return o; };
-  /* hangars: 72 m wide, eaves 20 m, an 8 m arched roof, 60 m deep. The front is the door: seven leaves across 66 m, a glazed band near
-     their top, the header above and the gable in cladding. The extruded profile's caps take uv in metres, hence the repeat */
-  const HW = 72, HH = 20, HR = 8, HD = 60, HT = HH + HR;
-  const doorTex = tex(576, 224, (c, w, h) => { const X = m => (m / HW + .5) * w, Y = m => (1 - m / HT) * h;
-    c.fillStyle = '#c3c7cb'; c.fillRect(0, 0, w, h);
-    c.fillStyle = '#b4b9bf'; c.fillRect(X(-33), Y(18), X(33) - X(-33), Y(0) - Y(18));
-    c.fillStyle = '#56616d'; c.fillRect(X(-33), Y(17), X(33) - X(-33), Y(14.8) - Y(17));                        // glazed band
-    c.fillStyle = '#8e969e'; for (let m = -33; m <= 33; m += 1.25) c.fillRect(X(m), Y(17), 1, Y(14.8) - Y(17));
-    c.fillStyle = '#7b828a'; for (let k = 0; k <= 7; k++) c.fillRect(X(-33 + k * 66 / 7) - 1, Y(18), 2, Y(0) - Y(18));   // leaf joints
-    c.fillStyle = 'rgba(90,96,104,.35)'; for (let m = 3; m < 14; m += 3) c.fillRect(X(-33), Y(m), X(33) - X(-33), 1);   // panel lines
-    c.fillStyle = '#3c4249'; c.fillRect(X(-33), Y(.45), X(33) - X(-33), Y(0) - Y(.45));                        // the bottom track
-    c.fillStyle = '#d2d5d8'; c.fillRect(0, Y(20), w, Y(18) - Y(20)); }, 1 / HW, 1 / HT);
-  doorTex.offset.set(.5, 0);
-  const hShape = new THREE.Shape(); hShape.moveTo(-HW / 2, 0); hShape.lineTo(HW / 2, 0); hShape.lineTo(HW / 2, HH); hShape.quadraticCurveTo(0, HH + 2 * HR, -HW / 2, HH); hShape.closePath();
-  const hGeo = new THREE.ExtrudeGeometry(hShape, { depth: HD, bevelEnabled: false, curveSegments: 20 }), hMats = [mat({ map: doorTex }), mat({ color: 0x8c9299 })];
-  for (const x of [-130, -40, 50]) add(hGeo, hMats, x, G0, -150 - HD);                                           // doors face the stand, 150 m off
-  /* terminal: 280 m of glazing in three storeys toward the apron, with spandrels at the floors and a fascia at the roof */
-  const glassTex = tex(448, 240, (c, w, h) => { const Y = m => (1 - m / 15) * h;
-    const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#8399ae'); gr.addColorStop(1, '#3b4857'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
-    for (let k = 0; k < 19; k++) if ((k * 7) % 5 === 1) { c.fillStyle = 'rgba(200,210,220,.12)'; c.fillRect(k * w / 18.7, Y(14), w / 18.7, Y(0) - Y(14)); }   // a few bays with blinds down
-    c.fillStyle = '#c6cacf'; for (const [a, b] of [[5, 5.8], [10.3, 11.1], [14, 15]]) c.fillRect(0, Y(b), w, Y(a) - Y(b));
-    c.fillStyle = 'rgba(41,49,58,.45)'; for (let m = 0; m < 28; m += 3) c.fillRect(m / 28 * w, 0, 2, Y(0) - Y(14)); }, 10, 1);
-  const plainT = mat({ color: 0x8a8e92 }), roofT = mat({ color: 0x5c6166 });
-  add(new THREE.BoxGeometry(280, 15, 36), [plainT, plainT, roofT, plainT, plainT, mat({ map: glassTex, roughness: .3, metalness: .2, envMapIntensity: .9 })], -30, G0 + 7.5, 170 + 18);
-  const bridgeM = mat({ color: 0x8d939a, roughness: .6, metalness: .2 });
-  for (const x of [-120, -70, -20, 30, 80]) { add(new THREE.BoxGeometry(3.2, 3.2, 22), bridgeM, x, G0 + 6.1, 170 - 11); add(new THREE.BoxGeometry(4.2, 3.8, 3.2), bridgeM, x, G0 + 6.1, 170 - 22.6);
-    add(new THREE.BoxGeometry(.9, 4.5, .9), mat({ color: 0x4a5057 }), x, G0 + 2.25, 170 - 19); }                // tunnel, cab and the wheeled leg
-  /* control tower behind the terminal: tapered shaft, a gallery, the glazed cab, roof and mast */
-  const tw = { x: -60, z: 236 };
-  add(new THREE.CylinderGeometry(3, 3.8, 38, 20), mat({ color: 0xa3a5a2 }), tw.x, G0 + 19, tw.z);
-  add(new THREE.CylinderGeometry(6.2, 3.2, 3, 24), mat({ color: 0x9a9da0 }), tw.x, G0 + 37.5, tw.z);
-  add(new THREE.CylinderGeometry(6.6, 6, 5, 24), mat({ color: 0x1d2935, roughness: .2, metalness: .3, envMapIntensity: 1 }), tw.x, G0 + 41.5, tw.z);
-  add(new THREE.CylinderGeometry(7.3, 7.3, .9, 24), mat({ color: 0xb2b5b8 }), tw.x, G0 + 44.45, tw.z);
-  add(new THREE.CylinderGeometry(.18, .18, 9, 6), mat({ color: 0x6b7178 }), tw.x, G0 + 49.4, tw.z);
-  /* cargo shed beyond the tail, a row of dock doors along its face */
-  const dockTex = tex(512, 96, (c, w, h) => { c.fillStyle = '#b9bcbf'; c.fillRect(0, 0, w, h); c.fillStyle = '#d4d6d8'; c.fillRect(0, 0, w, h * .14);
-    c.fillStyle = '#6a717a'; for (let k = 0; k < 4; k++) c.fillRect(k * w / 4 + w * .07, h * .5, w * .11, h * .5); }, 5, 1);
-  add(new THREE.BoxGeometry(40, 12, 150), [mat({ map: dockTex }), plainT, roofT, plainT, plainT, plainT], -260, G0 + 6, -10);
-  /* apron floodlight masts, about 25 m, heads turned toward the stand */
-  const mastM = mat({ color: 0x7a8188, roughness: .5, metalness: .5 }), headM = mat({ color: 0xc9ccd0, roughness: .4, metalness: .3 });
-  for (const [x, z] of [[-55, -48], [8, -48], [70, -48], [-55, 52], [70, 52]]) { add(new THREE.CylinderGeometry(.22, .36, 25, 8), mastM, x, G0 + 12.5, z);
-    const hd = add(new THREE.BoxGeometry(3.4, 1.3, .5), headM, x, G0 + 25.4, z); hd.rotation.y = Math.atan2(-x, -z); }
+/* the airport round the stand, built to read as a real one. Layout (metres; x forward along the lead-in, z across):
+   - the stand's concrete apron, x -95 to 125, z -62 to 70 (the tiled `apron` above);
+   - toward -z: an asphalt taxiway, the terminal apron with five gates and three airliners on them, the terminal (a glass airside front
+     under an overhanging roof, jet bridges) and the control tower behind it;
+   - toward +z: grass, a service road, the hangar apron and three maintenance hangars with their doors toward the stand;
+   - behind the tail the taxilane, grass and the cargo terminal; ahead of the nose grass out to a runway 400 m off; floodlight masts round
+     the stand, a fuel farm and belts of trees beyond.
+   The ground is one painted 1.2 km square (grass, asphalt, concrete) with the sun shadows of everything on it painted in, cast along the
+   sun's direction (the shadow map covers only the aircraft). The parts are built as ordinary meshes in a scratch group and merged into
+   one mesh per material, about 45 draw calls. Colours are chosen to stand apart from the concrete: white cladding with blue fascia,
+   tinted glass, green grass, black asphalt (the first version was grey on grey) */
+const airport = (() => {
+  const g = new THREE.Group(), B = new THREE.Group(), G0 = GROUND_Y, shadows = [];
+  let seed = 21; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const lin = hex => new THREE.Color(hex).convertSRGBToLinear();
+  const canvas = (w, h, draw) => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; draw(cv.getContext('2d'), w, h); return cv; };
+  const tex = (cv, srgb = true) => { const t = new THREE.CanvasTexture(cv); if (srgb) t.encoding = THREE.sRGBEncoding; t.anisotropy = 8; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; };
+  const mat = o => new THREE.MeshStandardMaterial(Object.assign({ roughness: .85, metalness: 0, envMapIntensity: .6 }, o));
+  const mesh = (geo, m, x, y, z, ry = 0, rx = 0, rz = 0, parent = B) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.rotation.set(rx, ry, rz, 'YXZ'); parent.add(o); return o; };
+  const tiles = (geo, tw, th) => { const uv = geo.attributes.uv, p = geo.parameters; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * p.width / tw, uv.getY(i) * p.height / th); return geo; };   // plane uv counted in tiles of tw x th m
+  const wall = (w, h, m, x, z, ry, tw = w, th = h, y0 = 0) => mesh(tiles(new THREE.PlaneGeometry(w, h), tw, th), m, x, G0 + y0 + h / 2, z, ry);   // a facade, facing +z turned by ry
+  const box = (w, h, d, m, x, y0, z, ry = 0, parent = B) => mesh(new THREE.BoxGeometry(w, h, d), m, x, G0 + y0 + h / 2, z, ry, 0, 0, parent);
+  const SUN = [-26 / 34, 26 / 34];                                                                      // ground shift per metre of height along the sun's rays
+  const hull = pts => { pts = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]); const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]), lo = [], up = [];
+    for (const p of pts) { while (lo.length > 1 && cr(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); }
+    for (const p of pts.slice().reverse()) { while (up.length > 1 && cr(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop(); up.push(p); }
+    return lo.slice(0, -1).concat(up.slice(0, -1)); };
+  const cast = (foot, top, bottom = 0) => hull(foot.flatMap(([x, z]) => [[x + SUN[0] * bottom, z + SUN[1] * bottom], [x + SUN[0] * top, z + SUN[1] * top]]));   // the shadow of a prism standing from bottom to top
+  const shade = (foot, top, bottom = 0) => shadows.push(cast(foot, top, bottom));
+  const rectFoot = (x0, x1, z0, z1) => [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
+  const circFoot = (x, z, r, n = 12) => Array.from({ length: n }, (_, i) => [x + r * Math.cos(i / n * 2 * Math.PI), z + r * Math.sin(i / n * 2 * Math.PI)]);
+  const FASCIA = '#23466e';
+  const plainM = mat({ color: lin('#dfe2e5') }), endM = mat({ color: lin('#c9cdd2') }), darkM = mat({ color: lin('#2a2f35'), roughness: .7 }), roofFlatM = mat({ color: lin('#80878e'), roughness: .7 });
+  const bandM = mat({ color: lin('#25303a'), roughness: .15, metalness: .6, envMapIntensity: 1.1 }), poleM = mat({ color: lin('#a9afb4'), roughness: .4, metalness: .6 });
+
+  /* ---- maintenance hangars (+z): 72 m wide, eaves 20 m, an 8 m arched roof, 60 m deep, doors toward the stand ---- */
+  const HW = 72, HH = 20, HR = 8, HD = 60, HT = HH + HR, HR0 = (HW * HW / 4 + HR * HR) / (2 * HR), HA = Math.asin(HW / 2 / HR0), HYC = HT - HR0, HZ = 150;
+  const doorTex = n => { const t = tex(canvas(1024, 400, (c, w, h) => { const X = m => (m + HW / 2) / HW * w, Y = m => h - m / HT * h, px = w / HW;
+      c.fillStyle = '#eceef0'; c.fillRect(0, 0, w, h);
+      for (let m = -HW / 2; m < HW / 2; m += .3) { c.fillStyle = 'rgba(0,0,0,.05)'; c.fillRect(X(m), 0, 1, h); }                                 // cladding ribs
+      c.fillStyle = '#c3c9cf'; c.fillRect(X(-34), Y(17.5), 68 * px, Y(0) - Y(17.5));                                                               // the doors
+      for (let k = 0; k < 8; k++) { c.fillStyle = `rgba(${rnd() < .5 ? '255,255,255' : '0,0,0'},${.03 + rnd() * .05})`; c.fillRect(X(-34 + k * 8.5), Y(17.5), 8.5 * px, Y(0) - Y(17.5)); }   // leaves weathered unevenly
+      for (let m = .6; m < 14; m += .6) { c.fillStyle = 'rgba(0,0,0,.07)'; c.fillRect(X(-34), Y(m), 68 * px, 1); }                                    // horizontal panel ribs
+      c.fillStyle = '#dbe4ec'; c.fillRect(X(-34), Y(16.7), 68 * px, Y(14.2) - Y(16.7));                                                             // translucent panels along the top
+      c.fillStyle = 'rgba(80,92,104,.7)'; for (let m = -34; m <= 34; m += 1.0625) c.fillRect(X(m), Y(16.7), 1.5, Y(14.2) - Y(16.7));
+      c.fillStyle = 'rgba(38,44,50,.85)'; for (let k = 0; k <= 8; k++) c.fillRect(X(-34 + k * 8.5) - 1, Y(17.5), 2.5, Y(0) - Y(17.5));               // leaf joints
+      { const gr = c.createLinearGradient(0, Y(3), 0, Y(0)); gr.addColorStop(0, 'rgba(70,64,56,0)'); gr.addColorStop(1, 'rgba(70,64,56,.3)'); c.fillStyle = gr; c.fillRect(X(-34), Y(3), 68 * px, Y(0) - Y(3)); }   // road dirt
+      c.fillStyle = '#25292e'; c.fillRect(X(-34), Y(.3), 68 * px, Y(0) - Y(.3));                                                                   // bottom track
+      c.fillStyle = FASCIA; c.fillRect(0, Y(20), w, Y(17.5) - Y(20));                                                                                // header fascia
+      c.fillStyle = '#5b6168'; c.fillRect(0, Y(.9), X(-34), Y(0) - Y(.9)); c.fillRect(X(34), Y(.9), w - X(34), Y(0) - Y(.9));                       // plinth either side
+      for (let k = 0; k < 50; k++) { const x = rnd() * w, l = (2 + rnd() * 6) * px, gr = c.createLinearGradient(0, Y(27), 0, Y(27) + l); gr.addColorStop(0, 'rgba(60,60,60,.1)'); gr.addColorStop(1, 'rgba(60,60,60,0)'); c.fillStyle = gr; c.fillRect(x, Y(27), 2, l); }   // rain streaks down the gable
+      c.fillStyle = FASCIA; c.font = `700 ${Math.round(4.6 * px)}px Arial, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(String(n), X(0), Y(23.4));   // hangar number
+    })); t.repeat.set(1 / HW, 1 / HT); t.offset.set(.5, 0); return t; };                                                                               // the profile's uv is in metres
+  const cladM = mat({ map: tex(canvas(512, 512, (c, w, h) => { const px = w / 15, Y = m => h - m / HH * h;                                              // tile 15 x 20 m
+      c.fillStyle = '#e8eaec'; c.fillRect(0, 0, w, h);
+      for (let x = 0; x < w; x += .3 * px) { c.fillStyle = 'rgba(0,0,0,.06)'; c.fillRect(x, 0, 1.5, h); c.fillStyle = 'rgba(255,255,255,.35)'; c.fillRect(x + 2, 0, 1, h); }
+      c.fillStyle = FASCIA; c.fillRect(0, Y(20), w, Y(18.6) - Y(20)); c.fillStyle = '#5b6168'; c.fillRect(0, Y(.9), w, Y(0) - Y(.9));
+      c.fillStyle = '#34404c'; for (const x of [2.5, 9.5]) c.fillRect(x * px, Y(3.9), 2.2 * px, Y(2.6) - Y(3.9));                                  // office windows
+      c.fillStyle = '#6c737a'; c.fillRect(6.2 * px, Y(2.3), 1.1 * px, Y(.9) - Y(2.3));                                                               // personnel door
+      for (let k = 0; k < 18; k++) { const x = rnd() * w, l = (3 + rnd() * 9) * px, gr = c.createLinearGradient(0, Y(18.6), 0, Y(18.6) + l); gr.addColorStop(0, 'rgba(60,60,60,.1)'); gr.addColorStop(1, 'rgba(60,60,60,0)'); c.fillStyle = gr; c.fillRect(x, Y(18.6), 2, l); }
+    })) });
+  const officeM = mat({ map: tex(canvas(256, 384, (c, w, h) => { const px = w / 6, Y = m => h - m / 9 * h;                                             // tile 6 x 9 m: two storeys of offices
+      c.fillStyle = '#d9dcdf'; c.fillRect(0, 0, w, h);
+      for (const y of [1.2, 5.2]) { c.fillStyle = '#2b3846'; c.fillRect(.6 * px, Y(y + 2.2), 4.8 * px, Y(y) - Y(y + 2.2));
+        c.fillStyle = 'rgba(170,186,202,.35)'; c.fillRect(.6 * px, Y(y + 2.2), 4.8 * px, (Y(y) - Y(y + 2.2)) * .35);
+        c.fillStyle = '#8e969e'; for (const x of [.6, 3, 5.4]) c.fillRect(x * px - 1, Y(y + 2.2), 3, Y(y) - Y(y + 2.2)); }
+      c.fillStyle = FASCIA; c.fillRect(0, Y(9), w, Y(8.3) - Y(9)); c.fillStyle = '#5b6168'; c.fillRect(0, Y(.6), w, Y(0) - Y(.6));
+    })) });
+  const prof = new THREE.Shape(); prof.moveTo(-HW / 2, 0); prof.lineTo(HW / 2, 0); prof.lineTo(HW / 2, HH); prof.absarc(0, HYC, HR0, Math.PI / 2 - HA, Math.PI / 2 + HA, false); prof.lineTo(-HW / 2, 0);
+  const profGeo = new THREE.ShapeGeometry(prof, 24), roofGeo = new THREE.CylinderGeometry(HR0, HR0, HD, 48, 1, true, Math.PI - HA, 2 * HA), roofM = mat({ color: lin('#9aa1a8'), roughness: .45, metalness: .55 });
+  [-115, -25, 65].forEach((hx, i) => {
+    mesh(profGeo, mat({ map: doorTex(i + 2) }), hx, G0, HZ, Math.PI); mesh(profGeo, plainM, hx, G0, HZ + HD);                                       // door front toward the stand, plain back
+    for (const s of [1, -1]) wall(HD, HH, cladM, hx + s * HW / 2, HZ + HD / 2, s * Math.PI / 2, 15, 20);
+    mesh(roofGeo, roofM, hx, G0 + HYC, HZ + HD / 2, 0, Math.PI / 2);
+    shade(rectFoot(hx - HW / 2, hx + HW / 2, HZ, HZ + HD), HH + HR * .6);
+    if (i !== 1) { const s = i ? 1 : -1, ax = hx + s * (HW / 2 + 6);                                                                                  // two-storey offices along the outer side
+      wall(12, 9, officeM, ax, HZ + 4, Math.PI, 6, 9); wall(40, 9, officeM, ax + s * 6, HZ + 24, s * Math.PI / 2, 6, 9); box(12.4, .5, 40.4, roofFlatM, ax, 9, HZ + 24);
+      shade(rectFoot(ax - 6, ax + 6, HZ + 4, HZ + 44), 9.5); }
+  });
+
+  /* ---- terminal (-z): airside front at z -175, 280 m long, glass above a service level, under a roof overhanging 7 m all round ---- */
+  const TZ = -175, TX0 = -170, TX1 = 110, TL = TX1 - TX0, TXC = (TX0 + TX1) / 2, TH = 15, TD = 35;
+  const termCv = rm => canvas(896, 480, (c, w, h) => { const px = w / 28, Y = m => h - m / TH * h;                                                    // tile 28 x 15 m; rm: roughness (G) and metalness (B)
+    const panel = rm ? 'rgb(0,190,30)' : '#c3c8cd', frame = rm ? 'rgb(0,110,150)' : '#9aa3ab';
+    c.fillStyle = panel; c.fillRect(0, 0, w, h);
+    if (rm) { c.fillStyle = 'rgb(0,26,160)'; c.fillRect(0, Y(14.2), w, Y(5.6) - Y(14.2)); c.fillRect(0, Y(4.5), w, Y(3.5) - Y(4.5)); }
+    else { const gr = c.createLinearGradient(0, Y(14.2), 0, Y(5.6)); gr.addColorStop(0, '#30465a'); gr.addColorStop(1, '#1c2a37'); c.fillStyle = gr; c.fillRect(0, Y(14.2), w, Y(5.6) - Y(14.2));
+      c.fillStyle = '#1f2c38'; c.fillRect(0, Y(4.5), w, Y(3.5) - Y(4.5));                                                                              // service level windows
+      c.fillStyle = 'rgba(255,240,200,.06)'; for (let k = 0; k < 6; k++) c.fillRect(rnd() * w, Y(9.5 + rnd() * 3), (2 + rnd() * 4) * px, .4 * px);      // lights inside
+      c.fillStyle = '#58616a'; for (const x of [4, 17]) c.fillRect(x * px, Y(3.4), 4.5 * px, Y(0) - Y(3.4));                                            // roller doors
+      c.fillStyle = 'rgba(0,0,0,.1)'; for (const x of [4, 17]) for (let m = .3; m < 3.4; m += .3) c.fillRect(x * px, Y(m), 4.5 * px, 1); }
+    c.fillStyle = frame; for (let m = 0; m < 28; m += 1.75) c.fillRect(m * px, Y(14.2), 3, Y(5.6) - Y(14.2));                                          // mullions and transoms
+    c.fillRect(0, Y(10), w, 3);
+    c.fillStyle = panel; c.fillRect(0, Y(5.6), w, Y(4.6) - Y(5.6)); c.fillRect(0, Y(15), w, Y(14.2) - Y(15));                                          // floor band, top band
+  });
+  const termRM = tex(termCv(true), false), termM = mat({ map: tex(termCv(false)), roughnessMap: termRM, metalnessMap: termRM, roughness: 1, metalness: 1, envMapIntensity: 1.2 });
+  wall(TL, TH, termM, TXC, TZ, 0, 28, TH); wall(TL, TH, termM, TXC, TZ - TD, Math.PI, 28, TH);
+  wall(TD, TH, endM, TX0, TZ - TD / 2, -Math.PI / 2); wall(TD, TH, endM, TX1, TZ - TD / 2, Math.PI / 2);
+  box(TL + 14, 1.4, TD + 14, mat({ color: lin('#e4e6e8'), roughness: .5, metalness: .25 }), TXC, TH, TZ - TD / 2);                                      // the roof
+  for (let k = 0; k < 7; k++) box(5 + rnd() * 4, 2.2, 3.5 + rnd() * 2, plainM, TX0 + 25 + k * 38, TH + 1.4, TZ - 10 - rnd() * 15);                   // plant on the roof
+  shade(rectFoot(TX0 - 7, TX1 + 7, TZ - TD - 7, TZ + 7), TH + 1.4);
+  /* jet bridges: fixed link, rotunda on its column, a tunnel sloping down to the cab, the drive column with its bogie */
+  const bridgeM = mat({ color: lin('#d3d7db'), roughness: .5, metalness: .3 });
+  const bridge = (xr, px, pz, floor) => {                                                                                                               // rotunda at xr, the cab against the door at (px, pz)
+    const zr = TZ + 8, yr = 4.8, dx = px - xr, dz = pz - zr, D = Math.hypot(dx, dz), ux = dx / D, uz = dz / D, ry = Math.atan2(dx, dz);
+    box(2.8, 3, 5.8, bridgeM, xr, yr, TZ + 2.9); mesh(new THREE.CylinderGeometry(2.2, 2.2, 3.4, 16), bridgeM, xr, G0 + yr + 1.7, zr); mesh(new THREE.CylinderGeometry(.5, .5, yr, 10), darkM, xr, G0 + yr / 2, zr);
+    const L = D - 2.2 - 1.95 - 1.5, c0 = 2.2 + L / 2, t = new THREE.Group(); t.position.set(xr + ux * c0, G0 + (yr + floor) / 2 + 1.5, zr + uz * c0); t.rotation.set(Math.atan2(yr - floor, L), ry, 0, 'YXZ'); B.add(t);
+    mesh(new THREE.BoxGeometry(2.8, 3, L), bridgeM, 0, 0, 0, 0, 0, 0, t); for (const s of [1, -1]) mesh(new THREE.BoxGeometry(.06, .75, L * .92), bandM, s * 1.42, .35, 0, 0, 0, 0, t);   // window bands
+    const cx = px - ux * 1.95, cz = pz - uz * 1.95, cab = new THREE.Group(); cab.position.set(cx, G0 + floor + 1.6, cz); cab.rotation.y = ry; B.add(cab);
+    mesh(new THREE.BoxGeometry(3.6, 3.2, 3), bridgeM, 0, 0, 0, 0, 0, 0, cab); mesh(new THREE.BoxGeometry(3.8, 3.3, .9), darkM, 0, 0, 1.9, 0, 0, 0, cab);   // cab and its bellows
+    const wx = xr + ux * (2.2 + L - 1.5), wz = zr + uz * (2.2 + L - 1.5); for (const s of [1, -1]) box(.35, floor + .3, .35, darkM, wx + s * uz * 1.1, 0, wz - s * ux * 1.1);
+    box(1.4, .7, 3.2, darkM, wx, 0, wz, ry + Math.PI / 2);                                                                                            // drive column legs and wheel bogie
+    shade([[xr - 1.4, TZ], [xr + 1.4, TZ], [px + uz * 1.4, pz - ux * 1.4], [px - uz * 1.4, pz + ux * 1.4]], (yr + floor) / 2 + 3, (yr + floor) / 2);
+  };
+
+  /* ---- airliners on three gates: a generic twin-engined narrowbody (about 38 m long, 35 m span), white with a coloured fin, no real
+     airline's livery. Built nose +x about the fuselage axis, 4 m above the ground; a ground crew's tug, belt loader, carts and fuel truck ---- */
+  const bodyTex = tex(canvas(1024, 256, (c, w, h) => { const U = x => (x + 19.3) / 38.15 * w, px = w / 38.15;                                       // u from tail to nose; rows: crown, belly (middle), crown
+      c.fillStyle = '#eef0f2'; c.fillRect(0, 0, w, h);
+      const gr = c.createLinearGradient(0, h * .3, 0, h * .7); gr.addColorStop(0, 'rgba(150,158,166,0)'); gr.addColorStop(.3, 'rgba(150,158,166,.75)'); gr.addColorStop(.7, 'rgba(150,158,166,.75)'); gr.addColorStop(1, 'rgba(150,158,166,0)');
+      c.fillStyle = gr; c.fillRect(0, h * .3, w, h * .4);                                                                                              // grey belly
+      for (const r of [.19, .81]) { c.fillStyle = '#26303a'; for (let x = -12.6; x < 12.9; x += .53) { if (Math.abs(x - 1.45) < .9) continue; c.fillRect(U(x), r * h - 3.5, .26 * px, 7); }
+        c.strokeStyle = 'rgba(80,90,100,.7)'; c.lineWidth = 1.2; for (const x of [14.6, -13.4]) c.strokeRect(U(x), r * h - 17, .85 * px, 34);                                                        // doors
+        for (const x of [1.0, 1.9]) c.strokeRect(U(x), r * h - 6, .5 * px, 12);                                                                       // overwing exits
+        c.fillStyle = '#1b222a'; c.fillRect(U(16.4), (r < .5 ? r - .05 : r + .05) * h - 4, 1.1 * px, 8); }                              // flight deck windows
+    }));
+  const bodyM = mat({ map: bodyTex, roughness: .35, envMapIntensity: .8 }), wingM = mat({ color: lin('#c4c9cf'), roughness: .5, metalness: .2 }), tyreM = mat({ color: lin('#1c1e21'), roughness: .9 });
+  const metalM = mat({ color: lin('#9aa1a8'), roughness: .35, metalness: .7 }), fanM = mat({ color: lin('#15191e'), roughness: .6 });
+  const shape = pts => new THREE.Shape(pts.map(([a, b]) => new THREE.Vector2(a, b)));
+  const WING = [[3.4, 0], [-7.9, 17.4], [-9.7, 17.4], [-4.9, 6.3], [-3.8, 0], [-4.9, -6.3], [-9.7, -17.4], [-7.9, -17.4]], STAB = [[-14.6, 0], [-17.9, 6.1], [-19, 6.1], [-18.6, 0], [-19, -6.1], [-17.9, -6.1]];
+  const wingGeo = new THREE.ExtrudeGeometry(shape(WING), { depth: .45, bevelEnabled: false }), stabGeo = new THREE.ExtrudeGeometry(shape(STAB), { depth: .25, bevelEnabled: false });
+  const finGeo = new THREE.ExtrudeGeometry(shape([[-12.8, 1.6], [-17.5, 8], [-19.1, 8], [-19.4, 1.1]]), { depth: .32, bevelEnabled: false });
+  const fusGeo = loft([[18.85, .04, -.38], [18.5, .7, -.22], [17.8, 1.3, -.1], [16.8, 1.75, -.02], [15.5, 1.97, 0], [-9.5, 1.97, 0], [-12.5, 1.78, .16], [-15.5, 1.3, .5], [-18, .7, .9], [-19.3, .22, 1.12]].map(([x, r, cy]) => ({ x, r, cy, ry: 1.04 })), 28);
+  const gseW = mat({ color: lin('#eeede8'), roughness: .5 }), gseY = mat({ color: lin('#e2b420'), roughness: .5 }), tarpM = mat({ color: lin('#3f5f80'), roughness: .8 });
+  const jet = (xc, zc, tailHex, cowlHex) => {
+    const j = new THREE.Group(); j.position.set(xc, G0 + 4, zc); j.rotation.y = Math.PI / 2; B.add(j);                                                // nose toward the terminal (-z)
+    const tailM = mat({ color: lin(tailHex), roughness: .35, metalness: .1, envMapIntensity: .8 }), cowlM = cowlHex ? mat({ color: lin(cowlHex), roughness: .35, envMapIntensity: .8 }) : bodyM;
+    const add = (geo, m, x, y, z, ry = 0, rx = 0, rz = 0) => mesh(geo, m, x, y, z, ry, rx, rz, j);
+    add(fusGeo, bodyM, 0, 0, 0); add(wingGeo, wingM, 0, -1.15, 0, 0, Math.PI / 2); add(stabGeo, wingM, 0, .85, 0, 0, Math.PI / 2); add(finGeo, tailM, 0, 0, -.16);
+    for (const s of [1, -1]) { add(new THREE.BoxGeometry(1.3, 2.2, .12), tailM, -9.1, -.05, s * 17.35);                                              // wingtip fences
+      add(new THREE.CylinderGeometry(.98, .82, 4, 24), cowlM, 2.6, -2.3, s * 5.75, 0, 0, -Math.PI / 2);
+      add(new THREE.TorusGeometry(.93, .07, 8, 24), metalM, 4.6, -2.3, s * 5.75, Math.PI / 2); add(new THREE.CircleGeometry(.88, 20), fanM, 4.63, -2.3, s * 5.75, Math.PI / 2);
+      add(new THREE.ConeGeometry(.55, 1.4, 16), metalM, -.1, -2.3, s * 5.75, 0, 0, Math.PI / 2); add(new THREE.BoxGeometry(3.4, .9, .28), wingM, 1.6, -1.55, s * 5.75);
+      for (const d of [-.4, .4]) add(new THREE.CylinderGeometry(.58, .58, .38, 16), tyreM, -1, -3.42, s * (3.8 + d), 0, Math.PI / 2);
+      add(new THREE.CylinderGeometry(.11, .11, 1.7, 8), metalM, -1, -2.6, s * 3.8); add(new THREE.CylinderGeometry(.38, .38, .28, 14), tyreM, 15, -3.62, s * .18, 0, Math.PI / 2); }
+    add(new THREE.CylinderGeometry(.09, .09, 1.6, 8), metalM, 15, -2.85, 0);
+    /* ground crew: tug at the nose, power unit, belt loader at the forward hold door (right side), a train of carts, a fuel truck ahead of the right wing */
+    const gb = (w, h, d, m, x, y0, z, ry = 0, rx = 0) => add(new THREE.BoxGeometry(w, h, d), m, x, -4 + y0 + h / 2, z, ry, rx);
+    gb(3.8, 1.4, 2.4, gseW, 21.6, 0, 0); gb(1.4, .9, 1.9, bandM, 21.2, 1.4, 0); gb(2.2, 1.3, 1.3, gseW, 16, 0, 3.2);
+    gb(1.9, 1, 5.2, gseY, 9.5, 0, 6.5); gb(.95, .22, 6.8, darkM, 9.5, 1.15, 5.5, 0, .24);
+    gb(2.4, 1.5, 1.4, gseW, 13, 0, 9.5); for (const x of [9.8, 6.8, 3.8]) { gb(2.6, .5, 1.5, darkM, x, .2, 9.5); gb(2.5, 1.2, 1.45, tarpM, x, .7, 9.5); }
+    gb(9, .9, 2.4, darkM, 2.5, .3, 13.5); gb(2.4, 2.4, 2.4, gseW, 6, .4, 13.5); add(new THREE.CylinderGeometry(1.15, 1.15, 6, 16), gseW, 1.2, -2.0, 13.5, 0, 0, Math.PI / 2);
+    const W = (x, z) => [xc + z, zc - x];                                                                                                             // jet frame to ground (x, z)
+    shade([[-19, -2], [18.8, -2], [18.8, 2], [-19, 2]].map(p => W(...p)), 6, 2);                                                                 // fuselage
+    shade(WING.map(p => W(...p)), 3, 2.6); shade(STAB.map(p => W(...p)), 4.9, 4.7); shade([[-19.4, 0], [-12.8, 0]].map(p => W(...p)).flatMap(([x, z]) => [[x - .2, z], [x + .2, z]]), 12, 5.6);   // wing, stabilizer, fin
+    for (const s of [1, -1]) shade(rectFoot(.6, 4.6, s * 5.75 - .95, s * 5.75 + .95).map(p => W(...p)), 2.7, .8);
+  };
+  [[-130, '#1f3a5f', null], [-80], [-30, '#a51f24', '#a51f24'], [20], [70, '#127a74', null]].forEach(([xc, tail, cowl]) => {
+    const xr = xc - 10;
+    if (tail) { const zc = -157 + 18.8; jet(xc, zc, tail, cowl); bridge(xr, xc - 2.05, zc - 15.5, 3.4); }                                           // to the forward left door
+    else bridge(xr, xr + 8.5, TZ + 16, 4.2);                                                                                                            // empty gate: the bridge parked
+  });
+
+  /* ---- control tower behind the terminal ---- */
+  { const X = -40, Z = -255, concM = mat({ color: lin('#ddd9d0') }), glassM = mat({ color: lin('#1c2b30'), roughness: .1, metalness: .7, envMapIntensity: 1.2 });
+    box(24, 8, 18, endM, X, 0, Z + 4);
+    mesh(new THREE.CylinderGeometry(3.2, 4.2, 38, 16), concM, X, G0 + 19, Z); mesh(new THREE.CylinderGeometry(5.8, 3.4, 4, 16), concM, X, G0 + 40, Z);
+    mesh(new THREE.CylinderGeometry(5.85, 5.85, 1, 16), bandM, X, G0 + 40.3, Z);                                                                       // the windowed floor under the cab
+    mesh(new THREE.CylinderGeometry(7.4, 6.1, 4.8, 10), glassM, X, G0 + 44.4, Z);                                                                      // the cab, glazed all round and raked outward
+    mesh(new THREE.CylinderGeometry(7.9, 7.6, 1, 10), roofFlatM, X, G0 + 47.3, Z);
+    for (const dx of [-2.5, 2.5]) mesh(new THREE.CylinderGeometry(.12, .12, 7, 6), poleM, X + dx, G0 + 51.3, Z);
+    mesh(new THREE.SphereGeometry(1.1, 14, 10), plainM, X, G0 + 49, Z + 3); mesh(new THREE.CylinderGeometry(.2, .2, 1.4, 6), poleM, X, G0 + 48, Z + 3);   // radome
+    shade(circFoot(X, Z, 4.5), 48); shade(rectFoot(X - 12, X + 12, Z - 5, Z + 13), 8); }
+
+  /* ---- cargo terminal behind the tail: airside face toward +x with roller doors, the name across it, containers on its apron ---- */
+  { const X = -250, CH = 14, CL = 180, CD = 60;
+    const cv = canvas(2048, 160, (c, w, h) => { const px = w / CL, Y = m => h - m / CH * h;                                                          // u runs from z +90 to z -90
+      c.fillStyle = '#dcd8ce'; c.fillRect(0, 0, w, h); c.fillStyle = 'rgba(0,0,0,.05)'; for (let x = 0; x < w; x += 3) c.fillRect(x, 0, 1, h);
+      c.fillStyle = '#2f4a66'; c.fillRect(0, Y(14), w, Y(12.6) - Y(14)); c.fillStyle = '#5b6168'; c.fillRect(0, Y(.8), w, Y(0) - Y(.8));
+      for (let k = 0; k < 8; k++) { const x = (24 + k * 19) * px; c.fillStyle = '#737b84'; c.fillRect(x, Y(7), 6 * px, Y(0) - Y(7)); c.fillStyle = 'rgba(0,0,0,.12)'; for (let m = .35; m < 7; m += .35) c.fillRect(x, Y(m), 6 * px, 1); c.fillStyle = '#202428'; c.fillRect(x, Y(.25), 6 * px, Y(0) - Y(.25)); }
+      c.fillStyle = '#34404c'; for (let x = 3; x < 20; x += 2.5) c.fillRect(x * px, Y(6), 1.6 * px, Y(4.6) - Y(6));                                     // offices at the end
+      c.fillStyle = '#2f4a66'; c.font = `700 ${Math.round(3.2 * h / CH)}px Arial, sans-serif`; c.textBaseline = 'middle'; c.fillText('CARGO', 3 * px, Y(9.8));
+    });
+    wall(CL, CH, mat({ map: tex(cv) }), X, 0, Math.PI / 2); const sideM = mat({ color: lin('#d6d2c8') });
+    for (const s of [1, -1]) wall(CD, CH, sideM, X - CD / 2, s * CL / 2, s > 0 ? 0 : Math.PI); box(CD, .5, CL, roofFlatM, X - CD / 2, CH, 0);
+    shade(rectFoot(X - CD, X, -CL / 2, CL / 2), CH + .5);
+    const uldM = mat({ color: lin('#b9bdc1'), roughness: .35, metalness: .6 });
+    for (let k = 0; k < 14; k++) { const z = -70 + k * 9 + rnd() * 3, x = X + 12 + rnd() * 10; box(2.4, 1.6, 1.6, uldM, x, 0, z, rnd() * .3); }
+  }
+
+  /* ---- fuel farm and its pump house, beyond the hangars ---- */
+  { const tankM = mat({ color: lin('#e9eaeb'), roughness: .5, metalness: .2 }), topM = mat({ color: lin('#b9bec3'), roughness: .5, metalness: .3 });
+    for (const [x, z] of [[235, 210], [270, 210], [252.5, 245]]) { mesh(new THREE.CylinderGeometry(11, 11, 13, 32), tankM, x, G0 + 6.5, z); mesh(new THREE.ConeGeometry(11.2, 1.6, 32), topM, x, G0 + 13.8, z); shade(circFoot(x, z, 11, 16), 14); }
+    box(10, 4, 6, plainM, 292, 0, 255); }
+
+  /* ---- floodlight masts round the stand, heads tipped down toward it; their shadows fall across the apron, so they are drawn on it ---- */
+  const lampM = mat({ color: lin('#dfe3e6'), roughness: .3, metalness: .2 }), decalM = new THREE.MeshBasicMaterial({ color: 0x0e1622, transparent: true, opacity: .45, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
+  for (const [x, z] of [[-70, -64], [0, -64], [70, -64], [-70, 72], [0, 72], [70, 72]]) {
+    mesh(new THREE.CylinderGeometry(.22, .42, 28, 10), poleM, x, G0 + 14, z);
+    const hd = new THREE.Group(); hd.position.set(x, G0 + 28.4, z); hd.rotation.set(.25, Math.atan2(-x, -z), 0, 'YXZ'); B.add(hd);
+    mesh(new THREE.BoxGeometry(4.4, 2.2, .3), darkM, 0, 0, 0, 0, 0, 0, hd);
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) mesh(new THREE.BoxGeometry(1.15, .8, .45), lampM, (i - 1) * 1.4, (j - .5) * 1.05, .3, 0, 0, 0, hd);
+    for (const poly of [cast(circFoot(x, z, .35, 8), 28), cast(circFoot(x, z, 2.2, 8), 29.5, 27.3)]) mesh(new THREE.ShapeGeometry(shape(poly.map(([a, b]) => [a, -b]))), decalM, 0, G0 - .0015, 0, 0, -Math.PI / 2);
+  }
+
+  /* ---- markings: taxiway and taxilane centrelines, lead-ins to the gates with their stop lines, the apron service road, our stop line ---- */
+  const yellowM = mat({ color: 0xd9a400, roughness: .8, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }), whiteM = mat({ color: lin('#e9eaea'), roughness: .8, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+  const line = (x0, z0, x1, z1, m, w = .15, y = G0 - .03) => mesh(new THREE.PlaneGeometry(w, Math.hypot(x1 - x0, z1 - z0)), m, (x0 + x1) / 2, y, (z0 + z1) / 2, Math.atan2(x1 - x0, z1 - z0), -Math.PI / 2);
+  line(-185, -81, 135, -81, yellowM); line(-110, -185, -110, 152, yellowM);
+  for (const xc of [-130, -80, -30, 20, 70]) { line(xc, -81, xc, -153.2, yellowM); line(xc - 2, -153.2, xc + 2, -153.2, whiteM, .3); }   // stop line under the nose wheels
+  for (const z of [-161, -167]) line(TX0, z, TX1, z, whiteM); for (let x = TX0; x < TX1; x += 9) line(x, -164, x + 3, -164, whiteM);
+  for (const z of [94.4, 103.6]) line(-160, z, 135, z, whiteM); for (let x = -160; x < 135; x += 9) line(x, 99, x + 3, 99, whiteM);
+  line(GEAR.noseX, -1.6, GEAR.noseX, 1.6, whiteM, .3, G0 - .0009);                                                                                    // the A220's stop line, under its nose wheels
+
+  /* ---- trees in belts beyond the buildings ---- */
+  const trees = [], belt = (x0, x1, z0, z1, n) => { for (let i = 0; i < n; i++) trees.push([x0 + rnd() * (x1 - x0), z0 + rnd() * (z1 - z0), 3.5 + rnd() * 3.5]); };
+  belt(-340, 340, -345, -300, 70); belt(-320, 220, 255, 300, 55); belt(-420, -365, -300, 300, 50); belt(470, 540, -420, 420, 60); belt(180, 330, 290, 325, 18);
+  /* a lumpy canopy (a sphere pushed in and out), darker underneath where the foliage shades itself: smooth balls read as lollipops */
+  { const geo = new THREE.IcosahedronGeometry(1, 2), p = geo.attributes.position, v = new THREE.Vector3(), cols = [];
+    for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const n = .8 + .14 * Math.sin(v.x * 5.1 + v.y * 3.7) + .1 * Math.sin(v.z * 6.3 - v.y * 2.4) + .06 * Math.sin(v.x * 11 + v.z * 9);
+      p.setXYZ(i, v.x * n, v.y * n, v.z * n); const k = .38 + .62 * Math.pow((v.y + 1) / 2, .8); cols.push(k, k, k); }
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); geo.computeVertexNormals();
+    const tm = new THREE.InstancedMesh(geo, mat({ color: 0xffffff, roughness: 1, envMapIntensity: .15, vertexColors: true }), trees.length), M4 = new THREE.Matrix4(), col = new THREE.Color(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
+    trees.forEach(([x, z, r], i) => { const h = r * (1.1 + rnd() * .45); M4.compose(new THREE.Vector3(x, G0 + h * 1.1, z), q.setFromAxisAngle(up, rnd() * 6), new THREE.Vector3(r * (.85 + rnd() * .3), h, r)); tm.setMatrixAt(i, M4);
+      tm.setColorAt(i, col.setStyle(['#2e3b22', '#37452a', '#40502e', '#2b3524', '#4a5531'][i % 5]).convertSRGBToLinear()); shade(circFoot(x, z, r * .85, 8), h * 2, h * .4); });
+    g.add(tm); }
+
+  /* ---- the ground: grass with mown stripes, asphalt taxiways and roads, concrete aprons in 5 m slabs, building pads, the runway, and the
+     sun shadows of all of the above painted in as one fill (so overlapping shadows do not double up). 1.2 km at 0.6 m a pixel ---- */
+  const S = 1200, N = 2048, k = N / S, cx = x => (x + S / 2) * k, cz = z => (z + S / 2) * k;
+  const site = canvas(N, N, c => {
+    const rect = (x0, x1, z0, z1, col) => { c.fillStyle = col; c.fillRect(cx(x0), cz(z0), (x1 - x0) * k, (z1 - z0) * k); };
+    c.fillStyle = '#76844c'; c.fillRect(0, 0, N, N);
+    for (let i = 0; i < N; i += 14) { c.fillStyle = (i / 14) % 2 ? 'rgba(235,240,190,.06)' : 'rgba(20,40,10,.05)'; c.fillRect(i, 0, 14, N); }                       // mown stripes, 8 m
+    for (let i = 0; i < 1400; i++) { const x = rnd() * N, y = rnd() * N, r = 5 + rnd() * 45, gr = c.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, rnd() < .55 ? 'rgba(168,160,96,.2)' : 'rgba(46,70,30,.18)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gr; c.fillRect(x - r, y - r, 2 * r, 2 * r); }
+    const ASPH = [[-185, 135, -100, -62], [-125, -95, -185, 152], [125, 135, -100, 104], [-160, 135, 94, 104], [-600, 600, -252, -240], [380, 425, -600, 600]];
+    for (const r of ASPH) { rect(...r, '#46494c');
+      for (let i = 0; i < (r[1] - r[0]) * (r[3] - r[2]) / 60; i++) { c.fillStyle = `rgba(${rnd() < .5 ? '255,255,255' : '0,0,0'},${.04 + rnd() * .06})`; c.fillRect(cx(r[0] + rnd() * (r[1] - r[0])), cz(r[2] + rnd() * (r[3] - r[2])), 1 + rnd() * 3, 1 + rnd() * 3); }
+      c.strokeStyle = 'rgba(15,15,15,.35)'; c.lineWidth = 1; for (let i = 0; i < (r[1] - r[0]) * (r[3] - r[2]) / 900; i++) { let x = cx(r[0] + rnd() * (r[1] - r[0])), y = cz(r[2] + rnd() * (r[3] - r[2])); c.beginPath(); c.moveTo(x, y); for (let s = 0; s < 6; s++) { x += (rnd() - .5) * 8; y += (rnd() - .5) * 8; c.lineTo(x, y); } c.stroke(); } }   // crack sealing
+    rect(-185, 135, -83, -79, 'rgba(15,15,15,.18)'); rect(-112, -108, -185, 152, 'rgba(15,15,15,.18)');                                              // tyre-darkened centre of the taxiways
+    for (const r of [[-95, 125, -62, 70], [-185, 135, -175, -100], [-160, 125, 104, 150], [-250, -125, -100, 100], [-185, 135, -175, -168]]) { rect(...r, '#aaaaa6');
+      for (let x = r[0]; x < r[1]; x += 5) for (let z = r[2]; z < r[3]; z += 5) { c.fillStyle = `rgba(${rnd() < .5 ? '255,255,255' : '0,0,0'},${rnd() * .06})`; c.fillRect(cx(x), cz(z), 5 * k, 5 * k); }
+      c.fillStyle = 'rgba(70,70,70,.35)'; for (let x = r[0]; x <= r[1]; x += 5) c.fillRect(cx(x), cz(r[2]), 1, (r[3] - r[2]) * k); for (let z = r[2]; z <= r[3]; z += 5) c.fillRect(cx(r[0]), cz(z), (r[1] - r[0]) * k, 1); }
+    for (const r of [[-185, 135, -150, -120]]) for (let i = 0; i < 40; i++) { const x = cx(r[0] + rnd() * (r[1] - r[0])), y = cz(r[2] + rnd() * (r[3] - r[2])), R = 3 + rnd() * 9, gr = c.createRadialGradient(x, y, 0, x, y, R);
+      gr.addColorStop(0, 'rgba(40,36,32,.22)'); gr.addColorStop(1, 'rgba(40,36,32,0)'); c.fillStyle = gr; c.fillRect(x - R, y - R, 2 * R, 2 * R); }        // drips on the gate stands
+    for (const r of [[TX0 - 7, TX1 + 7, TZ - TD - 7, TZ], [-160, 120, 150, 215], [-320, -250, -100, 100], [215, 305, 185, 280], [-62, -18, -268, -242]]) rect(...r, '#8f908e');   // building pads
+    rect(381, 382, -600, 600, '#e6e6e2'); rect(423, 424, -600, 600, '#e6e6e2'); for (let z = -600; z < 600; z += 50) rect(402, 403, z, z + 30, '#e6e6e2');   // runway edges and centreline
+    c.fillStyle = 'rgba(14,20,30,.5)'; c.beginPath(); for (const s of shadows) { s.forEach(([x, z], i) => i ? c.lineTo(cx(x), cz(z)) : c.moveTo(cx(x), cz(z))); c.closePath(); } c.fill('nonzero');
+  });
+  mesh(new THREE.PlaneGeometry(S, S), mat({ map: tex(site), roughness: .95, envMapIntensity: .3 }), 0, G0 - .04, 0, 0, -Math.PI / 2);
+  const farM = mat({ color: lin('#76844c'), roughness: 1, envMapIntensity: .2 });                                                                    // plain grass beyond, out past the haze
+  for (const [x, z, w, d] of [[0, -S / 2 - 1500, S + 6000, 3000], [0, S / 2 + 1500, S + 6000, 3000], [-S / 2 - 1500, 0, 3000, S], [S / 2 + 1500, 0, 3000, S]]) mesh(new THREE.PlaneGeometry(w, d), farM, x, G0 - .04, z, 0, -Math.PI / 2);
+
+  /* merge: one mesh per material */
+  B.updateMatrixWorld(true); const byMat = new Map();
+  B.traverse(o => { if (!o.isMesh) return; const q = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); q.applyMatrix4(o.matrixWorld); if (!byMat.has(o.material)) byMat.set(o.material, []); byMat.get(o.material).push(q); });
+  for (const [m, list] of byMat) { const out = new THREE.BufferGeometry();
+    for (const n of ['position', 'normal', 'uv']) { if (!list.every(q => q.attributes[n])) continue; const arr = new Float32Array(list.reduce((s, q) => s + q.attributes[n].array.length, 0)); let off = 0;
+      for (const q of list) { arr.set(q.attributes[n].array, off); off += q.attributes[n].array.length; } out.setAttribute(n, new THREE.BufferAttribute(arr, list[0].attributes[n].itemSize)); }
+    list.forEach(q => q.dispose()); const o = new THREE.Mesh(out, m); if (m === decalM) o.renderOrder = 2; g.add(o); }
   g.visible = false; scene.add(g); return g; })();
 scene.fog = new THREE.Fog(HAZE, 1e5, 2e5);
 /* contact shadow: the soft darkening of the ground under the aircraft from the sky it hides (the sun's shadow is sharp and falls to one side).
@@ -5442,6 +5651,7 @@ function frame(now) {
   { const k2 = .75 + .35 * Math.sin(now * .006);
     for (const m of equipment) if (m.userData.cabinShell) { m.material.visible = false; const lit = selectedEquip === m || (story.active && story.parts.has(m));
       for (const lbl in MON_MATS) if (m.userData.label.startsWith(lbl)) for (const mt of MON_MATS[lbl]) { mt.emissive.setHex(lit ? 0x4fb0ff : 0x000000); mt.emissiveIntensity = lit ? .62 * k2 : 0; } } }   // lit monuments glow their own fixtures
+  if (lookReady && mode === 'exterior') airport.visible = camera.position.y > GROUND_Y + .1;   // from below ground (the Belly view) only the aircraft against the sky
   renderer.render(scene, camera);
   if (lookReady && mode === 'exterior') ao.render(dt);   // occlusion multiplied over the finished frame
   if (labelItems.length) updateLabels();
