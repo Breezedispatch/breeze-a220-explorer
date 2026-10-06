@@ -1999,7 +1999,7 @@ function buildGear() {
   const sys = sysById.gear, G = GEAR, EL = sysById.elec, FR = sysById.fire, Y = new THREE.Vector3(0, 1, 0);
   const M = (color, o = {}) => std(color, { emissive: sys.color, emissiveIntensity: 0, ...o });
   const strutM = () => M(0xb9c2cc, { metalness: .55, roughness: .38 }), chromeM = () => M(0xe8ecf1, { metalness: .92, roughness: .12 });
-  const darkM = () => M(0x3b4149, { metalness: .5, roughness: .5 }), tyreM = () => M(0x17191d, { roughness: .92, metalness: 0 }), wheelM = () => M(0xc6ccd3, { metalness: .65, roughness: .3 });
+  const darkM = () => M(0x3b4149, { metalness: .5, roughness: .5 }), tyreM = () => M(0x07080a, { roughness: .88, metalness: 0, vertexColors: true }),   /* rubber near black (hex is linear: 0x17191d read mid grey); groove bottoms darker still */ wheelM = () => M(0xc6ccd3, { metalness: .65, roughness: .3 });
   const put = (m, label, leg, extra) => { m.userData.skinPart = true; if (leg) m.userData.gearLeg = leg; if (extra) Object.assign(m.userData, extra); if (!m.parent) aircraft.add(m); reg(sys, m, label || null, 1); return m; };
   const setRod = (m, a, b) => { const d = b.clone().sub(a), L = d.length(); m.position.copy(a).addScaledVector(d, .5); m.quaternion.setFromUnitVectors(Y, d.divideScalar(L)); m.scale.set(1, L, 1); return m; };
   const rod = (a, b, r, mat, seg = 14) => setRod(new THREE.Mesh(new THREE.CylinderGeometry(r, r, 1, seg), mat), a, b);
@@ -2010,7 +2010,9 @@ function buildGear() {
   const tyreGeo = (R, w, rim) => { const h = w / 2, sw = R - rim, tw = h * .64, p = [[rim - .004, -h * .80], [rim + sw * .12, -h * .95], [rim + sw * .45, -h], [rim + sw * .78, -h * .96], [R - .035, -h * .80], [R - .008, -tw]];
     for (const g of [-.62, -.22, .22, .62]) { const gy = g * tw; p.push([R, gy - .012], [R - .011, gy - .007], [R - .011, gy + .007], [R, gy + .012]); }
     p.push([R - .008, tw], [R - .035, h * .80], [rim + sw * .78, h * .96], [rim + sw * .45, h], [rim + sw * .12, h * .95], [rim - .004, h * .80]);
-    const g = new THREE.LatheGeometry(p.map(([r, y]) => new THREE.Vector2(r, y)), 56); g.rotateX(Math.PI / 2); return g; };
+    const g = new THREE.LatheGeometry(p.map(([r, y]) => new THREE.Vector2(r, y)), 56), n = p.length, col = [];
+    for (let i = 0; i < g.attributes.position.count; i++) { const k = p[i % n][0] < R - .009 && p[i % n][0] > R - .02 ? .3 : 1; col.push(k, k, k); }   // the groove floors (R - 0.011) shaded
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.rotateX(Math.PI / 2); return g; };
   const drumGeo = (rim, w) => { const h = w / 2, p = [[.03, -h * .56], [rim * .55, -h * .64], [rim * .9, -h * .76], [rim + .014, -h * .82], [rim + .014, -h * .72], [rim, -h * .68], [rim, h * .68], [rim + .014, h * .72], [rim + .014, h * .82], [rim * .9, h * .76], [rim * .55, h * .64], [.03, h * .56]];
     const g = new THREE.LatheGeometry(p.map(([r, y]) => new THREE.Vector2(r, y)), 44); g.rotateX(Math.PI / 2); return g; };
   const faceTex = (slots) => { const S = 256, cv = document.createElement('canvas'); cv.width = cv.height = S; const c = cv.getContext('2d'), m = S / 2;
