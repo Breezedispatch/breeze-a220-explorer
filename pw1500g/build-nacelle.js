@@ -279,13 +279,17 @@
     { const sh = 5.9844, WID = [[.478, .012], [.6, .03], [.9, .06], [1.245, .10], [1.5, .15], [1.77, .21], [2.15, .29], [2.53, .37], [2.8, .43], [3.05, .48], [3.44, .50], [4.0, .47], [5.0, .46], [6.0, .42], [6.2, .34], [6.3, .24], [6.363, .10]].map(([X, w]) => [X - sh, w]);
       const DEP = [[.478, 0], [1.245, .87], [1.77, 1.08], [2.53, 1.15], [3.05, 1.10]].map(([X, d]) => [X - sh, d]), yWing = 1.66;
       const TOP = [[.379, 1.265], [.016, 1.365], [-.957, 1.475], [-2.48, yWing], [-5.6, yWing]];
-      const bot = xx => (xx > -2.62 ? 1.02 : Math.min(yWing - .01, yWing - G.interp(DEP, xx)));
+      /* underside: 1.125 over the fan case, where the forward mount's beam sits between the mount ring and the pylon (p.45-47); 1.02
+         over the core; then the aft fairing down over the exhaust */
+      const bot = xx => (xx > -.95 ? 1.125 : xx > -1.05 ? 1.02 + .105 * (xx + 1.05) / .1 : xx > -2.62 ? 1.02 : Math.min(yWing - .01, yWing - G.interp(DEP, xx)));
       const secs = []; for (let i = 0; i <= 60; i++) { const xx = .379 - (5.48 + .379) * Math.pow(i / 60, 1.05);
         secs.push({ x: xx, yb: Math.min(bot(xx), G.interp(TOP, xx) - .03), yt: G.interp(TOP, xx), hw: Math.max(.006, G.interp(WID, xx) / 2) }); }
       PW.add('pylon', G.loft(secs, { n: 40, exp: 6 }), 'whitePaint');
       // aft fairing heat shield: bare metal on the underside over the hot core, about 0.55 m wide (photos)
       const hsSecs = []; for (let i = 0; i <= 24; i++) { const xx = -2.66 - 1.9 * i / 24; hsSecs.push({ x: xx, yb: bot(xx) - .012, yt: bot(xx) + .05, hw: Math.min(.275, G.interp(WID, xx) / 2 + .015) }); }
       PW.add('pylon', G.loft(hsSecs, { n: 32, exp: 8 }), 'bareCowl');
+      /* the aft mount fitting: pylon structure from the aft mount's main beam (r 0.64) up into the pylon box (p.45, p.49) */
+      { const xa = D.GEN.nacelle.engineAftMountPlane.x, f = PW.kit.frame('pylon', xa, 12, .40); PW.kit.box('pylon', f, [0, .43, 0], [.11, .38, .15], 'greyPrimer', { round: .012 }); }
     }
 
     /* the nacelle animation: hinges, sleeves and blocker doors follow the toolbar state */
