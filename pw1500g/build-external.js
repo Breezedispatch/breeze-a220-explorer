@@ -582,6 +582,26 @@
         /* the sense line aft along 10 o'clock, between the core harness and the coolers, to a boss on the diffuser case */
         line('pb-sensor', [P(-1.084, 10, .385), P(-1.12, 10.0, .36), P(-1.20, 10.0, .345), P(-1.30, 10.0, .345), P(-1.40, 10.0, .345), P(-1.52, 10.02, .345), P(-1.60, 10.05, .345), P(-1.63, 10.15, .30), P(-1.64, 10.2, .26)], .004, 'tube', { clamps: 3 }); }
     }
+    /* ============================== BORESCOPE PORTS ============================== */
+    /* p.70-73: every port with its clock position and what it looks at. Each sits in the gap behind the first row it names, as a plugged
+       boss on the case; radii from the model's case surfaces */
+    PW.part('borescope', { label: 'Borescope access ports', src: 'p.70-73',
+      info: 'Plugged ports for a borescope probe to inspect the gas path for damage, cracks, wear and missing material without disassembly. Some blade and stator damage can be blended through them (borescope blending): the AMP gives the damage and blend limits.\n\nLeft side: AP-LPC 3, AP-DIFF 1, AP-HPT 1, AP-LPT 1 and 2. Right side: AP-LPC 1 and 2, AP-HPC 1 to 8, AP-TIC 1. The igniter plug ports are used too: the borescope table puts them at 3:30 and 4:00, but the manual\'s ignition section puts igniters A and B at 4 and 5 o\'clock, which is what the model follows.' });
+    for (const [id, x, h, r, sees] of [
+      ['AP-LPC 1', -.62, 3.5, .370, 'the LPC variable inlet stator vanes and the 1st stage IBR airfoils'], ['AP-LPC 2', -.732, 4, .363, 'the LPC 1st stage stator vanes and the 2nd stage IBR airfoils'],
+      ['AP-LPC 3', -.826, 9.5, .351, 'the LPC 2nd stage stator vanes and the 3rd stage IBR blades'],
+      ['AP-HPC 1', -1.178, 4, .242, 'the HPC variable inlet guide vanes and the 1st stage IBR airfoils'], ['AP-HPC 2', -1.279, 4, .248, 'the HPC 1st stage variable stator vanes and the 2nd stage IBR airfoils'],
+      ['AP-HPC 3', -1.353, 3.5, .255, 'the HPC 2nd stage variable stator vanes and the 3rd stage IBR airfoils'], ['AP-HPC 4', -1.4075, 4, .282, 'the HPC 3rd stage variable stator vanes and the 4th stage IBR airfoils, through the 4th-stage bleed collar'],
+      ['AP-HPC 5', -1.46, 4, .247, 'the HPC 4th stage stator and the 5th stage IBR airfoils'], ['AP-HPC 6', -1.5055, 4, .251, 'the HPC 5th stage stator and the 6th stage IBR airfoils, under the gearbox\'s right arm'],
+      ['AP-HPC 7', -1.547, 2, .233, 'the HPC 6th stage stator and the 7th stage IBR airfoils'], ['AP-HPC 8', -1.59, 2, .254, 'the HPC 7th stage stator and the 8th stage rotor blades'],
+      ['AP-DIFF 1', -1.78, 11, .287, 'the combustion chamber inner and outer liners, the bulkhead and fuel nozzles, and the HPT 1st stage vanes and rotor blades'],
+      ['AP-HPT 1', -1.944, 9, .252, 'the HPT 1st stage rotor blades, 2nd stage vanes and 2nd stage rotor blades'], ['AP-TIC 1', -2.15, 1.5, .455, 'the HPT 2nd stage rotor blades and the LPT 1st stage rotor blades'],
+      ['AP-LPT 1', -2.272, 8.5, .491, 'the LPT 1st stage rotor blades, 1st stage vanes and 2nd stage rotor blades'], ['AP-LPT 2', -2.348, 8.5, .473, 'the LPT 2nd stage rotor blades, 2nd stage vanes and 3rd stage rotor blades']]) {
+      const pid = 'bs-' + id.toLowerCase().replace(/[^a-z0-9]+/g, '-'), hh = Math.floor(h), mm = Math.round((h - hh) * 60);
+      PW.part(pid, { parent: 'borescope', label: `Borescope port ${id}`, src: 'p.70-73', info: `Borescope port ${id} at ${hh}:${String(mm).padStart(2, '0')} o'clock. Through it the borescope sees ${sees}.` });
+      const f = Kt.frame(pid, x, h, r);
+      Kt.cyl(pid, f, [0, .005, 0], 'y', .0105, .01, 'nickel', { edge: .002 }); Kt.hex(pid, f, [0, .014, 0], 'y', .0085, .008, 'steel');   // boss and plug
+      Kt.box(pid, f, [.011, .012, 0], [.007, .002, .004], 'steel', { round: .001 }); }                                                    // lockwire tab
     PW.part('phmu', { label: 'Prognostics and health monitoring unit (PHMU)', explode: [0, .3, .3], src: 'p.92-95, p.134-139; photos',
       info: 'Grey box on the left of the fan case at 9 o\'clock, immediately aft of the EEC, with its own THIS SIDE UP placard. It takes the two vibration sensors and the oil debris monitor, and N1, N2 and fan speed from the EEC over the CAN bus, works out fan, N1 and N2 vibration for EICAS, and records the data for trend monitoring and the fan trim balance solutions. Powered from DC BUS 1.' });
     /* p.139 and Brian's photo: a separate grey box just aft of the EEC (until 2026-10-07 the model had it as a cross-braced module of the
