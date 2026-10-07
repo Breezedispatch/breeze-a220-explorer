@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PW1500G Engine Model</title>
+<style>
+  :root{
+    --bg0:#0d1f3a; --bg1:#071226; --rail:rgba(9,22,42,.9); --line:rgba(180,205,235,.16);
+    --ink:#f2f6fb; --ink2:#b9c7da; --ink3:#7f92ad; --breeze:#1f74df; --breeze-lt:#4d97ec;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg1);color:var(--ink);
+    font-family:"Avenir Next","Segoe UI","Helvetica Neue",Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45}
+  #gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+  #gl:active{cursor:grabbing}
+  #tags{position:fixed;inset:0;pointer-events:none}
+  .tag{position:absolute;transform:translate(-50%,-130%);background:rgba(7,18,38,.88);border:1px solid rgba(255,255,255,.18);color:var(--ink);
+    padding:2px 9px;border-radius:99px;font-size:12px;white-space:nowrap}
+  .tag::after{content:"";position:absolute;left:50%;top:100%;width:1px;height:10px;background:rgba(255,255,255,.45)}
+  header.top{position:fixed;left:12px;right:12px;top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;pointer-events:none}
+  header.top > *{pointer-events:auto}
+  h1{margin:0 8px 0 4px;font-size:16px;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+  .grp{display:flex;gap:4px;align-items:center;background:var(--rail);border:1px solid var(--line);border-radius:12px;padding:4px 6px;backdrop-filter:blur(10px)}
+  .grp label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin:0 4px}
+  button.b{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:var(--ink2);font:inherit;font-size:12.5px;padding:4px 10px;border-radius:99px;cursor:pointer}
+  button.b:hover{color:var(--ink);border-color:rgba(255,255,255,.3)}
+  button.b[aria-pressed="true"]{background:var(--breeze);color:#06182c;border-color:transparent;font-weight:600}
+  input[type=range]{width:110px;accent-color:var(--breeze)}
+  aside.list{position:fixed;left:12px;top:64px;bottom:12px;width:250px;background:var(--rail);border:1px solid var(--line);border-radius:12px;
+    overflow:auto;padding:6px;backdrop-filter:blur(10px)}
+  aside.list input{width:100%;margin:2px 0 6px;padding:6px 9px;border-radius:8px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink);font:inherit;font-size:13px}
+  .node{display:flex;align-items:center;gap:2px}
+  .node .tw{width:16px;border:0;background:none;color:var(--ink3);cursor:pointer;font-size:10px;padding:0}
+  .node .nm{flex:1;text-align:left;border:0;background:transparent;color:var(--ink2);font:inherit;font-size:12.5px;padding:3px 6px;border-radius:6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .node .nm:hover{background:rgba(255,255,255,.07);color:var(--ink)}
+  .node .nm[aria-pressed="true"]{background:var(--breeze);color:#06182c;font-weight:600}
+  .node .eye{border:0;background:none;color:var(--ink3);cursor:pointer;font-size:12px;width:20px;padding:0}
+  .node .eye.off{opacity:.35}
+  .kids{margin-left:12px}
+  .kids[hidden]{display:none}
+  section.info{position:fixed;right:12px;bottom:12px;width:min(440px,calc(100% - 290px));max-height:46%;overflow:auto;background:var(--rail);border:1px solid var(--line);
+    border-radius:12px;padding:12px 14px;backdrop-filter:blur(10px)}
+  section.info h2{margin:0 0 2px;font-size:15px}
+  section.info .sub{color:var(--ink3);font-size:12px;margin-bottom:6px}
+  section.info p{margin:6px 0;color:var(--ink2)}
+  section.info .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  section.info .src{color:var(--ink3);font-size:11.5px;margin-top:6px}
+  @media (max-width:820px){ aside.list{display:none} section.info{left:12px;right:12px;width:auto;max-height:40%} }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="tags"></div>
+<header class="top">
+  <h1>PW1500G</h1>
+  <div class="grp"><label>View</label>
+    <button class="b" data-view="left">Left</button><button class="b" data-view="right">Right</button><button class="b" data-view="front">Front</button><button class="b" data-view="rear">Rear</button><button class="b" data-view="top">Top</button><button class="b" data-view="below">Below</button>
+  </div>
+  <div class="grp"><label>Section</label>
+    <button class="b" data-cut="off" aria-pressed="true">Off</button><button class="b" data-cut="top">Upper half</button><button class="b" data-cut="left">Left half</button><button class="b" data-cut="right">Right half</button><button class="b" data-cut="view">Facing me</button>
+    <input type="range" id="cutOff" min="-1.2" max="1.2" step=".01" value="0" title="Move the section plane">
+  </div>
+  <div class="grp"><label>Nacelle</label>
+    <button class="b" data-nac="on" aria-pressed="true">On</button><button class="b" data-nac="ghost">Ghost</button><button class="b" data-nac="off">Off</button>
+  </div>
+  <div class="grp"><label>Explode</label><input type="range" id="explode" min="0" max="1" step=".01" value="0"></div>
+  <div class="grp"><label>Run</label>
+    <button class="b" data-run="0" aria-pressed="true">Stopped</button><button class="b" data-run=".25">Idle</button><button class="b" data-run="1">Takeoff</button>
+  </div>
+</header>
+<aside class="list" id="list"><input id="find" placeholder="Find a part" autocomplete="off"><div id="tree"></div></aside>
+<section class="info" id="info"></section>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* load the model scripts in order; ?v=N on the page URL is passed on so an edited script is never served from cache */
+(function () {
+  const v = new URLSearchParams(location.search).get('v') || '1';
+  const files = ['geo', 'core', 'data', 'build-core', 'build-external', 'build-nacelle', 'ui'];
+  const next = i => { if (i >= files.length) return; const s = document.createElement('script'); s.src = `pw1500g/${files[i]}.js?v=${encodeURIComponent(v)}`;
+    s.onload = () => next(i + 1); s.onerror = () => console.error('could not load ' + files[i]); document.body.appendChild(s); };
+  next(0);
+})();
+</script>
+</body>
+</html>
