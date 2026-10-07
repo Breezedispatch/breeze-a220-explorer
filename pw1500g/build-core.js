@@ -43,11 +43,13 @@
     o.dir = role === 'rotor' || role === 'tblade' ? -s : s;
     if (role === 'ngv' || role === 'tblade') { o.camHub = -(o.camHub || .05); o.camTip = -(o.camTip || .03); }
     const ax = Math.max(.004, row.x_le - row.x_te);
+    /* the four measured corners give each section its own leading and trailing edge (sweep and lean in side view) */
+    const hasC = row.x_le_hub !== undefined && row.x_le_tip !== undefined && row.x_te_hub !== undefined && row.x_te_tip !== undefined;
+    const xl = t => (hasC ? row.x_le_hub + (row.x_le_tip - row.x_le_hub) * t : row.x_le), xt = t => (hasC ? row.x_te_hub + (row.x_te_tip - row.x_te_hub) * t : row.x_te);
     const rh = (row.r_hub_le + row.r_hub_te) / 2 + (o.hubIn || 0), rt = (row.r_tip_le + row.r_tip_te) / 2 - (o.tipGap === undefined ? .0008 : o.tipGap);
     const gh = deg(o.gHub), gt = deg(o.gTip), n = o.span || 6, secs = [];
-    for (let k = 0; k <= n; k++) { const t = k / n, g = gh + (gt - gh) * t, r = rh + (rt - rh) * t;
-      const xle = row.x_le + (row.x_le_tip !== undefined ? (row.x_le_tip - row.x_le) * t : 0);
-      secs.push({ r, xle, chord: ax / Math.max(.2, Math.cos(g)), stagger: g, camber: (o.camHub || .05) + ((o.camTip || .03) - (o.camHub || .05)) * t,
+    for (let k = 0; k <= n; k++) { const t = k / n, g = gh + (gt - gh) * t, r = rh + (rt - rh) * t, axk = Math.max(.004, xl(t) - xt(t));
+      secs.push({ r, xle: xl(t), chord: axk / Math.max(.2, Math.cos(g)), stagger: g, camber: (o.camHub || .05) + ((o.camTip || .03) - (o.camHub || .05)) * t,
         thick: (o.tHub || .08) + ((o.tTip || .05) - (o.tHub || .08)) * t, lean: (o.lean || 0) * t * t }); }
     const geo = G.blade(secs, { chordPts: o.cp || 10, dir: o.dir || 1 });
     const gm = (gh + gt) / 2, cMid = ax / Math.max(.2, Math.cos(gm)), rm = (rh + rt) / 2;
@@ -128,7 +130,7 @@
       PW.add('fan-blades', G.ringInstances(blade, PW.partMat('fan-blades', 'fanBladePU'), 18), null);
       PW.add('fan-blades', G.ringInstances(lead, PW.partMat('fan-blades', 'tiSheath'), 18), null);
       /* hub: fairing ring under the blades (flow path), the disc with its dovetail rim, and the drum aft to the fan shaft */
-      const fl = L().spinner.filter(p => p[0] <= .01 && p[0] >= -.40).sort((a, b) => b[0] - a[0]);
+      const fl = (L().fanPlatform || []).slice().sort((a, b) => b[0] - a[0]);
       PW.add('fan-hub', G.revolve(G.shellProfile(fl, fl.map(([x, r]) => [x, r - .012])), { seg: 128 }), 'composite', { mat: { color: '#2b2f33' } });
       disk('fan-hub', .0, -.235, .262, .115, { rim: .05, web: .05, bore: .14, boreH: .03, mat: 'titanium' });
       PW.add('fan-hub', G.ring(-.235, -.40, .30, .315, { seg: 96 }), 'titanium');            // aft drum to the FDGS output
@@ -140,33 +142,48 @@
     PW.part('fan-case', { label: 'Fan case', explode: [.5, 0, 0], src: 'p.60-61; photos',
       info: 'One-piece composite case with a Kevlar containment wrap, carrying the inlet at flange A and the titanium mount ring at its aft end. Inside are the forward acoustic panels, the fan blade rub strip, the ice liners and the rear acoustic liner segments.\n\nThe rub strip is abradable: blades cut into it as they stretch under power, which keeps the tip clearance tight. It can be refurbished after heavy rubbing.' });
     {
-      const ci = L().fanCaseInner, co = L().fanCaseOuter;
-      const xA = .27, xD = -.845;                                              // flange A (fan case front) and the rear flange D (p.53)
-      const inner = seg('fanCaseInner', xA, xD, 40), outer = seg('fanCaseOuter', xA, xD, 40).map(([x, r]) => [x, Math.max(r, G.interp(ci, x) + .012)]);
+      const co = L().fanCaseOuter, skin = L().fanCaseInnerSkin;
+      const FL = D.GEN.flanges, fA = FL.find(f => /^A /.test(f.name)), fD = FL.find(f => /^D /.test(f.name));
+      const xA = fA.x, xD = fD.x;                                               // flange A (inlet cowl attach) and flange D (mount ring V-groove)
+      /* the structural shell: the case's outer surface outside, its inner skin inside (the liners fill between the skin and the flow path) */
+      const outer = seg('fanCaseOuter', xA - .006, xD + .012, 48), inner = seg('fanCaseInnerSkin', xA - .006, xD + .012, 48).map(([x, r], i) => [x, Math.min(r, outer[i][1] - .008)]);
       PW.part('fan-case-shell', { parent: 'fan-case', label: 'Fan case shell (composite)', src: 'p.60',
         info: 'One-piece composite shell, olive drab on the outside. It is the structural link between the inlet cowl and the core, and it contains a released blade. Harness runs, brackets and the EEC are mounted on its outside.' });
-      PW.add('fan-case-shell', G.revolve(G.shellProfile(outer, inner.map(([x, r]) => [x, r + .022])), { seg: 160 }), 'fanCaseOlive');
-      flange('fan-case-shell', xA - .004, .955, 1.006, .008, 72, 'lime');        // flange A: the inlet cowl bolts here
-      flange('fan-case-shell', xD + .004, .955, 1.004, .008, 72, 'lime');        // rear flange
-      for (const x of [.05, -.12, -.30, -.52, -.70]) PW.add('fan-case-shell', G.ring(x + .012, x - .012, G.interp(co, x) - .002, G.interp(co, x) + .012, { seg: 128 }), 'lime');   // stiffening frames
-      /* liners on the flow path, front to rear (p.60, zones measured on p.53) */
+      PW.add('fan-case-shell', G.revolve(G.shellProfile(outer, inner), { seg: 160 }), 'fanCaseOlive');
+      flange('fan-case-shell', xA - .004, fA.r_in, fA.r_out, .008, 72, 'lime');           // flange A: the inlet cowl bolts here
+      /* faint tape seams on the composite, as in the photo from below (circumferential bands and a few axial lines) */
+      for (const x of [.21, .02, -.17, -.36, -.55]) PW.add('fan-case-shell', G.ring(x + .007, x - .007, G.interp(co, x) - .001, G.interp(co, x) + .0012, { seg: 160 }), 'fanCaseOlive', { mat: { color: '#6e6c51' }, shadow: false });
+      for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + .2, sm = seg('fanCaseOuter', xA - .02, -.62, 12).map(([x, r]) => G.onRing(x, r + .0008, a));
+        PW.add('fan-case-shell', G.tube(sm, .0035, { radial: 6 }), 'fanCaseOlive', { mat: { color: '#6e6c51' }, shadow: false }); }
+      /* liners on the flow path, front to rear (p.60; zones measured on p.53), each between the flow path and the inner skin */
+      const LZ = D.GEN.linerZones;
       const liner = (pid, label, info, xf, xa, mat) => { PW.part(pid, { parent: 'fan-case', label, info, src: 'p.53, p.60-61' });
-        const a = seg('fanCaseInner', xf, xa, 16); PW.add(pid, G.revolve(G.shellProfile(a.map(([x, r]) => [x, r + .022]), a), { seg: 160 }), mat); };
-      liner('fan-acoustic-fwd', 'Forward acoustic panels', 'Perforated acoustic panels ahead of the fan blades that absorb fan noise. Check for delamination, dents and blocked perforations.', xA, .045, 'linerDark');
-      liner('fan-rub-strip', 'Fan blade rub strip', 'Abradable liner over the blade tips. The blades rub into it as they lengthen under centrifugal load, holding a tight tip clearance. Heavy rubbing is repaired by refurbishing the strip.', .045, -.30, 'rubTeal');
-      liner('fan-ice-liner', 'Ice liners', 'Replaceable liners just aft of the fan that protect the case from ice shed by the blades.', -.30, -.40, 'linerDark');
-      liner('fan-rear-liner', 'Rear acoustic liner segments', 'Acoustic liner segments between the fan and the exit guide vanes.', -.40, -.56, 'linerDark');
-      /* titanium mount ring with the thrust reverser V-groove (flange D) */
+        const a = seg('fanCaseInner', xf, xa, 16), b = a.map(([x, r]) => [x, Math.max(r + .006, G.interp(skin, x) - .001)]);
+        PW.add(pid, G.revolve(G.shellProfile(b, a), { seg: 160 }), mat); };
+      liner('fan-acoustic-fwd', 'Forward acoustic panels', 'Perforated acoustic panels ahead of the fan blades that absorb fan noise. Check for delamination, dents and blocked perforations.', LZ.frontAcousticPanels.x_from - .006, LZ.frontAcousticPanels.x_to, 'linerDark');
+      liner('fan-ice-liner', 'Ice liners', 'Replaceable liners just aft of the fan that protect the case from ice shed by the blades.', LZ.iceLiner.x_from, LZ.iceLiner.x_to, 'linerDark');
+      liner('fan-rear-liner', 'Rear acoustic liner segments', 'Acoustic liner segments between the fan and the exit guide vanes.', LZ.rearAcousticLiner.x_from, LZ.rearAcousticLiner.x_to, 'linerDark');
+      /* the rub strip: its measured outline is a closed wedge over the blade tips (p.53), the pale teal band in the front photos */
+      PW.part('fan-rub-strip', { parent: 'fan-case', label: 'Fan blade rub strip', src: 'p.53, p.60; photos',
+        info: 'Abradable liner over the blade tips, the pale green band you see round the fan from the front. The blades rub into it as they lengthen under centrifugal load, holding a tight tip clearance. Heavy rubbing is repaired by refurbishing the strip.' });
+      PW.add('fan-rub-strip', G.revolve(L().rubStrip, { seg: 160, crease: 25 }), 'rubTeal');
+      /* titanium mount ring with the thrust reverser V-groove (flange D), and the forward mount lugs at 12 o'clock */
       PW.part('mount-ring', { parent: 'fan-case', label: 'Titanium mount ring and V-groove (flange D)', src: 'p.60-61; TTM ch. 72',
-        info: 'Titanium ring round the aft end of the fan case. It carries the forward engine mount at 12 o\'clock, and its V-groove takes the V-blade on each thrust reverser door, which aligns and supports the doors when they are closed and latched.' });
-      PW.add('mount-ring', G.revolve([[-.70, .975], [-.70, 1.0], [-.80, 1.0], [-.815, .99], [-.83, 1.0], [-.845, 1.0], [-.845, .975]], { seg: 160, crease: 30 }), 'titanium');
-      /* fan exit guide vanes: 44, swept, hollow aluminium with a dark polyurethane coat (p.60; photos) */
+        info: 'Titanium ring round the aft end of the fan case. It carries the forward engine mount lugs at 12 o\'clock, and its V-groove takes the V-blade on each thrust reverser door, which aligns and supports the doors when they are closed and latched.' });
+      const rM = G.interp(co, -.72);
+      PW.add('mount-ring', G.revolve([[-.66, rM - .004], [-.66, rM + .016], [xD + .03, rM + .016], [xD + .018, rM + .004], [xD + .006, rM + .022], [xD - .006, rM + .022], [xD - .006, rM - .004]], { seg: 160, crease: 30 }), 'titanium');
+      const ml = D.GEN.externals.forwardMountLugs12oclock;
+      for (const dz of [-.06, .06]) { const lug = new THREE.Mesh(G.roundedBox(ml.x_from - ml.x_to + .02, ml.r_top - ml.r_base + .02, .035, .008));
+        lug.position.set((ml.x_from + ml.x_to) / 2, (ml.r_top + ml.r_base) / 2, dz); PW.add('mount-ring', lug, 'titanium', { solid: true }); }
+      /* precooler duct inlet: four-piece titanium casting at 12 o'clock behind the FEGVs, taking fan air up into the pylon precooler (p.60) */
+      PW.part('precooler-inlet', { parent: 'fan-case', label: 'Precooler duct inlet', src: 'p.60-61; p.53',
+        info: 'Four-piece titanium casting at the top of the fan case, behind the exit guide vanes. It takes fan air into the precooler in the pylon and gives the seal lands for the thrust reverser door fire seals at the upper bifurcation.' });
+      const pc = D.GEN.externals.precoolerDuctInletBox12oclock;
+      { const box = new THREE.Mesh(G.roundedBox(pc.x_from - pc.x_to, pc.r_out - pc.r_in, .16, .015)); box.position.set((pc.x_from + pc.x_to) / 2, (pc.r_out + pc.r_in) / 2, 0); PW.add('precooler-inlet', box, 'titanium', { solid: true }); }
+      /* fan exit guide vanes: 44, swept, hollow aluminium with a dark polyurethane coat (p.60; photos), from the measured hub and tip corners */
       PW.part('fegv', { parent: 'fan-case', label: 'Fan exit guide vanes (44)', src: 'p.60-61, p.53; photos',
         info: '44 hollow aluminium vanes behind the fan that take the swirl out of the fan air and carry structural load between the fan intermediate case and the fan case. Polyurethane coated against erosion.\n\nInspect from the bypass exit with the reversers open: look for FOD damage, coating loss and cracks at the platforms.' });
-      const fe = R('FEGV');
-      const fegvSecs = []; for (let k = 0; k <= 6; k++) { const t = k / 6, r = .455 + (.95 - .455) * t;
-        fegvSecs.push({ r, xle: -.42 - .245 * t, chord: .148 / Math.cos(deg(16)), stagger: deg(16 - 4 * t), camber: .07, thick: .07 }); }
-      PW.add('fegv', G.ringInstances(G.blade(fegvSecs, { chordPts: 10, dir: 1 }), PW.partMat('fegv', 'fegvDark'), 44), null);
+      bladeRow('fegv', R('FEGV'), { role: 'stator', s: 1, count: 44, gHub: 18, gTip: 12, camHub: .08, camTip: .06, tHub: .08, tTip: .07, tipGap: 0, span: 8, mat: 'fegvDark' });
     }
 
     /* =========================== FAN INTERMEDIATE CASE AND SPLITTER =========================== */
@@ -231,7 +248,6 @@
       wall('cic', 'coreHub', -.88, -1.17, -.012, 'nickel', { n: 16 });
       /* the CIC's outer wall: a conical disc from the bypass inner wall down to the HPC case (p.55 render) */
       PW.add('cic', G.revolve([[-.95, .515], [-1.16, .262], [-1.17, .262], [-1.17, .245], [-1.155, .245], [-.94, .50]], { seg: 128 }), 'nickel');
-      flange('cic', -1.165, .238, .275, .008, 48);
       for (const re of ['LPC exit guide vane', 'CIC strut', 'CIC rear vane']) { const r = R(re); if (r && !/exit guide/.test(re)) statorRow('cic', r, { role: 'stator', s: 1, count: re === 'CIC strut' ? 10 : 0, gHub: re === 'CIC strut' ? 0 : 20, gTip: re === 'CIC strut' ? 0 : 24, camHub: re === 'CIC strut' ? 0 : .08, camTip: .06, tHub: re === 'CIC strut' ? .25 : .1, tTip: re === 'CIC strut' ? .25 : .08, mat: 'nickel', bands: re !== 'CIC strut' }); }
     }
 
@@ -265,7 +281,6 @@
         info: 'Double-walled case: an inner flow-path shroud carrying the stator rows and an outer structural case between flanges E and H. The variable vane unison rings and the 4th and 8th-stage bleed ports are on the outside.' });
       wall('hpc-case', 'coreCase', -1.16, -1.66, .006, 'nickel', { n: 30 });
       PW.add('hpc-case', G.revolve(G.shellProfile(seg('outer', -1.165, -1.66, 30).map(([x, r]) => [x, Math.max(r, rAt('coreCase', x) + .02)]), seg('outer', -1.165, -1.66, 30).map(([x, r]) => [x, Math.max(r, rAt('coreCase', x) + .02) - .006])), { seg: 128 }), 'nickel');
-      flange('hpc-case', -1.17, .232, .292, .008, 60); flange('hpc-case', -1.655, .232, .292, .008, 60);
     }
 
     /* =========================== DIFFUSER AND COMBUSTOR =========================== */
@@ -276,6 +291,11 @@
     buildExhaust();
     /* =========================== SHAFTS AND BEARINGS =========================== */
     buildShafts(SP);
+    const owner = n => /^D /.test(n) || /^A /.test(n) ? null : /aft step/.test(n) ? 'fic' : /LPC case rear/.test(n) ? 'lpc-case' : /CIC front/.test(n) ? 'cic' : /^E /.test(n) || /^H /.test(n) ? 'hpc-case'
+      : /^M /.test(n) ? 'diffuser-case' : /HPT case rear/.test(n) ? 'hpt-case' : /^N /.test(n) ? 'tic' : /^N1 /.test(n) || /^P /.test(n) ? 'lpt-case' : /^T[oi] /.test(n) ? 'exhaust' : null;
+    for (const f of D.GEN.flanges) { const pid = owner(f.name); if (!pid || !PW.parts.has(pid)) continue;
+      const hot = /hpt|tic|lpt|exhaust|diffuser/.test(pid), n = Math.max(24, Math.round(TAU * f.r_out / .045 / 4) * 4);
+      flange(pid, f.x, f.r_in, f.r_out, .009, /^Ti /.test(f.name) ? 0 : n, hot ? 'hotCase' : 'nickel'); }
     PW.CENTER_X = -1.1;
   }
 
@@ -348,18 +368,20 @@
     const xf = -1.66, xa = -1.89;
     PW.part('diffuser-case', { parent: 'combustor', label: 'Diffuser case', src: 'p.53, p.55', info: 'Pressure case round the combustor between flanges H and M. It carries the 16 fuel nozzle mounting pads, the two igniter bosses and borescope ports.' });
     PW.add('diffuser-case', G.revolve(G.shellProfile(seg('outer', xf, xa, 20).map(([x, r]) => [x, Math.max(r, .245)]), seg('outer', xf, xa, 20).map(([x, r]) => [x, Math.max(r, .245) - .007])), { seg: 128 }), 'nickel');
-    flange('diffuser-case', xa + .004, .236, .29, .008, 60);
     if (L().combustorInnerCase) wall('diffuser-case', 'combustorInnerCase', -1.68, -1.86, -.006, 'nickel', { n: 12 });
     PW.part('combustor-liner', { parent: 'combustor', label: 'Combustor liner', src: 'p.53; TTM ch. 72',
       info: 'Annular liner with outer and inner walls and a dome at the front where the fuel nozzles enter. Rows of cooling and dilution holes hold the gas temperature to what the HPT can take.' });
     if (L().combustorOuterLiner) wall('combustor-liner', 'combustorOuterLiner', -1.735, -1.875, .004, 'combLiner', { n: 12 });
     if (L().combustorInnerLiner) wall('combustor-liner', 'combustorInnerLiner', -1.75, -1.875, -.004, 'combLiner', { n: 12 });
-    PW.add('combustor-liner', G.revolve([[-1.725, .218], [-1.74, .218], [-1.75, .20], [-1.755, .17], [-1.745, .145], [-1.73, .145], [-1.735, .17], [-1.735, .20]], { seg: 96 }), 'combLiner');   // dome
+    { const dm = L().combustorDome; PW.add('combustor-liner', G.revolve(G.shellProfile(dm.map(([x, r]) => [x + .006, r]), dm), { seg: 96 }), 'combLiner'); }   // dome bulkhead (p.53)
     /* 16 fuel nozzles through the case, with their swirler cups at the dome (TTM: 16) */
     PW.part('fuel-nozzles', { parent: 'combustor', label: 'Fuel nozzles (16)', src: 'p.164-175; TTM ch. 73',
       info: 'Sixteen nozzles fed by the primary and secondary manifolds, each held by a mounting flange on the diffuser case with its tip in a swirler at the combustor dome. Some positions are duplex (primary and secondary), others simplex.\n\nA streaky or uneven EGT pattern can point to a coked or leaking nozzle.' });
-    for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + TAU / 32, stem = G.rod(G.onRing(-1.72, .25, a), G.onRing(-1.735, .19, a), .006);
-      PW.add('fuel-nozzles', stem, 'steel'); const pad = new THREE.Mesh(G.roundedBox(.03, .012, .03, .003)); pad.position.copy(G.onRing(-1.72, .252, a)); pad.rotation.x = a; PW.add('fuel-nozzles', pad, 'steel', { solid: true }); }
+    const fnPath = L().fuelNozzle;
+    for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + TAU / 32;                       // 16 nozzles; two straddle 12 o'clock at +/-11.25 deg (p.164-165)
+      const pts = fnPath.map(([x, r]) => G.onRing(x, r, a)); PW.add('fuel-nozzles', G.tube(pts, .0065, { radial: 10, tension: .1 }), 'steel');
+      const pad = new THREE.Mesh(G.roundedBox(.032, .012, .036, .003)); pad.position.copy(G.onRing(fnPath[0][0], fnPath[0][1] + .004, a)); pad.rotation.x = a; PW.add('fuel-nozzles', pad, 'steel', { solid: true });
+      const tip = new THREE.Mesh(new THREE.CylinderGeometry(.009, .012, .016, 12)); tip.geometry.userData.solid = true; G.aim(tip, G.onRing(fnPath[fnPath.length - 1][0] - .006, fnPath[fnPath.length - 1][1], a), new THREE.Vector3(-1, 0, 0)); PW.add('fuel-nozzles', tip, 'steel', { solid: true }); }
   }
 
   function buildTurbines(SP) {
@@ -376,7 +398,6 @@
     PW.part('hpt-case', { parent: 'hpt', label: 'HPT case', src: 'p.53', info: 'Case between flanges M and N. The active clearance control manifolds outside it shrink it in cruise to close the blade tip gaps.' });
     PW.add('hpt-case', G.revolve(G.shellProfile(seg('outer', -1.89, -2.05, 12).map(([x, r]) => [x, Math.max(r, .225)]), seg('outer', -1.89, -2.05, 12).map(([x, r]) => [x, Math.max(r, .225) - .008])), { seg: 128 }), 'hotCase');
     wall('hpt-case', 'coreCase', -1.88, -2.04, .005, 'hotCase', { n: 12 });
-    flange('hpt-case', -2.05, .22, .275, .008, 60);
 
     PW.part('tic', { label: 'Turbine intermediate case (TIC)', explode: [-1.55, 0, 0], src: 'p.53-55; TTM ch. 72',
       info: 'Structural frame between the HPT and LPT. Its struts carry the No. 4 bearing and pass cooling air and service lines; the turning vanes behind them set up the flow for the first LPT stage. Station 4.5 is at its inlet.' });
@@ -401,7 +422,6 @@
     PW.part('lpt-case', { parent: 'lpt', label: 'LPT case', src: 'p.53', info: 'Case between flanges N1 and P carrying the LPT vane rings, with the clearance control ring manifolds round it.' });
     PW.add('lpt-case', G.revolve(G.shellProfile(seg('outer', -2.20, -2.47, 20), seg('outer', -2.20, -2.47, 20).map(([x, r]) => [x, r - .008])), { seg: 160 }), 'hotCase');
     wall('lpt-case', 'coreCase', -2.20, -2.47, .005, 'hotCase', { n: 20 });
-    flange('lpt-case', -2.205, .46, .51, .008, 72); flange('lpt-case', -2.465, .44, .49, .008, 72);
 
     PW.part('tec', { label: 'Turbine exhaust case (TEC)', explode: [-2.15, 0, 0], src: 'p.53-55, p.44-49; TTM ch. 72',
       info: 'The last structural case. Its struts carry the No. 5 and 6 bearing housing, its outer ring carries the aft engine mount lugs at the top, and the core nozzle and plug bolt to its rear flanges (To and Ti). Station 5 is at its exit.' });
@@ -419,18 +439,18 @@
     /* core nozzle (exhaust sleeve) and plug: from the nacelle stations, TEC flange To to ZS 816.2 and the plug tip at ZS 833.3 */
     PW.part('exhaust', { label: 'Core nozzle and exhaust plug', explode: [-2.6, 0, 0], src: 'TTM ch. 01 Fig. 28, ch. 78; photos',
       info: 'The core nozzle (exhaust sleeve) bolts to the TEC outer flange and the plug to its inner flange. Both are bare heat-resisting metal, straw to bronze with heat. The core stream leaves here; it is never reversed.\n\nOn the walkaround look into the nozzle for metal on the plug or turbine exit, which would mean internal damage.' });
-    const xTo = -2.71, xN = D.zsToX(D.ZS.coreNozzle), xP = D.zsToX(D.ZS.plugTip);
+    const NC = D.GEN.nacelle, xTo = D.GEN.flanges.find(f => /^To /.test(f.name)).x, xN = NC.coreNozzleExit.x, xP = NC.plugTip.x;
     const rTo = rAt('outer', -2.70), rN = .385;
     const nozOut = [[xTo, rTo + .004], [xTo - .25, rTo - .015], [xN, rN + .004]], nozIn = [[xTo, rTo - .006], [xTo - .25, rTo - .024], [xN, rN - .002]];
     PW.add('exhaust', G.revolve(G.shellProfile(nozOut, nozIn), { seg: 128, crease: 20 }), 'hotNozzle');
-    flange('exhaust', xTo + .004, rTo - .01, rTo + .02, .008, 60, 'hotNozzle');
     /* plug: bolts to flange Ti at the TEC hub (about 0.22 m radius), about 0.33 m across at the nozzle exit (TTM Fig. 28), then a long
        cone to a small rounded tip at ZS 833.3, as in the rear photos */
-    const rTi = rAt('coreHub', -2.70), plug = [[xTo, 0], [xTo, rTi]], n = 18;
-    for (let i = 1; i <= n; i++) { const t = i / n, x = xTo + (xN - xTo) * t; plug.push([x, rTi - (rTi - .165) * Math.pow(t, 1.3)]); }
+    /* a sheet-metal shell (it reads hollow in a section cut), with a small closed tip */
+    const rTi = (D.GEN.flanges.find(f => /^Ti /.test(f.name)).r_in + .01), plug = [], n = 18;
+    for (let i = 0; i <= n; i++) { const t = i / n, x = xTo + (xN - xTo) * t; plug.push([x, rTi - (rTi - .165) * Math.pow(t, 1.3)]); }
     for (let i = 1; i <= n; i++) { const t = i / n, x = xN + (xP - xN) * t; plug.push([x, Math.max(.006, .165 * Math.pow(1 - t, 1.08) + .006 * t)]); }
-    plug.push([xP - .006, 0]);
-    PW.add('exhaust', G.revolve(plug, { seg: 96, crease: 30 }), 'plugDark');
+    const inner = plug.filter(p => p[1] > .03).map(([x, r]) => [x - .002, r - .004]);
+    PW.add('exhaust', G.revolve(plug.concat([[xP - .006, 0], [inner[inner.length - 1][0] + .01, 0]]).concat(inner.reverse()), { seg: 96, crease: 30 }), 'plugDark');
   }
 
   function buildShafts(SP) {
@@ -443,8 +463,7 @@
     /* main bearings (p.56-57): 1 and 1.5 tapered roller, 2 and 3 ball, 4, 5 and 6 roller */
     PW.part('bearings', { label: 'Main bearings', src: 'p.56-57; TTM ch. 72',
       info: 'Seven main bearings in four compartments: No. 1 and 1.5 tapered rollers for the fan and FDGS, No. 2 and 3 ball thrust bearings at the front of the N1 and N2 rotors, and No. 4, 5 and 6 rollers at the rear. Most are oil-damped. Each compartment has carbon seals and its own scavenge, and chip collectors on the scavenge lines catch bearing debris.' });
-    const B = [['1', -.168, .115, 'tapered roller', 'fan rotor and FDGS'], ['1.5', -.376, .105, 'tapered roller', 'fan rotor and FDGS'], ['2', -.77, .07, 'ball', 'front of the N1 rotor'],
-               ['3', -1.06, .06, 'ball', 'front of the N2 rotor'], ['4', -2.15, .06, 'roller', 'rear of the N2 rotor'], ['5', -2.40, .045, 'roller', 'rear of the N1 rotor'], ['6', -2.62, .045, 'roller', 'rear of the N1 rotor']];
+    const B = D.GEN.bearings.map(b => [b.no, b.x, Math.min(b.r, b.no === '1' || b.no === '1.5' ? .105 : b.no === '2' || b.no === '3' ? .07 : .055), b.type, b.supports + (b.damped ? ', oil-damped' : '')]);
     for (const [no, x, r, type, what] of B) { const pid = 'bearing-' + no.replace('.', '-');
       PW.part(pid, { parent: 'bearings', label: `No. ${no} bearing (${type})`, src: 'p.56-57', info: `${type[0].toUpperCase() + type.slice(1)} bearing supporting the ${what}.` });
       PW.add(pid, G.ring(x + .018, x - .018, r - .006, r, { seg: 64 }), 'steel'); PW.add(pid, G.ring(x + .018, x - .018, r + .018, r + .026, { seg: 64 }), 'steel');

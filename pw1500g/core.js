@@ -26,8 +26,10 @@
     Object.assign(key.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: .5, far: 25 }); S.add(key, key.target);
     const fill = new THREE.DirectionalLight(0xbcd2ff, .35); fill.position.set(-5, 2, -4); S.add(fill);
     const rim = new THREE.DirectionalLight(0xffffff, .5); rim.position.set(-2, 5, 6); S.add(rim);
+    /* a soft light carried with the camera, like the work lights in a hangar, so open compartments and cut faces can be inspected */
+    PW.headlight = new THREE.PointLight(0xfff8f0, .55, 0, 1.2); PW.camera.add(PW.headlight); PW.headlight.position.set(.3, .4, 0); S.add(PW.camera);
     /* hangar floor: catches the engine's shadow and a soft contact shade */
-    const floor = PW.floor = new THREE.Mesh(new THREE.CircleGeometry(30, 64), new THREE.MeshStandardMaterial({ color: 0x343a42, roughness: .72, metalness: 0, envMapIntensity: .35 }));
+    const floor = PW.floor = new THREE.Mesh(new THREE.CircleGeometry(30, 64), new THREE.MeshStandardMaterial({ color: new THREE.Color(0x4a5058).convertSRGBToLinear(), roughness: .72, metalness: 0, envMapIntensity: .35 }));
     floor.rotation.x = -Math.PI / 2; floor.position.y = -1.75; floor.receiveShadow = true; floor.userData.noPick = true; S.add(floor);
     S.fog = new THREE.Fog(0x1b2533, 11, 26);                                 // the floor fades into the backdrop
     PW.initCut(); PW.initControls(canvas);
@@ -108,8 +110,11 @@
     glass:        () => new THREE.MeshPhysicalMaterial({ color: col('#dfeef5'), roughness: .05, metalness: 0, transmission: .6, transparent: true, opacity: .55 }),
   };
   const libCache = {};
+  /* three r128 takes colour values as linear, so an sRGB hex comes out far too light on screen: every library colour is converted once
+     here (the explorer's nacelle blue had the same problem) */
   PW.baseMat = name => libCache[name] || (libCache[name] = (() => { const f = PW.MAT[name]; if (!f) throw new Error('no material ' + name);
-    const m = f(); m.envMapIntensity = m.envMapIntensity === undefined ? 1 : m.envMapIntensity; m.side = THREE.FrontSide; m.shadowSide = THREE.FrontSide; return m; })());
+    const m = f(); m.envMapIntensity = m.envMapIntensity === undefined ? 1 : m.envMapIntensity; m.side = THREE.FrontSide; m.shadowSide = THREE.FrontSide;
+    if (m.color) m.color.convertSRGBToLinear(); if (m.emissive) m.emissive.convertSRGBToLinear(); return m; })());
 
   /* ---------------- part registry ---------------- */
   /* PW.part(id, { label, parent, info, sys, explode:[dx,dy,dz], anchor:[x,y,z] }) -> THREE.Group */
@@ -118,17 +123,19 @@
     o = o || {};
     const obj = new THREE.Group(); obj.name = id; obj.userData.pid = id;
     const parent = o.parent ? PW.parts.get(o.parent) : null;
-    (parent ? parent.obj : (o.attach || PW.root)).add(obj);
+    /* attach wins over the parent: a rotor sits in its module in the parts tree but turns with its spool; a door's parts swing with its hinge */
+    (o.attach || (parent ? parent.obj : PW.root)).add(obj);
     const p = { id, label: o.label || id, parent: o.parent || null, info: o.info || '', sys: o.sys || null, obj, meshes: [], mats: {}, children: [],
       explode: new THREE.Vector3(...(o.explode || [0, 0, 0])), base: new THREE.Vector3(), anchor: o.anchor ? new THREE.Vector3(...o.anchor) : null,
-      cut: true, hidden: false, src: o.src || '' };
+      cut: true, hidden: false, src: o.src || '', detached: false };
+    if (o.attach && parent) { let q = o.attach; while (q && q !== parent.obj) q = q.parent; p.detached = !q; }   // hung outside the parent's own group
     if (parent) parent.children.push(id);
     PW.parts.set(id, p);
     return obj;
   };
   PW.partMat = function (id, name, over) {
     const p = PW.parts.get(id), key = name + (over ? JSON.stringify(over, (k, v) => (v && v.isTexture ? v.uuid : v)) : '');
-    if (!p.mats[key]) { const m = PW.baseMat(name).clone(); if (over) for (const k in over) { if (m[k] && m[k].isColor) m[k].set(over[k]); else m[k] = over[k]; }
+    if (!p.mats[key]) { const m = PW.baseMat(name).clone(); if (over) for (const k in over) { if (m[k] && m[k].isColor) m[k].set(over[k]).convertSRGBToLinear(); else m[k] = over[k]; }
       m.userData.base = { color: m.color.clone(), emissive: m.emissive ? m.emissive.clone() : null, ei: m.emissiveIntensity || 0 }; p.mats[key] = m; }
     return p.mats[key];
   };
@@ -273,11 +280,17 @@
   };
 
   /* ---------------- explode ---------------- */
+  /* a part hung on a spool or hinge is not carried by its module's group, so it adds its ancestors' explode moves itself */
   PW.setExplode = function (t) {
     PW.explodeT = t;
-    for (const p of PW.parts.values()) { if (!p.explode.lengthSq() && !p.dragged) continue;
-      p.obj.position.copy(p.base).addScaledVector(p.explode, t); if (p.dragged) p.obj.position.add(p.dragged); }
+    for (const p of PW.parts.values()) {
+      const v = p.explode.clone(); if (p.detached) for (let q = PW.parts.get(p.parent); q; q = q.parent && PW.parts.get(q.parent)) v.add(q.explode);
+      if (!v.lengthSq() && !p.dragged) continue;
+      p.obj.position.copy(p.base).addScaledVector(v, t); if (p.dragged) p.obj.position.add(p.dragged); }
   };
+  /* builders can add toolbar controls: PW.addControl('Cowls', [{ label, on, apply }]) */
+  PW.controls = [];
+  PW.addControl = (label, buttons) => PW.controls.push({ label, buttons });
 
   /* ---------------- frame loop ---------------- */
   PW.start = function (onFrame) {

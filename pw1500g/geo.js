@@ -166,6 +166,21 @@
     g.applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize())));
     g.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2); g.userData.solid = true; return g; };
 
+  /* ---- a fairing lofted through rounded-box sections along x (pylons, bifurcations) ----
+     sections: [{ x, yb, yt, hw }] (bottom, top, half-width); each section is a superellipse, closed at both ends */
+  G.loft = (sections, opts) => {
+    opts = opts || {}; const n = opts.n || 36, ex = opts.exp || 5, pos = [], idx = [];
+    const ring = s => { const out = [], cy = (s.yb + s.yt) / 2, hh = Math.max(1e-4, (s.yt - s.yb) / 2);
+      for (let i = 0; i < n; i++) { const a = i / n * TAU, c = Math.cos(a), sn = Math.sin(a);
+        out.push([s.x, cy + hh * Math.sign(sn) * Math.pow(Math.abs(sn), 2 / ex), s.hw * Math.sign(c) * Math.pow(Math.abs(c), 2 / ex)]); } return out; };
+    sections.forEach(s => ring(s).forEach(p => pos.push(...p)));
+    for (let k = 0; k < sections.length - 1; k++) for (let i = 0; i < n; i++) { const a = k * n + i, b = k * n + (i + 1) % n, c = a + n, d = b + n; idx.push(a, c, b, b, c, d); }
+    for (const [k, flip] of [[0, false], [sections.length - 1, true]]) { const s = sections[k], base = pos.length / 3; pos.push(s.x, (s.yb + s.yt) / 2, 0);
+      for (let i = 0; i < n; i++) flip ? idx.push(base, k * n + i, k * n + (i + 1) % n) : idx.push(base, k * n + (i + 1) % n, k * n + i); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx);
+    G.orientOutward(g); g.computeVertexNormals(); g.userData.solid = true; return g;
+  };
+
   /* ---- boxes with rounded edges (castings, LRU housings, brackets) ---- */
   G.roundedBox = (w, h, d, r, seg) => {
     r = Math.min(r, w / 2 - 1e-4, h / 2 - 1e-4, d / 2 - 1e-4); seg = seg || 3;

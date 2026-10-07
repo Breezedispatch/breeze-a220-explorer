@@ -82,6 +82,13 @@
   document.querySelectorAll('[data-nac]').forEach(b => b.onclick = () => { press('[data-nac]', b); setNacelle(b.dataset.nac); });
   document.querySelectorAll('[data-run]').forEach(b => b.onclick = () => { press('[data-run]', b); PW.speed = +b.dataset.run; });
   PW.speed = 0;
+  /* controls the builders asked for (cowls, reverser) */
+  for (const c of PW.controls || []) {
+    const g = document.createElement('div'); g.className = 'grp'; g.innerHTML = `<label>${esc(c.label)}</label>`;
+    c.buttons.forEach((b, i) => { const el = document.createElement('button'); el.className = 'b'; el.textContent = b.label; el.setAttribute('aria-pressed', String(!!b.on));
+      el.onclick = () => { g.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === el))); b.apply(); }; g.append(el); });
+    document.querySelector('header.top').append(g);
+  }
 
   /* ---- labels: name the selected and hovered part ---- */
   const tags = document.getElementById('tags'), tagEl = document.createElement('div'); tagEl.className = 'tag'; tags.append(tagEl); tagEl.style.display = 'none';
