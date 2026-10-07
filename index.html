@@ -5760,7 +5760,7 @@ const airport = (() => {
       M4.compose(new THREE.Vector3(x, G0, z), q.setFromAxisAngle(up, rnd() * 6), new THREE.Vector3(rr, H / 2.3, rr)); firs.setMatrixAt(i, M4);
       firs.setColorAt(i, col.setStyle(['#1f2b1d', '#243221', '#1b261b', '#2a3a26'][i % 4]).convertSRGBToLinear()); shade(circFoot(x, z, rr * .9, 8), H, 0); });
     const crowns = sets.map((set, vi) => { const im = new THREE.InstancedMesh(crownVar[vi], leafM, set.length); set.forEach(([m, c], i) => { im.setMatrixAt(i, m); im.setColorAt(i, c); }); return im; });
-    g.add(...crowns, firs, trunks); }
+    g.add(...crowns, firs, trunks); g.userData.trees = { smooth, leafM }; }
 
   /* ---- the ground: grass with mown stripes, asphalt taxiways and roads, concrete aprons in 5 m slabs, building pads, the runway, and the
      sun shadows of all of the above painted in as one fill (so overlapping shadows do not double up). 1.2 km at 0.6 m a pixel ---- */
@@ -5798,19 +5798,63 @@ const airport = (() => {
   });
   const dayTex = tex(paintSite(SUN)), siteM = groundDetail(mat({ map: dayTex, roughness: .95, envMapIntensity: .3 })); let duskTex = null;   // the dusk painting is made the first time the gear step needs it
   mesh(new THREE.PlaneGeometry(S, S), siteM, 0, G0 - .04, 0, 0, -Math.PI / 2);
-  /* beyond the airfield, out to the gear step's approach 5 km off: farmland, a patchwork of fields (greens, stubble, ploughed earth) with
-     dark hedgerows, copses and a few lanes, in tiles of 3 km. A plain colour read as a flat sheet from the air */
-  const farM = mat({ roughness: 1, envMapIntensity: .2, map: tex(canvas(1024, 1024, c => { seed = 977;
-    const cols = ['#6f7e47', '#7a8a4e', '#65743f', '#8b8a55', '#9a8f5e', '#7d6c4c', '#6a5c44', '#7f8f55', '#5f6e3d'];
-    const field = (x, y, w, h, d) => { if (d < 5 && (w > 90 || h > 90) && rnd() < .92) { if (w > h) { const k = w * (.35 + .3 * rnd()); field(x, y, k, h, d + 1); field(x + k, y, w - k, h, d + 1); } else { const k = h * (.35 + .3 * rnd()); field(x, y, w, k, d + 1); field(x, y + k, w, h - k, d + 1); } return; }
-      c.fillStyle = cols[Math.floor(rnd() * cols.length)]; c.fillRect(x, y, w, h);
-      if (rnd() < .5) { c.fillStyle = 'rgba(255,255,230,.05)'; const s = 3 + rnd() * 3; for (let k = 0; k < (w > h ? w : h); k += 2 * s) w > h ? c.fillRect(x + k, y, s, h) : c.fillRect(x, y + k, w, s); }   // rows and tramlines
-      c.strokeStyle = 'rgba(34,46,26,.75)'; c.lineWidth = 2.5; c.strokeRect(x, y, w, h); };                                                         // the hedgerow round it
-    field(0, 0, 1024, 1024, 0);
-    for (let k = 0; k < 40; k++) { const x = rnd() * 1024, y = rnd() * 1024, r = 6 + rnd() * 18; c.fillStyle = 'rgba(30,42,24,.85)'; c.beginPath(); c.ellipse(x, y, r, r * (.5 + rnd() * .5), rnd() * 3, 0, 7); c.fill(); }   // copses
-    c.strokeStyle = 'rgba(160,156,146,.8)'; c.lineWidth = 2; for (let k = 0; k < 3; k++) { c.beginPath(); let x = rnd() * 1024, y = 0; c.moveTo(x, y); while (y < 1024) { y += 60; x += (rnd() - .5) * 60; c.lineTo(x, y); } c.stroke(); }   // lanes
+  /* beyond the airfield, out to the gear step's approach 5 km off: farmland in tiles of 3 km at 1.5 m a pixel. Fields of mottled pasture, crops
+     in rows with tractor tramlines, ploughed earth in furrows and golden stubble, each inside its hedgerow with trees along it; woods painted
+     as canopies of separate crowns lit on the sun side; farmsteads with shadowed roofs round a yard; country roads and lanes that run on
+     across the tile edges; a few ponds. Flat colours with dark ovals for woods read, from the approach, as a sheet with holes in it */
+  const farWoodsPx = [], farM = mat({ roughness: 1, envMapIntensity: .2, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 4, map: tex(canvas(2048, 2048, (c, W) => { seed = 977;
+    const wrap = (x, y, r, f) => { for (const dx of [-W, 0, W]) for (const dy of [-W, 0, W]) if (x + dx > -r && x + dx < W + r && y + dy > -r && y + dy < W + r) f(x + dx, y + dy); };   // drawn again across the edges: the tile repeats seamlessly
+    const types = [['#6f7e47', 0], ['#7a8a4e', 0], ['#65743f', 0], ['#5f6e3d', 0], ['#7f8f55', 1], ['#8b8a55', 1], ['#93944f', 1], ['#a8975e', 2], ['#b39f63', 2], ['#7d6c4c', 3], ['#6a5c44', 3], ['#75644a', 3]];   // pasture, crop, stubble, ploughed
+    const fields = [], crowns = [];
+    const field = (x, y, w, h, d) => { if (d < 6 && (w > 170 || h > 170) && rnd() < .93) { if (w > h) { const k = w * (.35 + .3 * rnd()); field(x, y, k, h, d + 1); field(x + k, y, w - k, h, d + 1); } else { const k = h * (.35 + .3 * rnd()); field(x, y, w, k, d + 1); field(x, y + k, w, h - k, d + 1); } return; }
+      const [col, kind] = types[Math.floor(rnd() * types.length)], along = w > h, L = along ? h : w; c.save(); c.beginPath(); c.rect(x, y, w, h); c.clip(); c.fillStyle = col; c.fillRect(x, y, w, h);
+      if (kind === 0) for (let k = 0; k < w * h / 900; k++) { const r = 4 + rnd() * 18; c.fillStyle = rnd() < .5 ? 'rgba(255,255,220,.05)' : 'rgba(20,40,10,.07)'; c.beginPath(); c.arc(x + rnd() * w, y + rnd() * h, r, 0, 7); c.fill(); }   // grazing, mottled
+      else { const step = [0, 3, 4, 2][kind]; c.fillStyle = ['', 'rgba(20,40,10,.1)', 'rgba(255,240,200,.08)', 'rgba(30,20,10,.16)'][kind]; for (let k = 0; k < L; k += step) along ? c.fillRect(x, y + k, w, 1) : c.fillRect(x + k, y, 1, h); }   // rows, stubble lines, furrows, along the field
+      if (kind === 1 || kind === 2) { c.fillStyle = 'rgba(120,110,80,.35)'; for (let k = 8; k < L; k += 16) for (const o of [0, 1.4]) along ? c.fillRect(x, y + k + o, w, .7) : c.fillRect(x + k + o, y, .7, h); }   // tramlines, 24 m apart
+      c.fillStyle = 'rgba(150,160,110,.35)'; c.fillRect(x, y, w, 2); c.fillRect(x, y + h - 2, w, 2); c.fillRect(x, y, 2, h); c.fillRect(x + w - 2, y, 2, h); c.restore(); fields.push([x, y, w, h]); };   // a grass margin inside the hedge
+    field(0, 0, W, W, 0);
+    c.strokeStyle = 'rgba(34,46,26,.8)'; c.lineWidth = 3; for (const [x, y, w, h] of fields) c.strokeRect(x, y, w, h);                                       // hedgerows,
+    for (const [x, y, w, h] of fields) for (const [x0, y0, dx, dy, l] of [[x, y, 1, 0, w], [x, y, 0, 1, h]]) for (let t = rnd() * 30; t < l; t += 10 + rnd() * 40) if (rnd() < .55) crowns.push([x0 + dx * t, y0 + dy * t, 3 + rnd() * 3.5]);   // with trees along them
+    const road = (horiz, p0, width, col) => { const pts = []; let q = p0; for (let t = 0; t <= W; t += 64) { pts.push(horiz ? [t, q] : [q, t]); q += (rnd() - .5) * 40 + (p0 - q) * Math.pow(t / W, 2) * .8; } pts[pts.length - 1] = horiz ? [W, p0] : [p0, W];   // it ends where it began, so the next tile carries it on
+      for (const off of [-W, 0, W]) { c.strokeStyle = col; c.lineWidth = width; c.beginPath(); pts.forEach(([u, v], i) => { const X = horiz ? u : u + off, Y = horiz ? v + off : v; i ? c.lineTo(X, Y) : c.moveTo(X, Y); }); c.stroke(); } return pts; };
+    for (const [horiz, p0] of [[true, rnd() * W], [false, rnd() * W]]) { const st = seed; road(horiz, p0, 8, 'rgba(170,165,150,.55)'); seed = st; road(horiz, p0, 4.5, '#5d5f61'); }   // two country roads (the same line twice: verge, then tarmac)
+    for (const [horiz, p0] of [[true, rnd() * W], [false, rnd() * W], [false, rnd() * W]]) road(horiz, p0, 2.4, 'rgba(165,160,148,.85)');                    // and lanes
+    for (let k = 0; k < 16; k++) { const x = rnd() * W, y = rnd() * W, an = rnd() * Math.PI / 2;                                                                // farmsteads: a gravel yard, two to five roofs, trees round them
+      const bs = Array.from({ length: 2 + Math.floor(rnd() * 4) }, () => [(rnd() - .5) * 40, (rnd() - .5) * 30, 8 + rnd() * 18, 5 + rnd() * 9, ['#8f8f8a', '#7a3b2e', '#b9bcbf', '#5d6064', '#9a8b74', '#6e2f26'][Math.floor(rnd() * 6)]]);
+      wrap(x, y, 70, (u, v) => { c.save(); c.translate(u, v); c.rotate(an); c.fillStyle = 'rgba(150,145,132,.9)'; c.fillRect(-28, -20, 56, 40);
+        for (const [bx, by, bw, bh, col] of bs) { c.fillStyle = 'rgba(15,18,12,.45)'; c.fillRect(bx - bw / 2 - 3, by - bh / 2 + 3, bw, bh); c.fillStyle = col; c.fillRect(bx - bw / 2, by - bh / 2, bw, bh); c.fillStyle = 'rgba(255,255,255,.12)'; c.fillRect(bx - bw / 2, by - bh / 2, bw, bh / 2); }   // shadow, roof, its lit side
+        c.restore(); });
+      for (let t = 0; t < 8; t++) crowns.push([x + (rnd() - .5) * 90, y + (rnd() - .5) * 70, 3 + rnd() * 4]); }
+    for (let k = 0; k < 3; k++) { const x = rnd() * W, y = rnd() * W, rx = 10 + rnd() * 25, ry = rx * (.5 + rnd() * .5), an = rnd() * 3;                       // ponds
+      wrap(x, y, rx + 4, (u, v) => { c.fillStyle = 'rgba(70,92,60,.7)'; c.beginPath(); c.ellipse(u, v, rx + 3, ry + 3, an, 0, 7); c.fill(); c.fillStyle = '#3d4a52'; c.beginPath(); c.ellipse(u, v, rx, ry, an, 0, 7); c.fill(); }); }
+    for (let k = 0; k < 30; k++) { const x = rnd() * W, y = rnd() * W, R = 20 + rnd() * 50, asp = .5 + rnd() * .5, an = rnd() * 3, n = R * R * asp / 14;            // woods: a canopy of separate crowns
+      for (let i = 0; i < n; i++) { const u = (rnd() * 2 - 1), v = (rnd() * 2 - 1); if (u * u + v * v > 1) continue; crowns.push([x + (u * Math.cos(an) - v * asp * Math.sin(an)) * R, y + (u * Math.sin(an) + v * asp * Math.cos(an)) * R, 3 + rnd() * 4, 1]); } }
+    const cc = ['#2b3a22', '#334428', '#3d4f2c', '#2a3620', '#46592f', '#384a2a'];                                                                             // crowns: shadows, then the crowns, then their sunlit sides
+    for (const [x, y, r] of crowns) wrap(x, y, r * 2, (u, v) => { c.fillStyle = 'rgba(16,22,12,.5)'; c.beginPath(); c.arc(u - r * .5, v + r * .4, r, 0, 7); c.fill(); });
+    crowns.forEach(([x, y, r], i) => wrap(x, y, r * 2, (u, v) => { c.fillStyle = cc[i % cc.length]; c.beginPath(); c.arc(u, v, r, 0, 7); c.fill(); }));
+    for (const cr of crowns) if (cr[3]) farWoodsPx.push(cr);
+    for (const [x, y, r] of crowns) wrap(x, y, r * 2, (u, v) => { c.fillStyle = 'rgba(150,170,100,.22)'; c.beginPath(); c.arc(u + r * .3, v - r * .3, r * .55, 0, 7); c.fill(); });
   })) });
-  for (const [x, z, w, d] of [[0, -S / 2 - 6000, S + 24000, 12000], [0, S / 2 + 6000, S + 24000, 12000], [-S / 2 - 6000, 0, 12000, S], [S / 2 + 6000, 0, 12000, S]]) mesh(tiles(new THREE.PlaneGeometry(w, d), 3000, 3000), farM, x, G0 - .3, z, 0, -Math.PI / 2);   // 0.3 m down: level with the runway carrying on north, the two flickered through each other
+  const farPlanes = [[0, -S / 2 - 6000, S + 24000, 12000], [0, S / 2 + 6000, S + 24000, 12000], [-S / 2 - 6000, 0, 12000, S], [S / 2 + 6000, 0, 12000, S]];
+  for (const [x, z, w, d] of farPlanes) mesh(tiles(new THREE.PlaneGeometry(w, d), 3000, 3000), farM, x, G0 - .3, z, 0, -Math.PI / 2);   // 0.3 m down: level with the runway carrying on north, the two flickered through each other
+
+  { const stripM = groundDetail(mat({ roughness: .95, envMapIntensity: .3, map: tex(canvas(32, 8, (c, w, h) => { c.fillStyle = '#76844c'; c.fillRect(0, 0, w, h); c.fillStyle = 'rgba(235,240,190,.06)'; c.fillRect(0, 0, w / 2, h); })) }));
+    mesh(tiles(new THREE.PlaneGeometry(300, 1120), 16, 16), stripM, 230, G0 - .2, 1150, 0, -Math.PI / 2); mesh(tiles(new THREE.PlaneGeometry(160, 820), 16, 16), stripM, 230, G0 - .2, -1000, 0, -Math.PI / 2); }   // the runway strip past the painted square and the approach ground: mown, clear of woods
+  /* woods in 3D along the gear step's flight path (the approach and the climb-out, 900 m either side of the extended centreline, and east of the
+     runway): a crown standing on each crown painted in the farmland's woods, so from the air they have height and the painting under them reads
+     as their shadow. The approach lights' and localizer's ground is kept clear. Shown only at dusk, the one time the camera flies */
+  { const T = g.userData.trees, geo = new THREE.IcosahedronGeometry(1, 1), p = geo.attributes.position, v = new THREE.Vector3();
+    for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const f = .8 + .14 * Math.sin(v.x * 4.1 + v.y * 2.7) + .08 * Math.sin(v.z * 5.3 - v.x * 3.1); p.setXYZ(i, v.x * f, v.y * f, v.z * f); }
+    T.smooth(geo); const cols = []; for (let i = 0; i < p.count; i++) { const k = .4 + .6 * (p.getY(i) + 1) / 2; cols.push(k, k, k); } geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+    const X0 = -670, X1 = 1130, clear = (X, Z) => (Math.abs(X - 230) < 155 && Z > 590 && Z < 1710) || (Math.abs(X - 230) < 85 && Z > -1410 && Z < -590) || (Math.abs(X - 230) < 60 && Z < 2000 && Z > -1400);
+    const ok = (X, Z) => X > X0 && X < X1 && ((Z < -620 && Z > -4800) || (Z > 620 && Z < 2600) || (X > 620 && Math.abs(Z) < 600)) && !clear(X, Z), pos = [];
+    for (const [cx, cz, w, d] of farPlanes) { const x0 = cx - w / 2, zt = cz + d / 2;                                                       // the planes' uv: x from their west edge, v from their north edge, 3 km a tile
+      for (let i = Math.floor((X0 - x0) / 3000) - 1; i <= Math.floor((X1 - x0) / 3000); i++) for (let j = Math.floor((zt - 2600) / 3000) - 1; j <= Math.floor((zt + 4800) / 3000); j++)
+        for (const [px, py, r] of farWoodsPx) { const X = x0 + (i + px / 2048) * 3000, Z = zt - (j + 1 - py / 2048) * 3000; if (X > x0 && X < cx + w / 2 && Z > cz - d / 2 && Z < zt && ok(X, Z)) pos.push([X, Z, r * 1.4]); } }                                // as big as the painted crown (1.46 m a pixel): smaller, the wood read as a pile of pebbles
+    const im = new THREE.InstancedMesh(geo, T.leafM, pos.length), M4 = new THREE.Matrix4(), q = new THREE.Quaternion(), col = new THREE.Color(), up = new THREE.Vector3(0, 1, 0);
+    pos.forEach(([X, Z, rr], k) => { M4.compose(new THREE.Vector3(X, G0 - .3 + 1.5 + rr * .8 + (k * 7 % 11) * .45, Z), q.setFromAxisAngle(up, k * 2.39), new THREE.Vector3(rr, rr * (.75 + (k % 5) * .06), rr)); im.setMatrixAt(k, M4);
+      im.setColorAt(k, col.setStyle(['#3a4a2a', '#435532', '#4d5f36', '#36452a', '#56663a'][k % 5]).convertSRGBToLinear()); });
+    im.visible = false; im.frustumCulled = false; g.add(im); g.userData.farWoods = im; }
 
   /* merge: one mesh per material */
   B.updateMatrixWorld(true); const byMat = new Map();
@@ -5860,7 +5904,7 @@ const airport = (() => {
     g.userData.tick(0); }
   const pools = g.children.find(o => o.material === poolM); pools.visible = false; pools.renderOrder = 3;
   g.userData.look = dusk => { if (dusk && !duskTex) duskTex = tex(paintSite(DUSK.shift)); siteM.map = dusk ? duskTex : dayTex; decalDay.visible = !dusk; decalDusk.visible = dusk; for (const p of lit) p.visible = dusk;
-    pools.visible = dusk; for (const [m, k] of duskLit) m.emissiveIntensity = dusk ? k : 0; };
+    pools.visible = dusk; g.userData.farWoods.visible = dusk; for (const [m, k] of duskLit) m.emissiveIntensity = dusk ? k : 0; };
   g.visible = false; scene.add(g); return g; })();
 scene.fog = new THREE.Fog(HAZE, 1e5, 2e5);
 /* contact shadow: the soft darkening of the ground under the aircraft from the sky it hides (the sun's shadow is sharp and falls to one side).
