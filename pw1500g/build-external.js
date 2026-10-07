@@ -355,11 +355,32 @@
       line('precooler', [V(pcx - .17, .60, .04), V(-2.12, .55, .045), V(-2.17, .50, .04)], .045, 'duct', { clamps: 0 }); }
     PW.part('tacc', { parent: 'air', label: 'Turbine active clearance control', src: 'p.270-277',
       info: 'Fan air taken through the scoop on the right IFS at about 1:30 passes the ACC valve and is sprayed onto the HPT and LPT cases from ring manifolds. Shrinking the cases closes the blade tip clearances in cruise, saving fuel; the valve is closed for takeoff and most of the climb.' });
-    { for (const xx of [-1.93, -2.0, -2.25, -2.32, -2.39]) { const rr = Math.max(rCase(xx), .24) + .025; PW.add('tacc', G.revolve([[xx + .012, rr - .012], [xx - .012, rr - .012], [xx - .012, rr + .012], [xx + .012, rr + .012]], { seg: 128, crease: 80 }), 'steel'); }
+    /* p.270-273: the ACC air valve at 1 o'clock near the rear of the HPC (it was over the HPT until 2026-10-07), fed from the scoop on the
+       right IFS; the HPT manifold a shroud band on the HPT case, the LPT manifold a band of spray tubes on the LPT case */
+    { PW.add('tacc', G.revolve([[-1.915, .258], [-2.015, .262], [-2.015, .286], [-1.915, .282]], { seg: 128, crease: 60 }), 'nickel');                // HPT manifold
+      for (const xx of [-1.93, -1.965, -2.0]) PW.add('tacc', G.revolve(circ(xx, .29, .006, 8), { seg: 128 }), 'nickel');
+      for (const xx of [-2.25, -2.32, -2.39]) { const rr = Math.max(rCase(xx), .24) + .025; PW.add('tacc', G.revolve([[xx + .012, rr - .012], [xx - .012, rr - .012], [xx - .012, rr + .012], [xx + .012, rr + .012]], { seg: 128, crease: 80 }), 'steel'); }
+      { const band = []; for (let i = 0; i <= 8; i++) { const xx = -2.236 - .168 * i / 8; band.push([xx, rCase(xx) + .004]); }                         // the band under the LPT spray tubes
+        PW.add('tacc', G.revolve(G.shellProfile(band.map(([xx, r]) => [xx, r + .005]), band), { seg: 128 }), 'nickel'); }
       const xT = D.GEN.externals.lptCaseTorus; PW.add('tacc', G.revolve(circ(xT.x, xT.r_centre, xT.tube_od / 2, 10), { seg: 128 }), 'steel');
-      line('tacc', [P(-1.62, 1.5, .55), P(-1.72, 1.25, .45), P(-1.88, 1.2, .35), P(-1.95, 1.35, .32)], .03, 'tube', { clamps: 1 });
-      line('tacc', [P(-1.95, 1.35, .32), P(-2.15, 1.4, .42), P(-2.30, 1.5, .50)], .03, 'tube', { clamps: 1 });
-      box('tacc', -1.95, 1.35, .33, .1, .07, .09, 'darkBox'); }
+      /* the valve: butterfly body with V-bands, the fuel-powered torque motor housing on top with its servo fuel ports from the IFPC,
+         and the single-channel LVDT to EEC channel A */
+      const f = Kt.frame('tacc', -1.64, 1.2, .40);
+      Kt.cyl('tacc', f, [0, 0, 0], 'x', .045, .12, 'castAl', { edge: .006 }); for (const s of [-1, 1]) Kt.vband('tacc', f, [s * .066, 0, 0], 'x', .03, { phase: 1.2 });
+      Kt.box('tacc', f, [0, .052, .02], [.07, .04, .05], 'castAl', { round: .006 }); Kt.connector('tacc', f, [0, .074, .02], 'y', .008, { lead: 'x' });
+      Kt.cyl('tacc', f, [-.02, .05, -.035], 'x', .012, .06, 'steel'); Kt.connector('tacc', f, [.015, .05, -.035], 'x', .008, { lead: 'y' });
+      for (const z of [.008, .032]) Kt.fitting('tacc', f, [.037, .052, z], 'x', .006);
+      line('tacc', [P(-1.62, 1.5, .55), P(-1.60, 1.4, .50), P(-1.585, 1.27, .44), P(-1.578, 1.2, .40)], .03, 'tube', { clamps: 0, ends: false });   // from the IFS scoop
+      line('tacc', [P(-1.702, 1.2, .40), P(-1.78, 1.2, .38), P(-1.85, 1.22, .36), P(-1.89, 1.25, .35)], .03, 'tube', { clamps: 1, ends: false });
+      line('tacc', [P(-1.89, 1.25, .35), P(-1.92, 1.25, .32), P(-1.935, 1.25, .295)], .024, 'tube', { clamps: 0, ends: false });                      // to the HPT manifold
+      line('tacc', [P(-1.89, 1.25, .35), P(-2.0, 1.28, .37), P(-2.08, 1.33, .45), P(-2.15, 1.4, .50), P(-2.21, 1.44, .515), P(-2.245, 1.45, .516)], .026, 'tube', { clamps: 1, ends: false }); }   // to the LPT manifold
+    /* p.276-277: four tubes take 6th-stage HPC air to the HPT 2nd stage vanes and blade attachments, two on each side, arching over the
+       case from the 6th-stage ports to the HPT case just ahead of the clearance control manifold, metered by plates at the case */
+    PW.part('hpt-cooling', { parent: 'air', label: 'HPT cooling air tubes (6th stage)', src: 'p.276-277',
+      info: 'Four tubes carry 6th-stage HPC air to the HPT 2nd stage vanes and blade attachments. Metering plates between the tubes and the HPT case set the flow; the air passes through the hollow vanes and leaves at their trailing edges. The 4th-stage air that cools the TIC fairings, the LPT case and the LPT rotor and blade attachments goes through seven more tubes (four supply, three jumpers) and three further jumpers (not drawn yet).' });
+    for (const h of [10.45, 11.15, .85, 1.6]) {
+      line('hpt-cooling', [P(-1.515, h, .251), P(-1.53, h, .30), P(-1.56, h, .345), P(-1.70, h, .357), P(-1.85, h, .357), P(-1.88, h, .32), P(-1.893, h, .27), P(-1.895, h, .245)], .015, 'tube', { clamps: 2, ends: false });
+      for (const [xx, rr] of [[-1.515, .251], [-1.895, .245]]) { const g = Kt.frame('hpt-cooling', xx, h, rr); Kt.box('hpt-cooling', g, [0, .006, 0], [.04, .012, .04], 'nickel', { round: .006 }); Kt.bolts('hpt-cooling', g, [0, .013, 0], 'y', .02, 4, .0035, { phase: Math.PI / 4 }); } }
     PW.part('cai', { parent: 'air', label: 'Cowl anti-ice duct and valves', src: 'p.10-11; TTM ch. 30; photos',
       info: 'HPC 6th-stage bleed for the inlet lip. It passes two cowl anti-ice valves in series (two for redundancy), controlled and monitored by the EEC from the L and R COWL switches (OFF, AUTO, ON), crosses the fan duct in the lower bifurcation and runs forward along the bottom right of the fan case into the inlet at 5 o\'clock, where its access panel is. The air leaves through the exhaust louvres at the bottom of the inlet. The valves also open during the start to help the HPC bleed valve unload the compressor.\n\nThe black hose with orange fittings along the fan case in the photos.' });
     { /* 6th-stage port on the right of the HPC, the two valves on the right of the core, down into the lower bifurcation at 6 o'clock,
