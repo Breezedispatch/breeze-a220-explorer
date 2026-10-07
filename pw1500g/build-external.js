@@ -36,7 +36,9 @@
     PW.add(pid, g, mat);
     const curve = g.userData.curve, n = o.clamps === undefined ? Math.max(1, Math.round(curve.getLength() / (kind === 'duct' ? .35 : .25))) : o.clamps;
     if (n > 0) { const ts = []; for (let i = 1; i <= n; i++) ts.push(i / (n + 1));
-      PW.add(pid, G.alongCurve(curve, ts, () => { const t = new THREE.CylinderGeometry(r * 1.35, r * 1.35, r * (kind === 'duct' ? .9 : 1.6), 12); return t; }), kind === 'duct' ? 'steel' : kind === 'harness' ? 'connector' : 'clampOrange', { shadow: false }); }
+      /* clamps are thin bands: orange cushioned P-clamps on small lines, steel V-band couplings on large ducts */
+      const big = kind === 'duct' || r > .03, band = Math.min(r * 1.6, big ? .022 : .016);
+      PW.add(pid, G.alongCurve(curve, ts, () => new THREE.CylinderGeometry(r + Math.min(.008, r * .35), r + Math.min(.008, r * .35), band, 16)), big ? 'steel' : kind === 'harness' ? 'connector' : 'clampOrange', { shadow: false }); }
     if (o.ends !== false && kind !== 'duct') PW.add(pid, G.alongCurve(curve, [0.012, .988], () => new THREE.CylinderGeometry(r * 1.6, r * 1.6, r * 2.2, 6)), kind === 'harness' ? 'connector' : 'steel', { shadow: false });
     return curve;
   }
@@ -91,9 +93,11 @@
       for (let i = 0; i < 18; i++) { const a = i / 18 * TAU, m = new THREE.Mesh(new THREE.CylinderGeometry(.006, .006, .004, 8)); m.geometry.rotateZ(Math.PI / 2); m.position.copy(P(ax - .135, ah, ar).add(V(0, Math.cos(a) * .07, Math.sin(a) * .07))); PW.add('ats', m, 'darkBox', { solid: true }); }   // exhaust holes in the end cap
       /* starter air valve on the duct coming down from the pylon (left side) */
       acc('sav', 'Starter air valve (SAV)', 'Electrically controlled, pneumatically operated valve in the starter duct. The EEC opens it for a start and closes it at starter cutout. If it fails closed it can be opened by hand with a square drive through an access in the left reverser door, under the MEL procedure with a second person on the interphone.', 'p.290-299');
-      const top = P(-1.0, 10.5, .62), sv = P(-1.35, 9.3, .53), st = P(ax, ah - .25, ar + .05);
-      line('sav', [top, P(-1.2, 10.0, .58), sv], .045, 'duct', { clamps: 2 }); line('sav', [sv, P(-1.55, 8.9, .5), st], .045, 'duct', { clamps: 1 });
-      can('sav', -1.35, 9.3, .53, .06, .1, 'steel'); box('sav', -1.35, 9.3, .60, .09, .08, .08, 'darkBox'); }
+      /* p.297: the starter duct comes down from the pylon along the left of the core over the HPT, through the valve at 9 o'clock,
+         then turns forward and down into the aft end of the starter */
+      const top = P(-2.42, 11.4, .66), sv = P(-2.24, 9.0, .49), st = P(ax - .15, ah, ar);
+      line('sav', [top, P(-2.38, 10.6, .56), P(-2.30, 9.6, .50), sv], .045, 'duct', { clamps: 2 }); line('sav', [sv, P(-2.10, 8.7, .46), P(-2.0, 8.45, .42), st], .045, 'duct', { clamps: 1 });
+      can('sav', -2.24, 9.0, .49, .06, .1, 'steel'); box('sav', -2.24, 8.75, .55, .09, .08, .1, 'darkBox'); }
     acc('pmag', 'Permanent magnet alternator/generator (PMAG)', 'Small alternator on the MGB aft face at 7 o\'clock. It powers the EEC once N2 is above about 10 to 15 percent and its frequency is the N2 speed signal.', 'p.96-101, p.112, p.69');
     { can('pmag', mx1 - .08, 7.15, .40, .05, .13, 'accGrey'); connector('pmag', P(mx1 - .14, 7.15, .45), V(-.4, -1, -.3)); }
     acc('vfg', 'Variable frequency generator (VFG)', 'The engine\'s main AC generator, 75 kVA at 360 to 800 Hz (frequency follows N2), on the MGB aft face. Oil-cooled from the engine oil system. A disconnect lets the crew decouple it; it can only be reconnected on the ground.\n\nAn inoperative VFG is an MEL item with the APU generator as the replacement source.', 'p.66-69; TTM ch. 24');
@@ -162,7 +166,15 @@
       PW.add('bleed-hp', G.revolve([[x4 + .03, rCase(x4)], [x4 - .03, rCase(x4)], [x4 - .03, rCase(x4) + .035], [x4 + .03, rCase(x4) + .035]], { seg: 96 }), 'nickel');     // 4th-stage manifold collar
       line('bleed-hp', [P(x4, 11.6, rCase(x4) + .03), P(x4 - .05, 11.8, .45), P(-1.5, 12, .62), P(-1.7, 12, .78)], .045, 'duct', { clamps: 2 });
       line('bleed-hp', [P(x8, .4, rCase(x8) + .02), P(x8 + .02, .2, .42), P(-1.55, .1, .62)], .035, 'duct', { clamps: 2 });
-      can('bleed-hp', -1.58, 12, .60, .06, .12, 'steel'); box('bleed-hp', -1.58, 12, .68, .1, .08, .09, 'darkBox'); }            // high-pressure valve
+      can('bleed-hp', -1.58, 12, .60, .06, .12, 'steel'); box('bleed-hp', -1.58, 12, .68, .1, .08, .09, 'darkBox');               // high-pressure valve
+      /* p.297: the precooler sits above the core at 12 o'clock in the upper bifurcation, fed with fan air by a corrugated duct from the
+         precooler duct inlet behind the FEGVs; hot bleed enters from below */
+      PW.part('precooler', { parent: 'air', label: 'Precooler', src: 'p.60, p.297; TTM ch. 36',
+        info: 'Air-to-air heat exchanger above the core at 12 o\'clock in the upper bifurcation. Fan air from the precooler duct inlet cools the engine bleed to a temperature the aircraft ducts can take, and leaves through the precooler exhaust door on the right IFS. Its fan air valve is modulated to hold the bleed temperature.' });
+      const pcx = -1.90, pcy = .74; { const m = new THREE.Mesh(G.roundedBox(.40, .46, .24, .03)); m.position.set(pcx, pcy, 0); PW.add('precooler', m, 'steel', { solid: true });
+        for (let i = 0; i < 9; i++) { const f = new THREE.Mesh(G.roundedBox(.36, .42, .004, .001)); f.position.set(pcx, pcy, -.1 + i * .025); PW.add('precooler', f, 'darkBox', { solid: true, shadow: false }); } }
+      line('precooler', [V(-1.05, .99, 0), V(-1.30, .93, 0), V(-1.55, .86, 0), V(pcx + .2, .80, 0)], .07, 'tube', { clamps: 5, ends: false });
+      line('precooler', [V(pcx - .2, .74, -.05), V(-2.2, .74, -.15), V(-2.35, .66, -.25)], .05, 'duct', { clamps: 1 }); }
     PW.part('tacc', { parent: 'air', label: 'Turbine active clearance control', src: 'p.270-277',
       info: 'Fan air taken through the scoop on the right IFS at about 1:30 passes the ACC valve and is sprayed onto the HPT and LPT cases from ring manifolds. Shrinking the cases closes the blade tip clearances in cruise, saving fuel; the valve is closed for takeoff and most of the climb.' });
     { for (const xx of [-1.93, -2.0, -2.25, -2.32, -2.39]) { const rr = Math.max(rCase(xx), .24) + .025; PW.add('tacc', G.revolve([[xx + .012, rr - .012], [xx - .012, rr - .012], [xx - .012, rr + .012], [xx + .012, rr + .012]], { seg: 128, crease: 80 }), 'steel'); }
