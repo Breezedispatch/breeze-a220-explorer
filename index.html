@@ -5529,9 +5529,10 @@ const airport = (() => {
     /* ground crew: tug at the nose, power unit, belt loader at the forward hold door (right side), a train of carts, a fuel truck ahead of the right wing */
     vk.veh(j, 21.6, -4, 0, Math.PI, v => vk.pushback(v, gseW)); vk.veh(j, 16, -4, 3.2, 0, v => vk.gpu(v, gseW)); vk.veh(j, 9.5, -4, 5.6, Math.PI / 2, v => vk.belt(v, gseY));
     vk.veh(j, 13.6, -4, 9.5, 0, v => vk.tug(v, gseW)); for (const x of [10.2, 7.2, 4.2]) vk.veh(j, x, -4, 9.5, 0, v => vk.cart(v, tarpM)); vk.veh(j, 2.5, -4, 13.5, 0, v => vk.fuel(v));
+    for (const [x0, x1, z0, z1, h] of [[18.6, 24.6, -1.4, 1.4, 1.2], [14.9, 17.1, 2.55, 3.85, 1.5], [8.5, 10.5, 2.6, 8.6, 2.3], [12.2, 15, 8.8, 10.2, 2.1], [2.9, 11.5, 8.75, 10.25, 1.7], [-1.6, 6.8, 12.25, 14.75, 3.1]]) shade(rectFoot(x0, x1, z0, z1).map(p => W(...p)), h);   // and their crew's equipment
     shade([[-19, -2], [18.8, -2], [18.8, 2], [-19, 2]].map(p => W(...p)), 6, 2);                                                                 // fuselage
-    shade(WING.map(p => W(...p)), 3, 2.6); shade(STAB.map(p => W(...p)), 4.9, 4.7); shade([[-19.4, 0], [-12.8, 0]].map(p => W(...p)).flatMap(([x, z]) => [[x - .2, z], [x + .2, z]]), 12, 5.6);   // wing, stabilizer, fin
-    for (const s of [1, -1]) shade(rectFoot(.6, 4.6, s * 5.75 - .95, s * 5.75 + .95).map(p => W(...p)), 2.7, .8);
+    shade(WING.map(p => W(...p)), 3.6, 2.8); shade(STAB.map(p => W(...p)), 5.5, 4.85); shade([[-19.4, -.2], [-12.8, -.2], [-12.8, .2], [-19.4, .2]].map(p => W(...p)), 12, 5.6);   // wing, stabilizer, fin
+    for (const s of [1, -1]) shade(rectFoot(.95, 4.8, s * 5.75 - 1, s * 5.75 + 1).map(p => W(...p)), 2.45, .45);
   };
   const gateSign = (x, n) => { const m = mat({ roughness: .5, emissive: 0xffffff, emissiveIntensity: 0, map: tex(canvas(256, 128, (c, w, h) => { c.fillStyle = FASCIA; c.fillRect(0, 0, w, h); c.fillStyle = '#ffffff';
       c.font = '700 30px Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('GATE', w * .3, h / 2); c.font = '700 96px Arial, sans-serif'; c.fillText(String(n), w * .72, h / 2 + 6); })) });
@@ -5539,7 +5540,7 @@ const airport = (() => {
   const gseParked = xc => {                                                                                                                             // an empty gate's equipment: pushback tug and power unit by the stop line, belt loader and carts in the staging box
     vk.veh(B, xc + 6, G0, -147, -Math.PI / 2, v => vk.pushback(v, gseY)); vk.veh(B, xc - 7, G0, -150, 0, v => vk.gpu(v, gseW)); vk.veh(B, xc + 26, G0, -151, Math.PI / 2, v => vk.belt(v, gseY));
     vk.veh(B, xc + 26, G0, -125, -Math.PI / 2, v => vk.tug(v, gseW)); for (let k = 0; k < 3; k++) vk.veh(B, xc + 26, G0, -128.6 - k * 3, -Math.PI / 2, v => vk.cart(v, tarpM));
-    shade(rectFoot(xc + 4.6, xc + 7.4, -150, -144), 2.2); shade(rectFoot(xc + 25, xc + 27, -154.5, -124), 1.9); };
+    shade(rectFoot(xc + 4.6, xc + 7.4, -150, -144), 2.2); shade(rectFoot(xc + 25, xc + 27, -154.5, -124), 1.9); shade(rectFoot(xc - 8.1, xc - 5.9, -150.65, -149.35), 1.5); };
   [[-130, '#1f3a5f', null], [-80], [-30, '#a51f24', '#a51f24'], [20], [70, '#127a74', null]].forEach(([xc, tail, cowl]) => {
     const xr = xc - 10; gateSign(xr, (xc + 130) / 50 + 1);
     if (tail) { const zc = -157 + 18.8; jet(xc, zc, tail, cowl); bridge(xr, xc - 2.05, zc - 15.5, 3.4); }                                           // to the forward left door
@@ -5573,13 +5574,13 @@ const airport = (() => {
     const uldM = mat({ color: lin('#b9bdc1'), roughness: .35, metalness: .6 });
     const ld3G = new THREE.ExtrudeGeometry(shape([[-.78, 0], [.78, 0], [.78, 1.63], [-1.23, 1.63], [-1.23, .62]]), { depth: 1.53, bevelEnabled: false }).translate(0, 0, -.765);   // an LD3: the lower corner cut away to fit the hold
     const ld3 = (x, z, ry, y0 = 0) => mesh(ld3G, uldM, x, G0 + y0, z, ry), smallW = new THREE.CylinderGeometry(.2, .2, .16, 10);
-    for (let k = 0; k < 14; k++) { const z = -70 + k * 9 + rnd() * 3, x = X + 12 + rnd() * 10; ld3(x, z, rnd() * .3); }                                          // containers on the apron (the same draws of rnd as before)
+    for (let k = 0; k < 14; k++) { const z = -70 + k * 9 + rnd() * 3, x = X + 12 + rnd() * 10; ld3(x, z, rnd() * .3); shade(rectFoot(x - 1.2, x + 1.2, z - .8, z + .8), 1.63); }                                          // containers on the apron (the same draws of rnd as before)
     const dolly = (x, z) => { mesh(vk.rbox(2.2, .25, 1.9, .06), darkM, x, G0 + .3, z); for (const [a, b] of [[-.8, -.8], [.8, -.8], [-.8, .8], [.8, .8]]) mesh(smallW, tyreM, x + a, G0 + .2, z + b, 0, Math.PI / 2); ld3(x, z, Math.PI / 2, .55); };
     const tug = (x, z) => vk.veh(B, x, G0, z, 0, v => vk.tug(v, gseW));
     for (const [z0, n] of [[-46, 4], [62, 3]]) { tug(X + 34, z0); for (let k = 0; k < n; k++) dolly(X + 31.2 - k * 2.9, z0); shade(rectFoot(X + 30.2 - n * 2.9, X + 35.2, z0 - 1.1, z0 + 1.1), 2.2); }   // tug trains of containers on dollies
     const palletM = mat({ roughness: .7, map: tex(canvas(64, 64, (c, w, h) => { c.fillStyle = '#2e3a2c'; c.fillRect(0, 0, w, h); c.strokeStyle = 'rgba(200,200,190,.45)'; c.lineWidth = 1.5; for (let k = 0; k < w; k += 10) { c.beginPath(); c.moveTo(k, 0); c.lineTo(k, h); c.moveTo(0, k); c.lineTo(w, k); c.stroke(); } })) });
-    for (let k = 0; k < 6; k++) { const z = -88 + k * 4; box(3.18, .1, 2.44, metalM, X + 5, 0, z); mesh(vk.rbox(3.0, 1.2 + lrnd() * .9, 2.3, .22), palletM, X + 5, G0 + .1, z); }   // pallets, wrapped and netted, by the doors
-    vk.veh(B, X + 9.2, G0, 82, 0, v => vk.forklift(v));                                                                                                // a forklift
+    for (let k = 0; k < 6; k++) { const z = -88 + k * 4; box(3.18, .1, 2.44, metalM, X + 5, 0, z); { const ph = 1.2 + lrnd() * .9; mesh(vk.rbox(3.0, ph, 2.3, .22), palletM, X + 5, G0 + .1, z); shade(rectFoot(X + 3.4, X + 6.6, z - 1.2, z + 1.2), ph + .1); } }   // pallets, wrapped and netted, by the doors
+    vk.veh(B, X + 9.2, G0, 82, 0, v => vk.forklift(v)); shade(rectFoot(X + 7.6, X + 11.3, 81.3, 82.7), 2.4);                                                                                                // a forklift
     jet(-195, 25, '#2f5d3a', null, false, { ry: Math.PI, body: freightM });                                                                                   // a freighter, nose in to the shed
     { const zc = 25 + 1.97 + 3.65; vk.veh(B, -205.8, G0, zc, Math.PI / 2, v => vk.kloader(v));                                                         // its main deck loader at the door
       ld3(-205.8, zc - 1.6, Math.PI / 2, 3.35);                                                                                                        // a container riding up
@@ -5617,7 +5618,7 @@ const airport = (() => {
   /* ---- fuel farm and its pump house, beyond the hangars, clear of the runway ---- */
   { const tankM = mat({ color: lin('#e9eaeb'), roughness: .5, metalness: .2 }), topM = mat({ color: lin('#b9bec3'), roughness: .5, metalness: .3 });
     for (const [x, z] of [[-245, 205], [-210, 205], [-227.5, 240]]) { mesh(new THREE.CylinderGeometry(11, 11, 13, 32), tankM, x, G0 + 6.5, z); mesh(new THREE.ConeGeometry(11.2, 1.6, 32), topM, x, G0 + 13.8, z); shade(circFoot(x, z, 11, 16), 14); }
-    box(10, 4, 6, plainM, -190, 0, 245); }
+    box(10, 4, 6, plainM, -190, 0, 245); shade(rectFoot(-195, -185, 242, 248), 4); }
 
   /* ---- floodlight masts round the stand, heads tipped down toward it; their shadows fall across the apron, so they are drawn on it ---- */
   const lampM = mat({ color: lin('#dfe3e6'), roughness: .3, metalness: .2 }), decalM = new THREE.MeshBasicMaterial({ color: 0x0e1622, transparent: true, opacity: .45, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }), decalDuskM = decalM.clone(), poolM = new THREE.MeshBasicMaterial({ map: alphaTexture(64, (x, y) => Math.pow(Math.max(0, 1 - Math.hypot(x, y)), 1.6)), color: 0xffcf96, transparent: true, opacity: .3, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
@@ -5965,7 +5966,8 @@ const airport = (() => {
   for (const [m, list] of byMat) { const out = new THREE.BufferGeometry();
     for (const n of ['position', 'normal', 'uv']) { if (!list.every(q => q.attributes[n])) continue; const arr = new Float32Array(list.reduce((s, q) => s + q.attributes[n].array.length, 0)); let off = 0;
       for (const q of list) { arr.set(q.attributes[n].array, off); off += q.attributes[n].array.length; } out.setAttribute(n, new THREE.BufferAttribute(arr, list[0].attributes[n].itemSize)); }
-    list.forEach(q => q.dispose()); const o = new THREE.Mesh(out, m); if (m === decalM || m === decalDuskM) o.renderOrder = 2; g.add(o); }
+    list.forEach(q => q.dispose()); const o = new THREE.Mesh(out, m); if (m === decalM || m === decalDuskM) o.renderOrder = 2;
+    out.computeBoundingBox(); if (!m.isMeshBasicMaterial && out.boundingBox.max.y < G0 + .05) o.receiveShadow = true; g.add(o); }   // the ground and its markings take the aircraft's shadow: it taxis, takes off and lands on them
   /* the look of the moment: day, or the gear step's dusk with long shadows and every airfield light glowing */
   const decalDay = g.children.find(o => o.material === decalM), decalDusk = g.children.find(o => o.material === decalDuskM); decalDusk.visible = false;
   const glowTex = alphaTexture(64, (x, y) => alphaStops(Math.hypot(x, y), [[0, 1], [.18, .85], [.45, .18], [1, 0]]));
@@ -5987,22 +5989,24 @@ const airport = (() => {
     const ambM = new THREE.MeshBasicMaterial({ color: 0xff9a1a }), vShM = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .42, depthWrite: false, map: alphaTexture(32, (x, y) => Math.min(1, (1 - Math.max(Math.abs(x), Math.abs(y))) * 3)), polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
     const cateringM = mat({ color: lin('#f3f3ef'), roughness: .4 }), followM = mat({ color: lin('#f2c21b'), roughness: .35, metalness: .3 }), tankM = mat({ color: lin('#dcdfe2'), roughness: .3, metalness: .6, envMapIntensity: 1 });
     const checkM = mat({ roughness: .5, map: tex(canvas(64, 16, (c, w, h) => { for (let i = 0; i < 8; i++) for (let j = 0; j < 2; j++) { c.fillStyle = (i + j) % 2 ? '#111' : '#f2c21b'; c.fillRect(i * 8, j * 8, 8, 8); } })) });
-    const vehicle = (L, W, build, beacon, lights) => { const v = new THREE.Group(); v.position.y = G0; build(v);                                  // parts: [w, h, d, material, x, y0, z] boxes, x forward
-      const sh = new THREE.Mesh(new THREE.PlaneGeometry(L + .8, W + .8), vShM); sh.rotation.x = -Math.PI / 2; sh.position.y = .03; v.add(sh);
+    const unitPlane = new THREE.PlaneGeometry(1, 1);
+    const vehicle = (L, W, H, build, beacon, lights) => { const v = new THREE.Group(); v.position.y = G0; build(v);                                  // parts: [w, h, d, material, x, y0, z] boxes, x forward
+      const sh = new THREE.Mesh(unitPlane, vShM); sh.rotation.set(-Math.PI / 2, 0, 0, 'YXZ'); g.add(sh);                                     // its shadow, placed each frame: off to the sun's far side, stretched by its height
       let bg = null; if (beacon) { const bc = new THREE.Mesh(new THREE.CylinderGeometry(.12, .14, .2, 8), ambM); bc.position.set(...beacon); v.add(bc);
         bg = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xffa53a, depthWrite: false, transparent: true, toneMapped: false })); bg.position.set(beacon[0], beacon[1] + .12, beacon[2]); bg.scale.set(1.8, 1.8, 1); v.add(bg); }
       const hl = lights.map(p => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xfff2d8, depthWrite: false, transparent: true, toneMapped: false })); sp.position.set(...p); sp.scale.set(1.2, 1.2, 1); v.add(sp); return sp; });
-      g.add(v); return { v, bg, hl, ph: lrnd() }; };
-    const tug = () => vehicle(2.7, 1.5, v => vk.tug(v, gseW), [-.66, 2.2, 0], [[1.42, .8, .5], [1.42, .8, -.5]]);
-    const cart = () => vehicle(2.6, 1.5, v => vk.cart(v, tarpM), null, []);
-    const catering = () => vehicle(7, 2.4, v => vk.catering(v, cateringM), [2.5, 2.85, 0], [[3.65, 1.0, .85], [3.65, 1.0, -.85]]);
-    const fuel = () => vehicle(8.4, 2.5, v => vk.fuel(v), [3.0, 3.05, 0], [[4.3, 1.05, .9], [4.3, 1.05, -.9]]);
-    const follow = () => vehicle(4.4, 1.8, v => { vk.car(v, followM); const sg = new THREE.Mesh(vk.rbox(.14, .45, 1.5, .04), checkM); sg.position.set(-.45, 1.42, 0); v.add(sg); }, [-1.0, 1.5, 0], [[2.25, .7, .65], [2.25, .7, -.65]]);
+      g.add(v); return { v, bg, hl, ph: lrnd(), sh, L, W, H }; };
+    const tug = () => vehicle(2.7, 1.5, 2.2, v => vk.tug(v, gseW), [-.66, 2.2, 0], [[1.42, .8, .5], [1.42, .8, -.5]]);
+    const cart = () => vehicle(2.6, 1.5, 1.75, v => vk.cart(v, tarpM), null, []);
+    const catering = () => vehicle(7, 2.4, 4.1, v => vk.catering(v, cateringM), [2.5, 2.85, 0], [[3.65, 1.0, .85], [3.65, 1.0, -.85]]);
+    const fuel = () => vehicle(8.4, 2.5, 3.2, v => vk.fuel(v), [3.0, 3.05, 0], [[4.3, 1.05, .9], [4.3, 1.05, -.9]]);
+    const follow = () => vehicle(4.4, 1.8, 1.9, v => { vk.car(v, followM); const sg = new THREE.Mesh(vk.rbox(.14, .45, 1.5, .04), checkM); sg.position.set(-.45, 1.42, 0); v.add(sg); }, [-1.0, 1.5, 0], [[2.25, .7, .65], [2.25, .7, -.65]]);
     const runs = [{ P: PT, s: 0, v: 6, units: [tug(), cart(), cart(), cart()], gap: [0, 3.4, 6.4, 9.4] }, { P: PT, s: PT.L / 2, v: 6, units: [catering()], gap: [0] },
       { P: PH, s: 40, v: 8, units: [fuel()], gap: [0] }, { P: PH, s: 40 + PH.L / 2, v: 8, units: [follow()], gap: [0] }];
-    let vt = 0; g.userData.tick = dt => { vt += dt; const dusk = !!(DUSK && DUSK.on);
+    let vt = 0; g.userData.tick = dt => { vt += dt; const dusk = !!(DUSK && DUSK.on), sv = dusk ? DUSK.shift : SUN;                // sv: ground shift per metre of height, as the painted shadows
       for (const r of runs) { r.s += r.v * dt; r.units.forEach((u, k) => { const s = r.s - r.gap[k], [x, z] = at(r.P, s), [xa, za] = at(r.P, s - 1.5), [xb, zb] = at(r.P, s + 1.5);   // heading from the chord either side: smooth round the turns
-        u.v.position.set(x, G0, z); u.v.rotation.y = Math.atan2(-(zb - za), xb - xa); if (u.bg) u.bg.visible = dusk && (vt * 1.3 + u.ph) % 1 < .35; for (const h of u.hl) h.visible = dusk; }); } };
+        const hd = Math.atan2(-(zb - za), xb - xa), ax = Math.cos(hd), az = -Math.sin(hd), sx = sv[0] * u.H, sz = sv[1] * u.H; u.v.position.set(x, G0, z); u.v.rotation.y = hd;
+        u.sh.position.set(x + sx / 2, G0 + .03, z + sz / 2); u.sh.rotation.y = hd; u.sh.scale.set(u.L + .8 + Math.abs(sx * ax + sz * az), u.W + .8 + Math.abs(-sx * az + sz * ax), 1); if (u.bg) u.bg.visible = dusk && (vt * 1.3 + u.ph) % 1 < .35; for (const h of u.hl) h.visible = dusk; }); } };
     g.userData.tick(0); }
   const pools = g.children.find(o => o.material === poolM); pools.visible = false; pools.renderOrder = 3;
   g.userData.look = dusk => { if (dusk && !duskTex) duskTex = tex(paintSite(DUSK.shift)); siteM.map = dusk ? duskTex : dayTex; decalDay.visible = !dusk; decalDusk.visible = dusk; for (const p of lit) p.visible = dusk;
