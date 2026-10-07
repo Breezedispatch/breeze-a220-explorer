@@ -5407,15 +5407,19 @@ const airport = (() => {
   shade(rectFoot(TX0 - 7, TX1 + 7, TZ - TD - 7, TZ + 7), TH + 1.4);
   /* jet bridges: fixed link, rotunda on its column, a tunnel sloping down to the cab, the drive column with its bogie */
   const bridgeM = mat({ color: lin('#d3d7db'), roughness: .5, metalness: .3 });
+  const ribM = mat({ roughness: .5, metalness: .3, map: tex(canvas(256, 64, (c, w, h) => { c.fillStyle = '#d3d7db'; c.fillRect(0, 0, w, h); for (let x = 0; x < w; x += 8) { c.fillStyle = 'rgba(0,0,0,.09)'; c.fillRect(x, 0, 2, h); c.fillStyle = 'rgba(255,255,255,.3)'; c.fillRect(x + 3, 0, 1, h); } })) });   // ribbed cladding
   const bridge = (xr, px, pz, floor) => {                                                                                                               // rotunda at xr, the cab against the door at (px, pz)
     const zr = TZ + 8, yr = 4.8, dx = px - xr, dz = pz - zr, D = Math.hypot(dx, dz), ux = dx / D, uz = dz / D, ry = Math.atan2(dx, dz);
-    box(2.8, 3, 5.8, bridgeM, xr, yr, TZ + 2.9); mesh(new THREE.CylinderGeometry(2.2, 2.2, 3.4, 16), bridgeM, xr, G0 + yr + 1.7, zr); mesh(new THREE.CylinderGeometry(.5, .5, yr, 10), darkM, xr, G0 + yr / 2, zr);
+    box(2.8, 3, 5.8, bridgeM, xr, yr, TZ + 2.9); mesh(new THREE.CylinderGeometry(2.2, 2.2, 3.4, 16), bridgeM, xr, G0 + yr + 1.7, zr); mesh(new THREE.CylinderGeometry(2.35, 2.35, .25, 16), roofFlatM, xr, G0 + yr + 3.52, zr); mesh(new THREE.CylinderGeometry(.5, .5, yr, 10), darkM, xr, G0 + yr / 2, zr);
     const L = D - 2.2 - 1.95 - 1.5, c0 = 2.2 + L / 2, t = new THREE.Group(); t.position.set(xr + ux * c0, G0 + (yr + floor) / 2 + 1.5, zr + uz * c0); t.rotation.set(Math.atan2(yr - floor, L), ry, 0, 'YXZ'); B.add(t);
-    mesh(new THREE.BoxGeometry(2.8, 3, L), bridgeM, 0, 0, 0, 0, 0, 0, t); for (const s of [1, -1]) mesh(new THREE.BoxGeometry(.06, .75, L * .92), bandM, s * 1.42, .35, 0, 0, 0, 0, t);   // window bands
+    mesh(new THREE.BoxGeometry(3.0, 3.15, L * .56), ribM, 0, 0, -L * .22, 0, 0, 0, t); mesh(new THREE.BoxGeometry(2.7, 2.85, L * .5), ribM, 0, -.1, L * .25, 0, 0, 0, t);   // telescoping: the outer tunnel from the rotunda, the inner running out of it to the cab
+    for (const s of [1, -1]) { mesh(new THREE.BoxGeometry(.06, .75, L * .5), bandM, s * 1.52, .35, -L * .22, 0, 0, 0, t); mesh(new THREE.BoxGeometry(.06, .7, L * .44), bandM, s * 1.37, .25, L * .25, 0, 0, 0, t); }   // window bands
     const cx = px - ux * 1.95, cz = pz - uz * 1.95, cab = new THREE.Group(); cab.position.set(cx, G0 + floor + 1.6, cz); cab.rotation.y = ry; B.add(cab);
     mesh(new THREE.BoxGeometry(3.6, 3.2, 3), bridgeM, 0, 0, 0, 0, 0, 0, cab); mesh(new THREE.BoxGeometry(3.8, 3.3, .9), darkM, 0, 0, 1.9, 0, 0, 0, cab);   // cab and its bellows
+    { const qx = -uz, qz = ux, h = floor + .1, Ls = Math.hypot(4, h), a = Math.atan2(qx, qz), sx = cx + qx * 3.8, sz = cz + qz * 3.8;   // the service stair down from the cab's far side
+      mesh(new THREE.BoxGeometry(1, .14, Ls), darkM, sx, G0 + h / 2, sz, a, Math.atan2(h, 4)); for (const sd of [-1, 1]) mesh(new THREE.BoxGeometry(.04, .04, Ls), poleM, sx + Math.cos(a) * sd * .5, G0 + h / 2 + .9, sz - Math.sin(a) * sd * .5, a, Math.atan2(h, 4)); }
     const wx = xr + ux * (2.2 + L - 1.5), wz = zr + uz * (2.2 + L - 1.5); for (const s of [1, -1]) box(.35, floor + .3, .35, darkM, wx + s * uz * 1.1, 0, wz - s * ux * 1.1);
-    box(1.4, .7, 3.2, darkM, wx, 0, wz, ry + Math.PI / 2);                                                                                            // drive column legs and wheel bogie
+    box(3.0, .45, .6, darkM, wx, .55, wz, ry); for (const s of [1, -1]) mesh(new THREE.CylinderGeometry(.5, .5, .42, 16), tyreM, wx + s * uz * 1.25, G0 + .5, wz - s * ux * 1.25, ry, 0, Math.PI / 2);                                                                                            // drive column legs and wheel bogie
     shade([[xr - 1.4, TZ], [xr + 1.4, TZ], [px + uz * 1.4, pz - ux * 1.4], [px - uz * 1.4, pz + ux * 1.4]], (yr + floor) / 2 + 3, (yr + floor) / 2);
   };
 
@@ -5432,6 +5436,8 @@ const airport = (() => {
     }));
   const bodyGlow = tex(canvas(1024, 256, (c, w, h) => { const U = x => (x + 19.3) / 38.15 * w, px = w / 38.15; c.fillStyle = '#000'; c.fillRect(0, 0, w, h);   // their cabins lit too
       for (const r of [.19, .81]) { c.fillStyle = '#ffd9a0'; for (let x = -12.6; x < 12.9; x += .53) { if (Math.abs(x - 1.45) < .9) continue; c.fillRect(U(x), r * h - 3.5, .26 * px, 7); } } }));
+  const freightM = mat({ roughness: .35, envMapIntensity: .8, map: tex(canvas(1024, 256, (c, w, h) => { const U = x => (x + 19.3) / 38.15 * w, px = w / 38.15; c.drawImage(bodyTex.image, 0, 0);   // a freighter: no windows, a main deck door
+      for (const r of [.19, .81]) { c.fillStyle = '#eef0f2'; c.fillRect(U(-12.8), r * h - 6, U(13.2) - U(-12.8), 12); c.strokeStyle = 'rgba(80,90,100,.8)'; c.lineWidth = 1.5; c.strokeRect(U(9), r * h - 22, 3.5 * px, 30); } })) });
   const bodyM = mat({ map: bodyTex, roughness: .35, envMapIntensity: .8, emissive: 0xffffff, emissiveMap: bodyGlow, emissiveIntensity: 0 }), wingM = mat({ color: lin('#c4c9cf'), roughness: .5, metalness: .2 }), tyreM = mat({ color: lin('#1c1e21'), roughness: .9 });
   const metalM = mat({ color: lin('#9aa1a8'), roughness: .35, metalness: .7 }), fanM = mat({ color: lin('#15191e'), roughness: .6 });
   const shape = pts => new THREE.Shape(pts.map(([a, b]) => new THREE.Vector2(a, b)));
@@ -5460,26 +5466,26 @@ const airport = (() => {
   const finGeo = new THREE.ExtrudeGeometry(shape([[-12.8, 1.6], [-17.5, 8], [-19.1, 8], [-19.4, 1.1]]), { depth: .32, bevelEnabled: false });
   const fusGeo = loft([[18.85, .04, -.38], [18.5, .7, -.22], [17.8, 1.3, -.1], [16.8, 1.75, -.02], [15.5, 1.97, 0], [-9.5, 1.97, 0], [-12.5, 1.78, .16], [-15.5, 1.3, .5], [-18, .7, .9], [-19.3, .22, 1.12]].map(([x, r, cy]) => ({ x, r, cy, ry: 1.04 })), 28);
   const gseW = mat({ color: lin('#eeede8'), roughness: .5 }), gseY = mat({ color: lin('#e2b420'), roughness: .5 }), tarpM = mat({ color: lin('#3f5f80'), roughness: .8 });
-  const jet = (xc, zc, tailHex, cowlHex, bare) => {                                                                                                   // bare: in a hangar, nose toward +z, no crew, shadows or lights
-    const j = new THREE.Group(); j.position.set(xc, G0 + 4, zc); j.rotation.y = bare ? -Math.PI / 2 : Math.PI / 2; B.add(j);                                                // nose toward the terminal (-z)
+  const jet = (xc, zc, tailHex, cowlHex, bare, opt = {}) => {                                                                                                   // bare: in a hangar, nose toward +z, no crew, shadows or lights
+    const R = opt.ry !== undefined ? opt.ry : bare ? -Math.PI / 2 : Math.PI / 2, W = (x, z) => [xc + x * Math.cos(R) + z * Math.sin(R), zc - x * Math.sin(R) + z * Math.cos(R)];   // W: jet frame to ground (x, z)
+    const j = new THREE.Group(); j.position.set(xc, G0 + 4, zc); j.rotation.y = R; B.add(j);                                                // nose toward the terminal (-z)
     const tailM = mat({ color: lin(tailHex), roughness: .35, metalness: .1, envMapIntensity: .8 }), cowlM = mat({ color: lin(cowlHex || '#eef0f2'), roughness: .35, envMapIntensity: .8, side: THREE.DoubleSide });   // white cowls had the body's window texture on them
     const add = (geo, m, x, y, z, ry = 0, rx = 0, rz = 0) => mesh(geo, m, x, y, z, ry, rx, rz, j);
-    add(fusGeo, bodyM, 0, 0, 0); add(finGeo, tailM, 0, 0, -.16); add(bellyG, bellyM, -1.4, -1.55, 0); add(new THREE.CylinderGeometry(.16, .16, .5, 12), darkM, -19.35, 1.12, 0, 0, 0, Math.PI / 2);   // belly fairing, APU exhaust
+    add(fusGeo, opt.body || bodyM, 0, 0, 0); add(finGeo, tailM, 0, 0, -.16); add(bellyG, bellyM, -1.4, -1.55, 0); add(new THREE.CylinderGeometry(.16, .16, .5, 12), darkM, -19.35, 1.12, 0, 0, 0, Math.PI / 2);   // belly fairing, APU exhaust
     for (const s of [1, -1]) { const q = s > 0 ? 0 : 1; add(wingGs[q], foilM, 0, 0, 0); add(stabGs[q], foilM, 0, 0, 0); add(sharkG, tailM, 0, wY(17.4), s * 17.4, 0, s * .17);
       add(nacG, cowlM, 2.6, -2.55, s * 5.75); add(coreG, metalM, 2.6, -2.55, s * 5.75); add(new THREE.CircleGeometry(.8, 24), fanM, 4.55, -2.55, s * 5.75, Math.PI / 2);
       add(new THREE.ConeGeometry(.26, .55, 16), metalM, 4.68, -2.55, s * 5.75, 0, 0, -Math.PI / 2); add(pylonG, wingM, 0, 0, s * 5.75);
       for (const z of [4.6, 8.8, 12.8]) add(canoeG, foilM, wTE(z) + .25, wY(z) - .3, s * z);                                                            // flap track fairings
-      add(new THREE.SphereGeometry(.12, 8, 6), s > 0 ? navG : navR, -8.75, wY(17.4) + .05, s * 17.5); if (!bare) glows.push([xc + s * 17.5, G0 + 4 + wY(17.4) + .05, zc + 8.75, s > 0 ? 0x3dff7a : 0xff3020]);   // navigation lights: green right, red left
+      add(new THREE.SphereGeometry(.12, 8, 6), s > 0 ? navG : navR, -8.75, wY(17.4) + .05, s * 17.5); if (!bare) { const [gx, gz] = W(-8.75, s * 17.5); glows.push([gx, G0 + 4 + wY(17.4) + .05, gz, s > 0 ? 0x3dff7a : 0xff3020]); }   // navigation lights: green right, red left
       for (const d of [-.4, .4]) add(new THREE.CylinderGeometry(.58, .58, .38, 16), tyreM, -1, -3.42, s * (3.8 + d), 0, Math.PI / 2);
       add(new THREE.CylinderGeometry(.11, .11, 1.7, 8), metalM, -1, -2.6, s * 3.8); add(new THREE.CylinderGeometry(.38, .38, .28, 14), tyreM, 15, -3.62, s * .18, 0, Math.PI / 2); }
-    add(new THREE.CylinderGeometry(.09, .09, 1.6, 8), metalM, 15, -2.85, 0); if (bare) return; glows.push([xc, G0 + 4.95, zc + 19.5, 0xfff4e0]);                  // and white at the tail
+    add(new THREE.CylinderGeometry(.09, .09, 1.6, 8), metalM, 15, -2.85, 0); if (bare) return; { const [gx, gz] = W(-19.5, 0); glows.push([gx, G0 + 4.95, gz, 0xfff4e0]); }                  // and white at the tail
     /* ground crew: tug at the nose, power unit, belt loader at the forward hold door (right side), a train of carts, a fuel truck ahead of the right wing */
     const gb = (w, h, d, m, x, y0, z, ry = 0, rx = 0) => add(new THREE.BoxGeometry(w, h, d), m, x, -4 + y0 + h / 2, z, ry, rx);
     gb(3.8, 1.4, 2.4, gseW, 21.6, 0, 0); gb(1.4, .9, 1.9, bandM, 21.2, 1.4, 0); gb(2.2, 1.3, 1.3, gseW, 16, 0, 3.2);
     gb(1.9, 1, 5.2, gseY, 9.5, 0, 6.5); gb(.95, .22, 6.8, darkM, 9.5, 1.15, 5.5, 0, .24);
     gb(2.4, 1.5, 1.4, gseW, 13, 0, 9.5); for (const x of [9.8, 6.8, 3.8]) { gb(2.6, .5, 1.5, darkM, x, .2, 9.5); gb(2.5, 1.2, 1.45, tarpM, x, .7, 9.5); }
     gb(9, .9, 2.4, darkM, 2.5, .3, 13.5); gb(2.4, 2.4, 2.4, gseW, 6, .4, 13.5); add(new THREE.CylinderGeometry(1.15, 1.15, 6, 16), gseW, 1.2, -2.0, 13.5, 0, 0, Math.PI / 2);
-    const W = (x, z) => [xc + z, zc - x];                                                                                                             // jet frame to ground (x, z)
     shade([[-19, -2], [18.8, -2], [18.8, 2], [-19, 2]].map(p => W(...p)), 6, 2);                                                                 // fuselage
     shade(WING.map(p => W(...p)), 3, 2.6); shade(STAB.map(p => W(...p)), 4.9, 4.7); shade([[-19.4, 0], [-12.8, 0]].map(p => W(...p)).flatMap(([x, z]) => [[x - .2, z], [x + .2, z]]), 12, 5.6);   // wing, stabilizer, fin
     for (const s of [1, -1]) shade(rectFoot(.6, 4.6, s * 5.75 - .95, s * 5.75 + .95).map(p => W(...p)), 2.7, .8);
@@ -5523,7 +5529,25 @@ const airport = (() => {
     for (const s of [1, -1]) wall(CD, CH, sideM, X - CD / 2, s * CL / 2, s > 0 ? 0 : Math.PI); box(CD, .5, CL, roofFlatM, X - CD / 2, CH, 0);
     shade(rectFoot(X - CD, X, -CL / 2, CL / 2), CH + .5);
     const uldM = mat({ color: lin('#b9bdc1'), roughness: .35, metalness: .6 });
-    for (let k = 0; k < 14; k++) { const z = -70 + k * 9 + rnd() * 3, x = X + 12 + rnd() * 10; box(2.4, 1.6, 1.6, uldM, x, 0, z, rnd() * .3); }
+    const ld3G = new THREE.ExtrudeGeometry(shape([[-.78, 0], [.78, 0], [.78, 1.63], [-1.23, 1.63], [-1.23, .62]]), { depth: 1.53, bevelEnabled: false }).translate(0, 0, -.765);   // an LD3: the lower corner cut away to fit the hold
+    const ld3 = (x, z, ry, y0 = 0) => mesh(ld3G, uldM, x, G0 + y0, z, ry), smallW = new THREE.CylinderGeometry(.2, .2, .16, 10);
+    for (let k = 0; k < 14; k++) { const z = -70 + k * 9 + rnd() * 3, x = X + 12 + rnd() * 10; ld3(x, z, rnd() * .3); }                                          // containers on the apron (the same draws of rnd as before)
+    const dolly = (x, z) => { box(2.2, .25, 1.9, darkM, x, .3, z); for (const [a, b] of [[-.8, -.8], [.8, -.8], [-.8, .8], [.8, .8]]) mesh(smallW, tyreM, x + a, G0 + .2, z + b, 0, Math.PI / 2); ld3(x, z, Math.PI / 2, .55); };
+    const tug = (x, z) => { box(2.4, .9, 1.5, gseW, x, .35, z); box(1.1, .8, 1.4, bandM, x + .3, 1.25, z); box(2.2, .3, 1.4, darkM, x, .1, z); };
+    for (const [z0, n] of [[-46, 4], [62, 3]]) { tug(X + 34, z0); for (let k = 0; k < n; k++) dolly(X + 31.2 - k * 2.9, z0); shade(rectFoot(X + 30.2 - n * 2.9, X + 35.2, z0 - 1.1, z0 + 1.1), 2.2); }   // tug trains of containers on dollies
+    const palletM = mat({ roughness: .7, map: tex(canvas(64, 64, (c, w, h) => { c.fillStyle = '#2e3a2c'; c.fillRect(0, 0, w, h); c.strokeStyle = 'rgba(200,200,190,.45)'; c.lineWidth = 1.5; for (let k = 0; k < w; k += 10) { c.beginPath(); c.moveTo(k, 0); c.lineTo(k, h); c.moveTo(0, k); c.lineTo(w, k); c.stroke(); } })) });
+    for (let k = 0; k < 6; k++) { const z = -88 + k * 4; box(3.18, .1, 2.44, metalM, X + 5, 0, z); box(3.0, 1.2 + lrnd() * .9, 2.3, palletM, X + 5, .1, z); }   // pallets, wrapped and netted, by the doors
+    box(2.4, 1.1, 1.2, gseY, X + 9, .25, 82); box(.12, 3.2, 1.0, darkM, X + 10.25, 0, 82); for (const dz of [-.3, .3]) box(1.2, .06, .12, darkM, X + 10.9, .15, 82 + dz); box(1.1, .1, 1.1, darkM, X + 8.4, 2.1, 82);   // a forklift
+    jet(-195, 25, '#2f5d3a', null, false, { ry: Math.PI, body: freightM });                                                                                   // a freighter, nose in to the shed
+    { const zc = 25 + 1.97 + 3.65; box(3.4, .4, 7, gseY, -205.8, 2.95, zc); box(3.2, .8, 2.2, gseY, -205.8, 0, zc + 4.6); box(1.6, 1.5, 2.0, bandM, -205.8, .8, zc + 4.6);   // its main deck loader at the door: platform, cab,
+      for (const sd of [-1, 1]) mesh(new THREE.BoxGeometry(.12, .12, 6.4), darkM, -205.8 + sd * 1.3, G0 + 1.55, zc, 0, sd * .42); box(3.2, .5, 6.6, darkM, -205.8, .2, zc); ld3(-205.8, zc - 1.6, Math.PI / 2, 3.35);   // scissor arms, chassis, a container riding up
+      shade(rectFoot(-207.5, -204.1, zc - 3.5, zc + 5.7), 3.4); }
+    wall(CL, CH, mat({ map: tex(canvas(2048, 160, (c, w, h) => { const px = w / CL, Y = m => h - m / CH * h; c.fillStyle = '#dcd8ce'; c.fillRect(0, 0, w, h); c.fillStyle = '#2f4a66'; c.fillRect(0, Y(14), w, Y(12.6) - Y(14));   // the landside face: truck docks
+      for (let k = 0; k < 16; k++) { const x = (8 + k * 10.5) * px; c.fillStyle = '#6d757e'; c.fillRect(x, Y(4.2), 3 * px, Y(1.2) - Y(4.2)); c.fillStyle = '#23272b'; c.fillRect(x - .3 * px, Y(1.2), 3.6 * px, Y(0) - Y(1.2)); } })) }), X - CD, 0, -Math.PI / 2);
+    for (const [z, col] of [[-80.5, '#e9eaea'], [-59.5, '#b9302a'], [-28, '#e9eaea'], [3.5, '#2d5d8a'], [35, '#e9eaea']]) { const x0 = X - CD - .5, tm = mat({ color: lin(col), roughness: .5 });   // lorries backed onto the docks
+      box(13.6, 2.7, 2.5, tm, x0 - 6.8, 1.2, z); box(13, .3, 2.2, darkM, x0 - 6.8, .9, z); box(2.4, 2.8, 2.5, gseW, x0 - 15.6, .5, z); box(3.6, .5, 2.2, darkM, x0 - 15.2, .4, z);
+      for (const dx of [-1.6, -2.9, -12.4, -15.8]) for (const sd of [-1, 1]) mesh(new THREE.CylinderGeometry(.5, .5, .3, 12), tyreM, x0 + dx, G0 + .5, z + sd * 1.1, 0, Math.PI / 2);
+      shade(rectFoot(x0 - 17, x0, z - 1.3, z + 1.3), 3.9); }
   }
 
   /* ---- fire station (ARFF) beside connector B, its bays facing the taxiway so the tenders reach the runway in seconds, two tenders out on its
@@ -5645,6 +5669,7 @@ const airport = (() => {
     const t = tex(canvas(256, 128, (c, w, h) => { c.fillStyle = '#121416'; c.fillRect(0, 0, w, h); c.fillStyle = '#f2c21b'; c.font = '700 100px Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('20', w / 2, h / 2 + 6); }));
     mesh(new THREE.PlaneGeometry(4.4, 2.2), mat({ map: t, roughness: .8, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }), -40, y, 3.4, -Math.PI / 2, -Math.PI / 2);   // its number at the lead-in, read taxiing in
     for (const sd of [-1, 1]) { for (const z of [sd * 26, sd * 34]) line(-12, z, 8, z, whiteM, .15, y); for (const x of [-12, 8]) line(x, sd * 26, x, sd * 34, whiteM, .15, y); } }   // and a staging box either side
+  line(-110, 25, -210, 25, yellowM); line(-210, 23, -210, 27, whiteM, .3);                                                                               // the freighter's lead-in from the taxilane and its stop line
 
   /* ---- runway 27/9 (centreline x 230, along z, +z is west): threshold of 27 at z -420 behind a 60 m overrun, runway on to z 1500. Markings for a
      45 m runway (ICAO Annex 14): threshold stripes, the designator, touchdown zone and aiming point markings, centreline dashes, edge
@@ -5831,7 +5856,7 @@ const airport = (() => {
     for (const r of [[-185, 135, -150, -120]]) for (let i = 0; i < 40; i++) { const x = cx(r[0] + rnd() * (r[1] - r[0])), y = cz(r[2] + rnd() * (r[3] - r[2])), R = 3 + rnd() * 9, gr = c.createRadialGradient(x, y, 0, x, y, R);
       gr.addColorStop(0, 'rgba(40,36,32,.22)'); gr.addColorStop(1, 'rgba(40,36,32,0)'); c.fillStyle = gr; c.fillRect(x - R, y - R, 2 * R, 2 * R); }        // drips on the gate stands
     for (const r of [[TX0 - 7, TX1 + 7, TZ - TD - 7, TZ], [-160, 120, 150, 215], [-320, -250, -100, 100], [-262, -180, 190, 255], [-62, -18, -268, -242], [139, 176, 40, 67], [350, 364, -128, -114], [328, 342, 153, 167], [115, 125, 240, 250]]) rect(...r, '#8f908e');
-    rect(-174, -161, 152, 194, '#4a4d50'); rect(113, 124, 152, 194, '#4a4d50');                                                                    // car parks by the hangar offices   // building pads
+    rect(-174, -161, 152, 194, '#4a4d50'); rect(113, 124, 152, 194, '#4a4d50'); rect(-356, -310, -90, 60, '#4a4d50');   // and the truck yard behind the cargo shed                                                                    // car parks by the hangar offices   // building pads
     rect(200, 207.5, -420, 600, '#5d6063'); rect(252.5, 260, -420, 600, '#5d6063'); rect(207.5, 252.5, -480, -420, '#53565a');   // runway shoulders, the overrun (the markings are meshes)
     for (let i = 0; i < 320; i++) { const x = 230 + (rnd() - .5) * (rnd() < .6 ? 9 : 20), z = -330 + rnd() * 600, l = 8 + rnd() * 55;   // rubber laid down in the touchdown zone
       c.fillStyle = `rgba(14,14,14,${.08 + rnd() * .2})`; c.fillRect(cx(x), cz(z), Math.max(1, (.3 + rnd()) * k), l * k); }
@@ -5927,6 +5952,7 @@ const airport = (() => {
     const checkM = mat({ roughness: .5, map: tex(canvas(64, 16, (c, w, h) => { for (let i = 0; i < 8; i++) for (let j = 0; j < 2; j++) { c.fillStyle = (i + j) % 2 ? '#111' : '#f2c21b'; c.fillRect(i * 8, j * 8, 8, 8); } })) });
     const vehicle = (L, W, parts, beacon, lights) => { const v = new THREE.Group(); v.position.y = G0;                                  // parts: [w, h, d, material, x, y0, z] boxes, x forward
       for (const [w, h, d, m, x, y0, z, geo] of parts) { const o = new THREE.Mesh(geo || new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y0 + h / 2, z); if (geo) o.rotation.z = Math.PI / 2; v.add(o); }
+      { const wr = L > 5 ? .5 : .3, wg = new THREE.CylinderGeometry(wr, wr, .26, 12); for (const x of [L / 2 - wr - .25, -L / 2 + wr + .25]) for (const sd of [-1, 1]) { const o = new THREE.Mesh(wg, darkM); o.position.set(x, wr, sd * (W / 2 - .1)); o.rotation.x = Math.PI / 2; v.add(o); } }   // wheels
       const sh = new THREE.Mesh(new THREE.PlaneGeometry(L + .8, W + .8), vShM); sh.rotation.x = -Math.PI / 2; sh.position.y = .03; v.add(sh);
       let bg = null; if (beacon) { const bc = new THREE.Mesh(new THREE.CylinderGeometry(.12, .14, .2, 8), ambM); bc.position.set(...beacon); v.add(bc);
         bg = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xffa53a, depthWrite: false, transparent: true, toneMapped: false })); bg.position.set(beacon[0], beacon[1] + .12, beacon[2]); bg.scale.set(1.8, 1.8, 1); v.add(bg); }
