@@ -11,8 +11,10 @@
 
   /* materials for this module (real finishes from the photos in PHOTOS-LOCAL.md) */
   Object.assign(PW.MAT, {
-    fanBladePU:  () => new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#151a22'), roughness: .52, metalness: .12, clearcoat: .15, clearcoatRoughness: .5 }),   // black polyurethane erosion paint (p.58)
-    tiSheath:    () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#b9c2bb'), roughness: .42, metalness: .55 }),   // matte sage-grey titanium sheath (photos)
+    /* photos: the blades are glossy blue-black and pick up bright reflections of the hangar lights; the titanium leading edge reads as a
+       matte pale sage band about 3 cm wide head-on (teal-green in sunlight) */
+    fanBladePU:  () => new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#141922'), roughness: .38, metalness: .15, clearcoat: .45, clearcoatRoughness: .22 }),   // black polyurethane erosion paint (p.58)
+    tiSheath:    () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#97ab9e'), roughness: .5, metalness: .3 }),   // titanium leading-edge sheath
     coneGrey:    () => new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#33363a'), roughness: .58, metalness: .05, clearcoat: .12, clearcoatRoughness: .5 }),
     fanCaseOlive:() => new THREE.MeshStandardMaterial({ color: new THREE.Color('#5f5f45'), roughness: .62, metalness: .08 }),
     rubTeal:     () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#6fae98'), roughness: .7, metalness: .05 }),
@@ -108,8 +110,9 @@
       const g = G.revolve(prof, { seg: 96, crease: 50 });
       const cone = PW.add('inlet-cone', g, 'coneGrey', { mat: { map: coneTexture(outer), color: '#ffffff' } });
       cone.userData.solid = true;
-      /* six fasteners round the cone, as in the front photos */
-      const ring = outer.find(p => p[1] > .085) || outer[3];
+      /* six fasteners round the cover's rim, about 0.114 m from the axis in the head-on photo */
+      const k = outer.findIndex(p => p[1] > .114), a0 = outer[k - 1] || outer[3], a1 = outer[k] || outer[4], tq = (.114 - a0[1]) / ((a1[1] - a0[1]) || 1);
+      const ring = [a0[0] + (a1[0] - a0[0]) * tq, .114];
       for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + .3, b = new THREE.Mesh(new THREE.CylinderGeometry(.006, .006, .004, 10));
         G.aim(b, G.onRing(ring[0] + .001, ring[1] + .001, a), new THREE.Vector3(.5, Math.cos(a), Math.sin(a)).normalize()); PW.add('inlet-cone', b, 'steel', { solid: true }); }
     }
@@ -126,7 +129,7 @@
         const g = deg(26 + 34 * Math.pow(t, .85));                             // stagger from the axis: about 26 deg at the root to 60 deg at the tip
         const s = { r, xle: xl, chord: ax / Math.cos(g), stagger: g, camber: .075 - .05 * t, thick: .11 - .08 * t, lean: -.10 * t * t };
         secs.push(s); sheath.push(Object.assign({}, s)); }
-      const blade = G.blade(secs, { chordPts: 16, dir: -1 }), lead = G.blade(sheath, { chordPts: 6, dir: -1, uMax: .045, inflate: 1.18 });
+      const blade = G.blade(secs, { chordPts: 16, dir: -1 }), lead = G.blade(sheath, { chordPts: 8, dir: -1, uMax: .065, inflate: 1.12 });   // sheath over the first 6.5 % of the chord
       PW.add('fan-blades', G.ringInstances(blade, PW.partMat('fan-blades', 'fanBladePU'), 18), null);
       PW.add('fan-blades', G.ringInstances(lead, PW.partMat('fan-blades', 'tiSheath'), 18), null);
       /* hub: fairing ring under the blades (flow path), the disc with its dovetail rim, and the drum aft to the fan shaft */
@@ -304,22 +307,29 @@
 
   /* ---- the cone's paint: dark grey with one white teardrop, drawn in the cone's own (angle, length) coordinates so it is not stretched ---- */
   function coneTexture(prof) {
-    const W = 1024, H = 512, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
+    const W = 1024, H = 1024, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
     if (!c || !c.fillRect) return null;
     /* uv.v is the surface length from the nose in metres (texture row = 1 - v). Matte dark grey, with the slightly lighter inlet cone
-       cover in the nose (out to about 0.11 m along the surface). The white teardrop sits on the cover: round end at the centre, point
-       outward, at angle 0 (12 o'clock with the fan at rest). That is how it is painted on the A220s in Brian's photos; on some
-       operators' engines the drop is the other way round. */
+       cover in the nose. Sizes from the head-on photo: the cover reaches about 0.12 m from the axis (0.136 m along the surface), the
+       teardrop runs from a round end over the centre (radius 0.022 m) to a point at the cover's rim, at angle 0 (12 o'clock with the
+       fan at rest). That is how it is painted on the A220s in Brian's photos; on some operators' engines it is the other way round.
+       Round the cone's aft band, between the blade roots, the photo shows a ring of dark cells with three curved ribs each */
+    const S_COVER = .136, R_DROP = .022;
     c.fillStyle = '#34373b'; c.fillRect(0, 0, W, H);
-    c.fillStyle = '#44484c'; c.fillRect(0, H * (1 - .11), W, H * .11);
-    c.fillStyle = '#26282b'; c.fillRect(0, H * (1 - .113), W, 2);                    // the cover's edge
+    c.fillStyle = '#44484c'; c.fillRect(0, H * (1 - S_COVER), W, H * S_COVER);
+    c.fillStyle = '#26282b'; c.fillRect(0, H * (1 - S_COVER - .003), W, 2);           // the cover's edge
     const acc = [0]; for (let i = 1; i < prof.length; i++) acc.push(acc[i - 1] + Math.hypot(prof[i][0] - prof[i - 1][0], prof[i][1] - prof[i - 1][1]));
+    const rAt = s => { for (let i = 1; i < acc.length; i++) if (acc[i] >= s) { const t = (s - acc[i - 1]) / ((acc[i] - acc[i - 1]) || 1); return prof[i - 1][1] + (prof[i][1] - prof[i - 1][1]) * t; } return prof[prof.length - 1][1]; };
     c.fillStyle = '#eef0f2';
-    for (let y = 0; y < H; y++) { const s = 1 - (y + .5) / H; let r = .05; for (let i = 1; i < acc.length; i++) if (acc[i] >= s) { r = prof[i][1]; break; }
-      const f = (s - .018) / .085; if (f < 0 || f > 1) continue;
-      const f0 = .3, Rm = .015, halfW = f < f0 ? Rm * Math.sqrt(Math.max(0, 1 - Math.pow((f0 - f) / f0, 2))) : Rm * Math.pow(1 - (f - f0) / (1 - f0), 1.15);
-      const du = Math.min(W / 2, halfW / (TAU * Math.max(.012, r)) * W);
+    for (let y = 0; y < H; y++) { const s = 1 - (y + .5) / H; if (s > S_COVER) continue;
+      if (s < R_DROP) { c.fillRect(0, y, W, 1); continue; }                            // the round end, over the centre
+      const halfW = R_DROP * Math.pow(1 - (s - R_DROP) / (S_COVER - R_DROP), 1.1), du = Math.min(W / 2, halfW / (TAU * Math.max(.012, rAt(s))) * W);
       c.fillRect(0, y, du, 1); c.fillRect(W - du, y, du, 1); }
+    /* root cells: 18, centred between the blades, on the band from about 0.24 m from the axis to the cone's aft edge */
+    let sA = .2; while (rAt(sA) < .222 && sA < acc[acc.length - 1] - .05) sA += .002; const sB = acc[acc.length - 1] - .006;
+    for (let i = 0; i < 18; i++) { const uc = (i + .5) / 18 * W, hw = .27 / 18 * W, yA = H * (1 - sB), yB = H * (1 - sA);
+      for (const off of [0, W, -W]) { c.fillStyle = '#1b1d20'; c.fillRect(uc - hw + off, yA, 2 * hw, yB - yA);
+        c.fillStyle = '#50555b'; for (let k = 1; k <= 3; k++) { const yk = yA + (yB - yA) * k / 4; c.fillRect(uc - hw * .8 + off, yk - 1.5, 1.6 * hw, 3); } } }
     const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; return t;
   }
 
