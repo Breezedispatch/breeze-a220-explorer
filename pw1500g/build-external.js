@@ -33,13 +33,13 @@
   function line(pid, pts, r, kind, o) { o = o || {};
     const mat = { tube: 'tube', hose: 'fireSleeve', harness: 'harness', duct: 'insulation', black: 'blackHose' }[kind] || 'tube';
     const g = G.tube(pts.map(p => (p.isVector3 ? p : V(...p))), r, { radial: kind === 'duct' ? 16 : 10, tension: o.tension === undefined ? .25 : o.tension });
-    PW.add(pid, g, mat);
+    const tubeMesh = PW.add(pid, g, mat); tubeMesh.userData.isLine = true;
     const curve = g.userData.curve, n = o.clamps === undefined ? Math.max(1, Math.round(curve.getLength() / (kind === 'duct' ? .35 : .25))) : o.clamps;
     if (n > 0) { const ts = []; for (let i = 1; i <= n; i++) ts.push(i / (n + 1));
       /* clamps are thin bands: orange cushioned P-clamps on small lines, steel V-band couplings on large ducts */
       const big = kind === 'duct' || r > .03, band = Math.min(r * 1.6, big ? .022 : .016);
-      PW.add(pid, G.alongCurve(curve, ts, () => new THREE.CylinderGeometry(r + Math.min(.008, r * .35), r + Math.min(.008, r * .35), band, 16)), big ? 'steel' : kind === 'harness' ? 'connector' : 'clampOrange', { shadow: false }); }
-    if (o.ends !== false && kind !== 'duct') PW.add(pid, G.alongCurve(curve, [0.012, .988], () => new THREE.CylinderGeometry(r * 1.6, r * 1.6, r * 2.2, 6)), kind === 'harness' ? 'connector' : 'steel', { shadow: false });
+      PW.add(pid, G.alongCurve(curve, ts, () => new THREE.CylinderGeometry(r + Math.min(.008, r * .35), r + Math.min(.008, r * .35), band, 16)), big ? 'steel' : kind === 'harness' ? 'connector' : 'clampOrange', { shadow: false }).userData.isLine = true; }
+    if (o.ends !== false && kind !== 'duct') PW.add(pid, G.alongCurve(curve, [0.012, .988], () => new THREE.CylinderGeometry(r * 1.6, r * 1.6, r * 2.2, 6)), kind === 'harness' ? 'connector' : 'steel', { shadow: false }).userData.isLine = true;
     return curve;
   }
 
@@ -92,15 +92,15 @@
       PW.add('ats', G.ring(mx1 - .008, mx1 - .02, .10, .13, { seg: 40 }), 'steel').position.copy(P(0, ah, ar));                   // QAD ring
       for (let i = 0; i < 18; i++) { const a = i / 18 * TAU, m = new THREE.Mesh(new THREE.CylinderGeometry(.006, .006, .004, 8)); m.geometry.rotateZ(Math.PI / 2); m.position.copy(P(ax - .135, ah, ar).add(V(0, Math.cos(a) * .07, Math.sin(a) * .07))); PW.add('ats', m, 'darkBox', { solid: true }); }   // exhaust holes in the end cap
       /* starter air valve on the duct coming down from the pylon (left side) */
-      acc('sav', 'Starter air valve (SAV)', 'Electrically controlled, pneumatically operated valve in the starter duct. The EEC opens it for a start and closes it at starter cutout. If it fails closed it can be opened by hand with a square drive through an access in the left reverser door, under the MEL procedure with a second person on the interphone.', 'p.290-299');
+      acc('sav', 'Starter air valve (SAV)', 'Pneumatically operated butterfly valve in the starter duct, spring-loaded closed, with a regulator that holds 30 psi downstream. The EEC opens it through a dual-coil torque motor and confirms it open from starter speed and N2. A cooling shroud, fed by a hose from the air/oil cooler, protects it from core heat; its line-replaceable filter is under the shroud.\n\nA 3/8 in square-drive manual override can be reached through an access hole in the left thrust reverser door. The 2017 manual carries a warning that a manual override start is not an approved procedure, because of the motor-to-start logic that prevents starting with a bowed rotor: follow the current AMM and MEL.', 'p.290-299; p.298 warning');
       /* p.297: the starter duct comes down from the pylon along the left of the core over the HPT, through the valve at 9 o'clock,
          then turns forward and down into the aft end of the starter */
       const top = P(-2.42, 11.4, .66), sv = P(-2.24, 9.0, .49), st = P(ax - .15, ah, ar);
       line('sav', [top, P(-2.38, 10.6, .56), P(-2.30, 9.6, .50), sv], .045, 'duct', { clamps: 2 }); line('sav', [sv, P(-2.10, 8.7, .46), P(-2.0, 8.45, .42), st], .045, 'duct', { clamps: 1 });
       can('sav', -2.24, 9.0, .49, .06, .1, 'steel'); box('sav', -2.24, 8.75, .55, .09, .08, .1, 'darkBox'); }
-    acc('pmag', 'Permanent magnet alternator/generator (PMAG)', 'Small alternator on the MGB aft face at 7 o\'clock. It powers the EEC once N2 is above about 10 to 15 percent and its frequency is the N2 speed signal.', 'p.96-101, p.112, p.69');
+    acc('pmag', 'Permanent magnet alternator/generator (PMAG)', 'Small alternator on the MGB aft face at 7 o\'clock with a separate winding for each EEC channel. Above 45 percent N2 it powers the EEC; below that, or if both its channels fail, the EEC runs on aircraft 28 V DC. Its frequency is also the N2 speed signal.', 'p.96-101, p.112, p.69');
     { can('pmag', mx1 - .08, 7.15, .40, .05, .13, 'accGrey'); connector('pmag', P(mx1 - .14, 7.15, .45), V(-.4, -1, -.3)); }
-    acc('vfg', 'Variable frequency generator (VFG)', 'The engine\'s main AC generator, 75 kVA at 360 to 800 Hz (frequency follows N2), on the MGB aft face. Oil-cooled from the engine oil system. A disconnect lets the crew decouple it; it can only be reconnected on the ground.\n\nAn inoperative VFG is an MEL item with the APU generator as the replacement source.', 'p.66-69; TTM ch. 24');
+    acc('vfg', 'Variable frequency generator (VFG)', 'The engine\'s main AC generator on the MGB aft face: 115/200 V AC, 75 kVA, 380 to 760 Hz, the frequency following N2. It has its own oil, cooled through the VFG oil/oil heat exchanger and a VFG air/oil cooler.\n\nThe crew can disconnect it from the gearbox with the L or R DISC switch on the electrical panel, which also shows its oil cautions (TTM ch. 24). Reconnection is done on the ground, following the AMM.', 'p.66-69; TTM ch. 24');
     { const vr = .385; can('vfg', mx1 - .17, 6.15, vr, .13, .32, 'accGrey', { edge: .02 }); for (let i = 0; i < 7; i++) PW.add('vfg', G.ring(mx1 - .05 - i * .035, mx1 - .062 - i * .035, .13, .137, { seg: 40 }), 'accGrey').position.copy(P(0, 6.15, vr));
       box('vfg', mx1 - .30, 6.15, vr + .1, .1, .04, .14, 'labelBlue', { round: .006 }); connector('vfg', P(mx1 - .25, 5.75, vr + .09), V(-.3, -1, .6)); connector('vfg', P(mx1 - .18, 6.55, vr + .09), V(-.3, -1, -.6)); }
     acc('ocm', 'Oil control module (OCM)', 'Cast module at the right end of the MGB aft face carrying the main oil filter with its delta-P sensor, the oil pressure and temperature sensors and the oil debris monitor. It also holds the fuel/oil cooler bypass logic. A filter bypass or debris message is worked from here.', 'p.226-249, p.69');
@@ -112,7 +112,7 @@
     PW.part('oil', { label: 'Oil system', explode: [0, 0, .45], src: 'p.212-255; TTM ch. 79',
       info: 'Dry-sump system: the tank on the right of the core feeds the pressure stage of the lube and scavenge pump, the oil control module filters and monitors it, and part of the flow is cooled in the fuel/oil heat exchanger and the air/oil cooler before going to the bearings, gearboxes and the FDGS journals. Six scavenge stages return it to the tank through chip collectors.' });
     PW.part('oil-tank', { parent: 'oil', label: 'Oil tank', src: 'p.222-225; TTM ch. 79; photos',
-      info: 'Engine-mounted tank on the right side of the core, 27.3 L (28.8 qt), with a de-aerator inside. Service it through the oil tank access door on the right reverser door at about 3 o\'clock: check the level on the sight glass, then fill through the filler cap. Do it within the AMM time after shutdown so the level is meaningful.\n\nA scupper round the filler drains spills to the drain mast.' });
+      info: 'Engine-mounted tank on the right side of the core, 27.3 L (28.8 qt), with a de-aerator inside. Service it through the oil tank access door on the right reverser door at about 2:30: check the level on the sight glass, then fill through the filler cap. Do it within the AMM time after shutdown so the level is meaningful.\n\nA scupper round the filler drains spills to the drain mast.' });
     /* p.223: a tall upright tank on the right of the core over the diffuser and HPT, curved to the core, with the fill port on top, the
        sight glass at its upper aft corner, and a conical sump down to the drain plug; the OTAD on the right IFS opens onto it */
     { const tx = -1.93, len = .30, a0 = G.clock(1.45), a1 = G.clock(4.0), a2 = G.clock(4.75);
@@ -126,13 +126,24 @@
       line('oil-tank', [P(tx + .06, 4.7, .44), P(-1.65, 4.9, .44), P(mx0 + .2, 4.85, .43)], .016, 'tube', { clamps: 2 });          // to the lube and scavenge pump
       line('oil-tank', [P(mx0 + .12, 4.6, .45), P(-1.70, 4.3, .48), P(tx + .12, 4.2, .47)], .014, 'tube', { clamps: 1 });          // scavenge return
       line('oil-tank', [P(tx - .12, 4.3, .46), P(-2.0, 4.5, .45), P(xm, 4.4, .40)], .012, 'tube', { clamps: 1 }); }                 // vent to the deoiler
-    PW.part('aoc', { parent: 'oil', label: 'Air/oil cooler (AOC)', src: 'p.232-233',
-      info: 'Plate-fin air/oil heat exchanger on the left of the core at about 10 o\'clock, cooled by fan air through the window in the left IFS. It cools oil returning from the VFG and the FDGS.' });
-    { box('aoc', -1.54, 9.8, .50, .5, .1, .16, 'steel'); for (let i = 0; i < 14; i++) box('aoc', -1.54, 9.8, .555, .48, .012, .002, 'darkBox').position.add(V(0, 0, 0)).copy(P(-1.54, 9.8 + (i - 6.5) * .016, .555));
-      line('aoc', [P(-1.30, 9.5, .48), P(-1.25, 8.9, .44), P(mx0 + .1, 8.6, .44)], .016, 'tube', { clamps: 1 }); }
-    PW.part('fohe', { parent: 'oil', label: 'Fuel/oil heat exchanger (FOHE)', src: 'p.164-171, p.232',
-      info: 'Fuel-cooled oil cooler on the fuel/oil manifold. Engine fuel takes heat from the oil, which also warms the fuel ahead of the filter so ice crystals do not block it.' });
-    { can('fohe', mx0 + .18, 8.9, .50, .06, .26, 'steel'); for (let i = 0; i < 6; i++) PW.add('fohe', G.ring(mx0 + .08 + i * .04, mx0 + .075 + i * .04, .06, .066, { seg: 24 }), 'darkBox').position.copy(P(0, 8.9, .50)); }
+    /* thermal management (p.212-217, 232-233): three heat exchangers on the upper left of the core. The EEC's bypass valve splits the
+       cooled oil between the fuel/oil and air/oil coolers on fuel temperature, normally about 75 / 25 */
+    PW.part('aoc', { parent: 'oil', label: 'Air/oil heat exchanger (AOHX)', src: 'p.212-217, p.232-233; p.20',
+      info: 'Plate-fin cooler on the upper left of the core at 10 o\'clock, over the rear HPC and diffuser. Fan air enters and leaves through the window in the left IFS. It takes part of the cooled-path oil, from about 25 percent up to nearly all of it when the fuel cannot take more heat. If it clogs, a relief valve sends the oil straight to the VFG oil/oil cooler.' });
+    { const ax = -1.86; box('aoc', ax, 10, .47, .46, .12, .2, 'steel'); for (let i = 0; i < 16; i++) { const f = box('aoc', ax, 10, .535, .44, .012, .002, 'darkBox'); f.position.copy(P(ax, 10 + (i - 7.5) * .02, .535)); }
+      for (const dx of [.25, -.25]) box('aoc', ax + dx, 10, .47, .06, .14, .22, 'steel', { round: .02 });                                        // inlet and exhaust plenums
+      line('aoc', [P(ax + .2, 10.4, .44), P(-1.55, 10.6, .40), P(-1.48, 10.2, .41)], .016, 'tube', { clamps: 1 }); }
+    PW.part('vfgoohx', { parent: 'oil', label: 'VFG oil/oil heat exchanger (VFGOOHX)', src: 'p.212-217, p.232-233',
+      info: 'Small plate-fin cooler on the left of the core at about 10 o\'clock, between the fuel/oil and air/oil coolers. Cooled engine oil takes heat from the generator\'s own oil; the VFG oil then passes a separate VFG air/oil cooler before returning to the generator.' });
+    { box('vfgoohx', -1.49, 10.2, .41, .12, .07, .12, 'steel'); for (const dx of [.07, -.07]) box('vfgoohx', -1.49 + dx, 10.2, .42, .03, .09, .13, 'castAl', { round: .01 });
+      line('vfgoohx', [P(-1.49, 9.6, .40), P(-1.55, 8.0, .40), P(mx1 - .1, 6.4, .45)], .014, 'tube', { clamps: 2 }); }
+    PW.part('fohe', { parent: 'oil', label: 'Fuel/oil heat exchanger (FOHX) and bypass valve', src: 'p.166, p.170, p.212-217, p.232-233',
+      info: 'Fuel-cooled oil cooler on top of the core at about 11 o\'clock, over the CIC and front HPC, with the bypass valve on its manifold near 12 o\'clock. Fuel from the IFPC boost stage takes heat from the oil, and the warmed fuel stays above 0 deg C at the fuel filter so ice cannot block it. The EEC modulates the bypass valve on fuel temperature, normally sending about 75 percent of the cooled-path oil here and 25 percent to the air/oil cooler. Both sides have relief valves.' });
+    { const fx = -1.17; can('fohe', fx, 11.0, .32, .05, .34, 'steel'); can('fohe', fx, 11.35, .32, .05, .34, 'steel');                     // the two long headers
+      box('fohe', fx, 11.18, .33, .30, .06, .06, 'steel'); box('fohe', fx + .21, 11.2, .33, .06, .1, .12, 'castAl', { round: .01 });           // core and end plate
+      box('fohe', fx - .24, 11.8, .33, .1, .07, .08, 'darkBox'); can('fohe', fx - .24, 11.8, .39, .025, .05, 'accGrey', { rot: [G.clock(11.8), 0, Math.PI / 2] });   // bypass valve with its torque motor
+      line('fohe', [P(fx + .2, 11.0, .30), P(-1.0, 10.0, .36), P(-1.15, 8.7, .42), P(mx0 + .1, 8.6, .43)], .016, 'tube', { clamps: 3 });    // fuel to and from the IFPC
+      line('fohe', [P(fx - .2, 11.4, .31), P(-1.45, 11.0, .34), P(-1.49, 10.4, .40)], .014, 'tube', { clamps: 1 }); }
 
     /* ============================== FUEL ============================== */
     PW.part('fuel', { label: 'Fuel system lines', explode: [0, 0, -.45], src: 'p.162-183; TTM ch. 73',
@@ -172,7 +183,7 @@
       PW.part('precooler', { parent: 'air', label: 'Precooler', src: 'p.60, p.297; TTM ch. 36',
         info: 'Air-to-air heat exchanger above the core at 12 o\'clock in the upper bifurcation. Fan air from the precooler duct inlet cools the engine bleed to a temperature the aircraft ducts can take, and leaves through the precooler exhaust door on the right IFS. Its fan air valve is modulated to hold the bleed temperature.' });
       const pcx = -1.90, pcy = .74; { const m = new THREE.Mesh(G.roundedBox(.40, .46, .24, .03)); m.position.set(pcx, pcy, 0); PW.add('precooler', m, 'steel', { solid: true });
-        for (let i = 0; i < 9; i++) { const f = new THREE.Mesh(G.roundedBox(.36, .42, .004, .001)); f.position.set(pcx, pcy, -.1 + i * .025); PW.add('precooler', f, 'darkBox', { solid: true, shadow: false }); } }
+        for (let i = 0; i < 9; i++) { const f = new THREE.Mesh(G.roundedBox(.36, .42, .004, .001)); f.position.set(pcx, pcy, -.1 + i * .025); PW.add('precooler', f, 'nickel', { solid: true, shadow: false }); } }
       line('precooler', [V(-1.05, .99, 0), V(-1.30, .93, 0), V(-1.55, .86, 0), V(pcx + .2, .80, 0)], .07, 'tube', { clamps: 5, ends: false });
       line('precooler', [V(pcx - .2, .74, -.05), V(-2.2, .74, -.15), V(-2.35, .66, -.25)], .05, 'duct', { clamps: 1 }); }
     PW.part('tacc', { parent: 'air', label: 'Turbine active clearance control', src: 'p.270-277',
@@ -199,7 +210,7 @@
         info: 'Small memory module plugged into the EEC that holds the engine serial number, rating and trim data. It stays with the engine: when an EEC is changed, the new one reads the engine\'s data from the DSU.' });
       box('dsu', ex - .25, eh + .2, er + .01, .07, .06, .08, 'darkBox'); }
     PW.part('harnesses', { label: 'Engine harnesses', explode: [0, .25, 0], src: 'p.102-107; photos',
-      info: 'Braided harnesses from the EEC to every sensor, valve and actuator, clipped to the fan case on lime-green stand-offs and run down to the core through the bifurcations. Each EEC channel has its own harness, so a chafed or open harness usually affects one channel only.' });
+      info: 'Braided harnesses from the EEC to every sensor, valve and actuator, clipped to the fan case on lime-green stand-offs. WF01 and WF02 bring the aircraft connections down from the pylon to the EEC; W03 and W04 run from the EEC along the bottom of the fan case into the core; WC05 rings the turbine exhaust for the EGT probes and WC08 runs over the HPC (p.105, p.107). Chafe at clamps and connector security are the usual findings.' });
     /* p.105 / p.107: WF01 and WF02 come down from the pylon interface at 12 o'clock to the EEC; W03 and W04 leave its lower face, run
        down to 6 o'clock, aft along the bottom of the fan case and up into the core at the gearbox; the core harnesses (WC05 round the
        turbine exhaust for the EGT probes, WC08 over the HPC) branch from there */
@@ -212,10 +223,13 @@
       line('harnesses', [P(-1.35, 6.9, .42), P(-1.5, 8.5, .36), P(-1.75, 10.5, .33), P(-2.2, 11.5, .40), P(-2.42, 12.5, .42)], .012, 'harness', { clamps: 4 });
       line('harnesses', [P(-1.2, 7.5, .38), P(-1.25, 9.5, .32), P(-1.4, 11.2, .30), P(-1.7, 12.2, .30)], .012, 'harness', { clamps: 3 }); }
     PW.part('ignition', { label: 'Ignition system', explode: [0, 0, -.35], src: 'p.306-323; TTM ch. 74',
-      info: 'Two ignition exciters on the fan case, each feeding one igniter plug in the diffuser case through a shielded lead. The EEC fires one or both; they alternate between starts so a failed system shows up.\n\nThe exciter output is lethal: wait the AMM time after power is removed before disconnecting a lead.' });
-    { for (const [h, dx] of [[8.0, 0], [7.3, -.16]]) { box('ignition', -.55 + dx, h, 1.02, .22, .09, .11, 'darkBox'); }
-      for (const [h, hh] of [[8.0, 3.6], [7.3, 2.6]]) { const a0 = P(-.62, h, 1.0), a1 = P(-.95, h - .4, .72), a2 = P(-1.45, h - .7, .45), a3 = P(-1.72, hh > 3 ? 8.2 : 7.6, .30);
-        line('ignition', [a0, a1, a2, a3], .009, 'tube', { clamps: 3 }); can('ignition', -1.72, hh > 3 ? 8.2 : 7.6, .29, .012, .07, 'steel', { rot: [G.clock(hh > 3 ? 8.2 : 7.6), 0, Math.PI / 2] }); } }
+      info: 'One exciter box on the left of the fan case at 8 o\'clock, low and aft, holding two independent capacitor-discharge circuits. System A is run by EEC channel A and system B by channel B, each firing one igniter plug in the diffuser case through its own shielded lead at about 5 kV, 1 to 3 sparks a second. The two systems are powered from different DC essential buses.\n\nThe output is lethal: wait the AMM time after power is removed before disconnecting a lead.' });
+    { box('ignition', -.53, 8.0, 1.06, .21, .09, .10, 'darkBox'); box('ignition', -.635, 8.0, 1.06, .02, .09, .10, 'steel');                   // the exciter, with its output end plate aft
+      for (const [h, hh] of [[7.95, 3.6], [8.05, 2.6]]) { const a0 = P(-.645, h, 1.05), a1 = P(-.95, h - .4, .72), a2 = P(-1.45, h - .7, .45), a3 = P(-1.72, hh > 3 ? 8.2 : 7.6, .30);
+        line('ignition', [a0, a1, a2, a3], .009, 'tube', { clamps: 3 });
+        if (!PW.parts.has('igniters')) PW.part('igniters', { parent: 'ignition', label: 'Igniter plugs (2)', src: 'p.318-319',
+          info: 'Two igniter plugs through bosses in the diffuser case into the combustor, one for each exciter circuit (system A and system B). Their tips erode in service; plug condition and immersion depth are checked when they are removed.' });
+        can('igniters', -1.72, hh > 3 ? 8.2 : 7.6, .29, .012, .07, 'steel', { rot: [G.clock(hh > 3 ? 8.2 : 7.6), 0, Math.PI / 2] }); } }
     PW.part('sensors', { label: 'Engine sensors', explode: [0, .2, .2], src: 'p.102-161',
       info: 'Speed probes for N1 (station 2.5 at 4:30 on the CIC) and fan speed (No. 1 bearing support at 1 o\'clock), PMAG for N2, T3 and P3 at the HPC exit, the EGT thermocouple harness behind the LPT at station 5, two vibration sensors, and the oil sensors on the OCM. Their signals go to the EEC; vibration and oil debris also go to the PHMU.' });
     { for (let i = 0; i < 8; i++) { const a = G.clock(i * 1.5 + .75), xx = -2.47; PW.add('sensors', G.rod(G.onRing(xx, .40, a), G.onRing(xx, .30, a), .007), 'steel'); }        // EGT probes at station 5
@@ -229,7 +243,7 @@
     PW.part('phmu', { label: 'Prognostics and health management unit (PHMU)', explode: [0, .3, .3], src: 'p.92-95', info: 'Box on the fan case that records vibration and oil debris data for trend monitoring and fan trim balance solutions. It talks to the EEC over a CAN bus.' });
     box('phmu', -.40, 10.3, 1.04, .26, .08, .16, 'eecGrey');
     PW.part('pdos', { label: 'Power door opening system', explode: [0, .3, .4], src: 'p.32-43',
-      info: 'Hydraulic powerpack on the fan case at about 2 o\'clock and one opening actuator per reverser door. Run from a hand pump or the electric pump, it lifts each door to the hold-open rod position. Never stand under a door that is held only by the actuator: install the hold-open rods.' });
+      info: 'Hydraulic powerpack on the fan case at about 2 o\'clock and one opening actuator per reverser door, which lifts the door to the hold-open rod position. A hand pump can be connected at the quick-disconnect instead; the TTM notes that newer production aircraft have no powerpack and use the hand pump only. Never stand under a door held only by its actuator: install the hold-open rods.' });
     { box('pdos', -.70, 2.0, 1.04, .24, .1, .14, 'accGrey'); for (const h of [4, 8]) line('pdos', [P(-.80, h, 1.0), P(-1.0, h, 1.05)], .022, 'tube', { clamps: 0 }); }
 
     /* ============================== FIRE PROTECTION ============================== */

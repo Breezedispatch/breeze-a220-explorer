@@ -134,7 +134,9 @@
   /* N copies of a geometry round the axis, as one instanced mesh (cheap to draw, raycastable per instance) */
   G.ringInstances = (geo, mat, n, opts) => {
     opts = opts || {};
-    const im = new THREE.InstancedMesh(geo, mat, n), q = new THREE.Quaternion(), m4 = new THREE.Matrix4(), ax = new THREE.Vector3(1, 0, 0), one = new THREE.Vector3(1, 1, 1), off = new THREE.Vector3(opts.x || 0, 0, 0);
+    /* an axial offset is baked into the geometry (rotations about x leave x alone), so the mesh's bounding box sits where the ring is */
+    if (opts.x) { const s = geo.userData.solid; geo = geo.clone(); geo.translate(opts.x, 0, 0); geo.userData.solid = s; }
+    const im = new THREE.InstancedMesh(geo, mat, n), q = new THREE.Quaternion(), m4 = new THREE.Matrix4(), ax = new THREE.Vector3(1, 0, 0), one = new THREE.Vector3(1, 1, 1), off = new THREE.Vector3(0, 0, 0);
     for (let i = 0; i < n; i++) { q.setFromAxisAngle(ax, (opts.phase || 0) + i / n * TAU); m4.compose(off, q, one); im.setMatrixAt(i, m4); }
     im.instanceMatrix.needsUpdate = true; im.userData.solid = !!geo.userData.solid;
     return im;
@@ -198,11 +200,11 @@
   /* hexagon bolt heads round a flange: one instanced mesh. Bolts point along +x (axial) unless radial is set. */
   G.boltGeo = (s) => { const g = new THREE.CylinderGeometry(s, s, s * .7, 6); g.rotateZ(-Math.PI / 2); g.userData.solid = true; return g; };
   G.boltCircle = (mat, x, r, n, size, opts) => {
-    opts = opts || {}; const geo = opts.geo || G.boltGeo(size || .006), im = new THREE.InstancedMesh(geo, mat, n);
-    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), one = new THREE.Vector3(1, 1, 1);
+    /* the bolt's own turn and the axial position are baked into the geometry, so instances only turn about x and the bounding box is true */
+    opts = opts || {}; const geo = (opts.geo || G.boltGeo(size || .006)).clone(); if (opts.radial) geo.rotateZ(Math.PI / 2); geo.translate(x, 0, 0); geo.userData.solid = true;
+    const im = new THREE.InstancedMesh(geo, mat, n), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), one = new THREE.Vector3(1, 1, 1);
     for (let i = 0; i < n; i++) { const a = (opts.phase || 0) + i / n * TAU;
-      if (opts.radial) e.set(a, 0, Math.PI / 2); else e.set(a, 0, 0);
-      q.setFromEuler(e); m4.compose(new THREE.Vector3(x, r * Math.cos(a), r * Math.sin(a)), q, one); im.setMatrixAt(i, m4); }
+      e.set(a, 0, 0); q.setFromEuler(e); m4.compose(new THREE.Vector3(0, r * Math.cos(a), r * Math.sin(a)), q, one); im.setMatrixAt(i, m4); }
     im.instanceMatrix.needsUpdate = true; im.userData.solid = true; return im;
   };
 

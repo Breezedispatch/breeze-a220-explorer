@@ -281,9 +281,13 @@
 
   /* ---------------- explode ---------------- */
   /* a part hung on a spool or hinge is not carried by its module's group, so it adds its ancestors' explode moves itself */
+  /* Exploded, routed tubes, hoses and harnesses (meshes marked isLine) and parts marked explodeHide (sensors spread over several
+     modules, links, loops) are put away, as on a module breakdown drawing; they come back when the engine is put together again */
   PW.setExplode = function (t) {
-    PW.explodeT = t;
+    PW.explodeT = t; const away = t > .02;
     for (const p of PW.parts.values()) {
+      if (p.explodeHide) p.obj.visible = !p.hidden && !away;
+      for (const m of p.meshes) if (m.userData.isLine) m.visible = !away;
       const v = p.explode.clone(); if (p.detached) for (let q = PW.parts.get(p.parent); q; q = q.parent && PW.parts.get(q.parent)) v.add(q.explode);
       if (!v.lengthSq() && !p.dragged) continue;
       p.obj.position.copy(p.base).addScaledVector(v, t); if (p.dragged) p.obj.position.add(p.dragged); }

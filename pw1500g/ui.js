@@ -76,7 +76,11 @@
   document.querySelectorAll('[data-cut]').forEach(b => b.onclick = () => { press('[data-cut]', b); const m = b.dataset.cut;
     PW.cut.on = m !== 'off'; if (PW.cut.on) PW.setCutPlane(m, +document.getElementById('cutOff').value); PW.applyCut(); });
   document.getElementById('cutOff').oninput = e => PW.setCutPlane(null, +e.target.value);
-  document.getElementById('explode').oninput = e => PW.setExplode(+e.target.value);
+  /* exploding spreads the engine over about 11 m: pull the camera back as it opens so the whole breakdown stays in view */
+  let lastT = 0;
+  document.getElementById('explode').oninput = e => { const t = +e.target.value; PW.setExplode(t);
+    if (t > lastT) { const W = PW.ctl.want; W.r = Math.max(W.r, 9 + 9 * t); W.target.x = W.target.x + ((-1.3 - .4 * t) - W.target.x) * .5; }
+    lastT = t; };
   let nacMode = 'on';
   function setNacelle(m) { nacMode = m; const ids = PW.NACELLE_IDS || []; for (const id of ids) { PW.setHidden(id, m === 'off'); PW.setGhost(id, m === 'ghost'); } syncTree(); PW.applyCut(); }
   document.querySelectorAll('[data-nac]').forEach(b => b.onclick = () => { press('[data-nac]', b); setNacelle(b.dataset.nac); });
@@ -96,7 +100,10 @@
   PW.start(() => {
     const id = hover || sel, p = id && PW.parts.get(id);
     if (!p) { tagEl.style.display = 'none'; return; }
-    if (p.anchor) v.copy(p.anchor); else { const box = new THREE.Box3(); for (const m of PW.meshesOf(id)) box.expandByObject(m); if (box.isEmpty()) { tagEl.style.display = 'none'; return; } box.getCenter(v); p.anchor = v.clone(); }
+    /* the anchor is kept in the part's own frame, so the label follows it when it is exploded, swung open or turned with its spool */
+    if (!p.anchorLocal) { const box = new THREE.Box3(); for (const m of PW.meshesOf(id)) if (m.visible) box.expandByObject(m); if (box.isEmpty()) { tagEl.style.display = 'none'; return; }
+      box.getCenter(v); p.obj.updateMatrixWorld(true); p.anchorLocal = p.obj.worldToLocal(v.clone()); }
+    v.copy(p.anchorLocal); p.obj.localToWorld(v);
     const q = v.clone().project(PW.camera); if (q.z > 1) { tagEl.style.display = 'none'; return; }
     tagEl.textContent = p.label; tagEl.style.display = 'block';
     tagEl.style.left = ((q.x + 1) / 2 * innerWidth) + 'px'; tagEl.style.top = ((1 - q.y) / 2 * innerHeight) + 'px';

@@ -111,7 +111,7 @@
 
     /* ============================== THRUST REVERSER DOORS ============================== */
     PW.part('thrust-reverser', { parent: 'nacelle', label: 'Thrust reverser doors', src: 'p.18-43, p.324-379; TTM ch. 78',
-      info: 'Two C-duct doors, left and right, hinged at the pylon hinge beam and latched together at the bottom. Each door carries its translating sleeve, fixed cascade segments, blocker doors and three hydraulic actuators, and its half of the inner fixed structure (IFS) that encloses the core.\n\nIn reverse the sleeves move aft to uncover the cascades and the blocker doors swing into the fan duct, turning the fan air forward. The core stream is not reversed. The doors are opened for core access with the power door opening system; an inoperative reverser can be locked out for dispatch under the MEL.' });
+      info: 'Two C-duct doors, left and right, hinged at the pylon hinge beam and latched together at the bottom. Each door carries its translating sleeve, fixed cascade segments, blocker doors and three hydraulic actuators, and its half of the inner fixed structure (IFS) that encloses the core.\n\nIn reverse the sleeves move aft to uncover the cascades and the blocker doors swing into the fan duct, turning the fan air forward. The core stream is not reversed. The doors are opened for core access with the power door opening system or a hand pump; an inoperative reverser can be locked out for dispatch under the MEL.' });
     const yhT = 1.0;
     /* the IFS outer line (inner wall of the fan duct) and the duct's outer wall (inside the T/R door) */
     const bi = D.GEN.lines.bypassInner, xI0 = bi[bi.length - 1][0], rI0 = bi[bi.length - 1][1];
@@ -121,7 +121,7 @@
     for (const side of ['left', 'right']) {
       const sg = side === 'right' ? 1 : -1, pid = `tr-${side}`;
       PW.part(pid, { parent: 'thrust-reverser', label: `${side === 'left' ? 'Left' : 'Right'} thrust reverser door`, explode: [0, .25, sg * .9], src: 'p.18-23; photos',
-        info: `${side === 'left' ? 'Left' : 'Right'} C-duct: outer fixed cowl, translating sleeve, cascades, blocker doors and actuators outside, the IFS half inside. It hinges at the pylon and latches to the other door at the bottom.` + (side === 'right' ? ' The oil tank access door is on its IFS at about 3 o\'clock.' : ' Its IFS carries the air/oil cooler window and the IFS pressure-relief door at 9 o\'clock, and its latch beam carries the latch access door where the drain mast exits.') });
+        info: `${side === 'left' ? 'Left' : 'Right'} C-duct: outer fixed cowl, translating sleeve, cascades, blocker doors and actuators outside, the IFS half inside. It hinges at the pylon and latches to the other door at the bottom.` + (side === 'right' ? ' The oil tank access door is on its IFS at about 2:30.' : ' Its IFS carries the air/oil cooler window and the IFS pressure-relief door at 9 o\'clock, and its latch beam carries the latch access door where the drain mast exits.') });
       const obj = PW.parts.get(pid).obj, hinge = new THREE.Group(); obj.add(hinge); obj.position.set(0, yhT + .2, sg * .2); hinge.position.set(0, -(yhT + .2), -sg * .2);
       S.hinges.push({ obj, axis: 'tr', sign: -sg, max: deg(45) });
       const t0 = sg > 0 ? deg(10) : Math.PI + deg(1), tl = Math.PI - deg(11);
@@ -157,7 +157,7 @@
       /* the IFS half: white composite wall facing the fan stream, quilted stainless blanket facing the core, bare metal aft core cowl */
       const iid = `${pid}-ifs`;
       PW.part(iid, { parent: pid, label: `${side === 'left' ? 'Left' : 'Right'} inner fixed structure (IFS)`, attach: hinge, src: 'p.18-23; photos',
-        info: 'The half of the inner fixed structure carried by this door. Outside it is the inner wall of the fan duct; inside, facing the core, it is covered by quilted stainless thermal blankets with silicone fire seals along its edges, so the core compartment is a designated fire zone.' + (side === 'right' ? ' The oil tank access door (OTAD) at about 3 o\'clock is the oil servicing point, with the PCE door aft of it.' : ' The air/oil cooler inlet and exhaust window and the IFS pressure-relief door are on this side at about 9 o\'clock; a relief door found open points to a bleed duct burst in the core compartment.') });
+        info: 'The half of the inner fixed structure carried by this door. Outside it is the inner wall of the fan duct; inside, facing the core, it is covered by quilted stainless thermal blankets with silicone fire seals along its edges, so the core compartment is a designated fire zone.' + (side === 'right' ? ' The oil tank access door (OTAD) at about 2:30 is the oil servicing point, with the precooler exhaust door aft of it.' : ' The air/oil cooler inlet and exhaust window and the IFS pressure-relief door are on this side at about 9 o\'clock; a relief door found open points to a bleed duct burst in the core compartment.') });
       const ifo = []; for (let i = 0; i <= 24; i++) { const xx = xI0 + (xTE - .02 - xI0) * i / 24; ifo.push([xx, rIFS(xx)]); }
       PW.add(iid, G.revolve(G.shellProfile(ifo, ifo.map(([xx, r]) => [xx, r - .02])), { seg: 72, thetaStart: t0, thetaLength: tl }), 'cowlWhite');
       PW.add(iid, G.revolve(G.shellProfile(ifo.map(([xx, r]) => [xx, r - .02]), ifo.map(([xx, r]) => [xx, r - .032])), { seg: 72, thetaStart: t0 + deg(1), thetaLength: tl - deg(2) }), 'blanket', { mat: { bumpMap: quiltTex(), roughnessMap: quiltTex() } });
@@ -186,7 +186,7 @@
     ifsPanel('ifs-otad', 'tr-right', 'Oil tank access door (OTAD)', 'Door in the right IFS at about 2:30, over the oil tank, that gives access to its fill port and sight glass without opening the reverser door (p.21, p.223). Service within the AMM time after shutdown and check the level in the sight glass.', -1.92, 2.4, .26, .22, 'cowlWhite');
     ifsPanel('ifs-pce', 'tr-right', 'Precooler exhaust (PCE) door', 'Door aft of the oil tank access door on the right IFS (p.21).', -2.30, 2.4, .2, .18, 'cowlWhite');
     ifsPanel('ifs-aoc-window', 'tr-left', 'Air/oil cooler window', 'Opening in the left IFS at about 9 o\'clock (ZS 748 to 779) for the air/oil cooler inlet and exhaust.', -1.54, 9.6, .62, .17, 'darkBox');
-    ifsPanel('ifs-prd', 'tr-left', 'IFS pressure-relief door', 'Spring-loaded door at 9 o\'clock (ZS 795 to 803) that opens if core compartment pressure rises, as after a bleed duct burst. Found open on the walkaround: find out why before flight.', -2.44, 9, .2, .2, 'cowlWhite');
+    ifsPanel('ifs-prd', 'tr-left', 'IFS pressure-relief door', 'Spring-latched door at 9 o\'clock (ZS 795 to 803) that opens at 3.5 psi core compartment overpressure, as after a bleed duct burst. Found open on the walkaround: find out why before flight.', -2.44, 9, .2, .2, 'cowlWhite');
     ifsPanel('ifs-acc-scoop', 'tr-right', 'ACC air scoop', 'Scoop on the right IFS at about 1:30 that takes fan air for the turbine active clearance control.', -1.62, 1.5, .18, .07, 'darkBox');
 
     /* ============================== PYLON (lower part) ============================== */
@@ -222,6 +222,44 @@
       { label: 'Stowed', on: true, apply: () => { S.want.sleeve = 0; } },
       { label: 'Deployed', apply: () => { S.want.sleeve = 1; S.want.tr = 0; } }]);
   }
+
+  /* ---- the exploded view: the manual's module breakdown (p.54-55) laid out along the axis ----
+     Runs after every builder. Each module's real length is measured and the modules are spaced in order with even gaps: forward of
+     the fan case the FDGS, the fan rotor and the inlet cone; aft of it the FIC, LPC, CIC, HPC, diffuser and combustor, HPT, TIC,
+     LPT, TEC and exhaust. Gearboxes drop below, the oil system moves out to the right, the nacelle opens out round the engine, and
+     dressing that spans modules is put away. */
+  PW.builders.push(function explodePlan() {
+    const P = id => PW.parts.get(id), set = (id, v, hide) => { const p = P(id); if (!p) return; if (v) p.explode.set(...v); if (hide) p.explodeHide = true; };
+    const xr = ids => { const b = new THREE.Box3(); PW.root.updateMatrixWorld(true); for (const id of ids) for (const m of PW.meshesOf(id)) b.expandByObject(m); return [b.min.x, b.max.x]; };
+    const GAP = .25, off = {}; set('fan-case', [0, 0, 0]);
+    const fc = xr(['fan-case']);
+    /* aft chain */
+    let cur = fc[0] - GAP;
+    for (const id of ['fic', 'lpc', 'cic', 'hpc', 'combustor', 'hpt', 'tic', 'lpt', 'tec', 'exhaust']) { if (!P(id)) continue;
+      const [a, b] = xr([id]); off[id] = cur - b; cur = a + off[id] - GAP; set(id, [off[id], 0, 0]); }
+    /* forward chain: FDGS, then the fan rotor (blades and hub), then the inlet cone, which hangs on the rotor */
+    cur = fc[1] + GAP;
+    { const [a, b] = xr(['fdgs']); off.fdgs = cur - a; cur = b + off.fdgs + GAP; set('fdgs', [off.fdgs, 0, 0]); }
+    { const [a, b] = xr(['fan-blades', 'fan-hub']); off.fan = cur - a; cur = b + off.fan + GAP; set('fan-rotor', [off.fan, 0, 0]); }
+    { const [a, b] = xr(['inlet-cone']); const o = cur - a; cur = b + o + GAP; set('inlet-cone', [o - off.fan, 0, 0]); }
+    /* the nacelle opens out: inlet ahead of everything, fan cowls up and out, reverser doors out beside the core, pylon up */
+    { const [a] = xr(['inlet']); set('inlet', [cur + .2 - a, 0, 0]); }
+    set('fan-cowl-left', [0, .6, -1.5]); set('fan-cowl-right', [0, .6, 1.5]);
+    set('tr-left', [off.hpc * .6, .35, -1.8]); set('tr-right', [off.hpc * .6, .35, 1.8]); set('pylon', [0, 1.9, 0]);
+    /* each bearing with the case that carries it; the shafts below the line */
+    for (const [b, m] of [['bearing-1', 'fdgs'], ['bearing-1-5', 'fdgs'], ['bearing-2', 'lpc'], ['bearing-3', 'cic'], ['bearing-4', 'tic'], ['bearing-5', 'lpt'], ['bearing-6', 'tec']]) set(b, [off[m] || 0, 0, 0]);
+    set('shafts', [off.hpc, -1.0, 0]);
+    /* gearboxes and accessories below; oil system out to the right with the air/oil cooler kept on the left */
+    set('gearboxes', [off.hpc, -1.3, 0]); set('oil', [off.combustor, 0, 1.15]); set('aoc', [0, 0, -2.3]);
+    set('fuel', [off.combustor, 0, 0]); set('igniters', [off.combustor, 0, .35]);
+    /* air system parts stay with their cases; the precooler rises with the pylon */
+    set('air', [0, 0, 0]); set('hpc-sva', [off.hpc, 0, 0]); set('lpc-sva', [off.lpc, 0, 0]); set('bleed-25', [off.cic, 0, 0]); set('bleed-hp', [off.hpc, 0, 0]);
+    set('precooler', [off.hpc, 1.4, 0]); set('tacc', null, true); set('cai', null, true);
+    /* units on the fan case move out from it a little */
+    set('eec', [0, 0, -.45]); set('phmu', [0, .25, -.25]); set('ignition', [0, 0, -.35]); set('pdos', [0, .25, .3]);
+    for (const id of ['harnesses', 'sensors', 'fire', 'mounts', 'drain-mast']) set(id, [0, 0, 0], true);
+    PW.EXPLODE_SPAN = cur;
+  });
 
   /* the inlet's scarf: the lower lip sits 2.1 in aft of the upper (ZS 647.1 top, 649.2 bottom); shift vertices near the lip by angle */
   function scarf(g, xHL) {
