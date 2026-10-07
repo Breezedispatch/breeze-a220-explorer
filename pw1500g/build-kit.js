@@ -155,13 +155,16 @@
       else { c.font = 'bold 52px Arial'; c.fillText(kind === 'noStep' ? 'NO STEP' : kind, W / 2, H * .6); } }, 256, kind === 'thisSideUp' ? 220 : 128);
     backing(pid, f, pos, n, up, w, .0012, h, 'darkBox', .0004);
     return faceQuad(pid, f, add(pos, dir(n), .00065), n, up, w * .96, h * .96, 'darkBox', { map: t, color: '#ffffff' }); };
-  /* printed adhesive label: 'hv' (red-orange high-voltage warning, as on the ignition exciter in the photos) or 'caution' (yellow) */
+  /* printed adhesive label: 'hv' (red-orange high-voltage warning, as on the ignition exciter in the photos), 'caution' (yellow),
+     'white' (white part label with black print) or 'dataBlack' (black data plate with white print, as on the EEC and PHMU) */
   K.label = (pid, f, pos, n, up, w, h, style) => {
-    const hv = style === 'hv', t = plateTex('label-' + style, (c, W, H) => { c.fillStyle = hv ? '#e2552c' : '#efc41a'; c.fillRect(0, 0, W, H);
-      c.fillStyle = hv ? '#ffffff' : '#141414'; c.textAlign = 'center';
-      if (hv) { c.font = 'bold 40px Arial'; c.fillText('WARNING', W / 2, 46); c.font = 'bold 27px Arial'; c.fillText('HIGH VOLTAGE', W / 2, 82); c.font = '15px Arial'; c.fillText('WAIT 5 MINUTES AFTER IGNITION', W / 2, 108); }
-      else { c.font = 'bold 30px Arial'; c.fillText('CAUTION', W / 2, 40); for (let i = 0; i < 4; i++) c.fillRect(24, 58 + i * 15, W - 48 - (i * 29) % 60, 6); } }, 256, 128);
-    backing(pid, f, pos, n, up, w, .0008, h, hv ? 'clampOrange' : 'lime', .0003);
+    const bg = { hv: '#e2552c', caution: '#efc41a', white: '#f1f1ee', dataBlack: '#1a1a1a' }[style] || '#f1f1ee', ink = style === 'hv' || style === 'dataBlack' ? '#ffffff' : '#141414';
+    const t = plateTex('label-' + style, (c, W, H) => { c.fillStyle = bg; c.fillRect(0, 0, W, H); c.fillStyle = ink; c.textAlign = 'center';
+      if (style === 'hv') { c.font = 'bold 40px Arial'; c.fillText('WARNING', W / 2, 46); c.font = 'bold 27px Arial'; c.fillText('HIGH VOLTAGE', W / 2, 82); c.font = '15px Arial'; c.fillText('WAIT 5 MINUTES AFTER IGNITION', W / 2, 108); }
+      else if (style === 'caution') { c.font = 'bold 30px Arial'; c.fillText('CAUTION', W / 2, 40); for (let i = 0; i < 4; i++) c.fillRect(24, 58 + i * 15, W - 48 - (i * 29) % 60, 6); }
+      else { if (style === 'dataBlack') { c.strokeStyle = ink; c.lineWidth = 4; c.strokeRect(8, 8, W - 16, H - 16); }
+        for (let i = 0; i < 6; i++) c.fillRect(22, 20 + i * 17, (W - 44) * (.45 + ((i * 37) % 50) / 100), 7); } }, 256, 128);
+    backing(pid, f, pos, n, up, w, .0008, h, style === 'hv' ? 'clampOrange' : style === 'caution' ? 'lime' : 'darkBox', .0003);
     return faceQuad(pid, f, add(pos, dir(n), .00045), n, up, w * .98, h * .98, 'plateAl', { map: t, color: '#ffffff', metalness: 0, roughness: .6 }); };
   /* raised cast lettering (FILL, OIL...) on a part's own surface: a bump-mapped quad in the surface colour */
   K.decal = (pid, f, pos, n, up, w, h, text, mat) => {

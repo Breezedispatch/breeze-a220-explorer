@@ -366,19 +366,18 @@
       info: 'Dual-channel FADEC computer on the left side of the fan case at 9 o\'clock, on four vibration isolators, cooled by fan compartment air. Each channel has a control and a protection processor. It sets thrust, schedules fuel, vanes, bleeds and clearance control, runs starts and the reverser logic, and stores faults.\n\nThe data storage unit plugged into it holds the engine rating and trim data; it stays with the engine if the EEC is changed. Eight connectors: check them seated and locked after any EEC work.' });
     /* p.105, p.91 and Brian's photo: a grey box about 0.6 m long fore and aft on the left of the fan case, about a third of the way aft,
        on four isolator feet; four connectors on its upper face and four on its lower, with stainless backshells and braided harnesses;
-       THIS SIDE UP placards; two pressure sense fittings at its forward end; a cross-braced module at its aft end; the DSU in J99 */
+       a THIS SIDE UP placard, a black data plate and a white label; two pressure sense fittings at its forward end; the DSU in J99.
+       The separate box right behind it is the PHMU */
     { const ex = -.08, eh = 9, er = 1.045, f = Kt.frame('eec', ex, eh, er);
       Kt.box('eec', f, [.03, 0, 0], [.46, .095, .22], 'eecGrey', { round: .012 });
-      Kt.box('eec', f, [-.255, -.003, 0], [.1, .088, .22], 'eecGrey', { round: .01 });
-      for (const s of [-1, 1]) Kt.box('eec', f, [-.255, .043, 0], [.2, .005, .012], 'eecGrey', { round: .002, rot: [0, s * 1.15, 0] });
-      for (const [ax, az] of [[.285, .085], [.285, -.085], [-.325, .085], [-.325, -.085]]) { Kt.box('eec', f, [ax, -.036, az], [.06, .012, .045], 'eecGrey', { round: .004 });
+      for (const [ax, az] of [[.285, .085], [.285, -.085], [-.23, .085], [-.23, -.085]]) { Kt.box('eec', f, [ax, -.036, az], [.06, .012, .045], 'eecGrey', { round: .004 });
         Kt.cyl('eec', f, [ax + Math.sign(ax) * .012, -.026, az], 'y', .016, .02, 'eecGrey'); Kt.hex('eec', f, [ax + Math.sign(ax) * .012, -.014, az], 'y', .006, .006, 'steel');
         /* the channel bracket each foot's isolator stands on, bonded to the composite case (r 0.97) */
         Kt.box('eec', f, [ax, -.075, az], [.06, .008, .05], 'lime', { round: .002 }); Kt.box('eec', f, [ax, -.0435, az], [.06, .003, .05], 'lime', { round: .001 });
         for (const s of [-1, 1]) Kt.box('eec', f, [ax + s * .022, -.057, az], [.004, .03, .045], 'lime', { round: .001 }); }
       for (const x of [.18, .1, -.02, -.1]) for (const s of [1, -1]) Kt.connector('eec', f, [x, 0, s * .11], s > 0 ? 'z' : '-z', .017);
-      Kt.placard('eec', f, [.02, .0485, 0], 'y', 'z', .06, .07, 'thisSideUp'); Kt.placard('eec', f, [-.255, .0445, .062], 'y', 'z', .04, .045, 'thisSideUp');
-      Kt.plate('eec', f, [.19, .0485, -.025], 'y', 'z', .05, .03, 'EEC');
+      Kt.placard('eec', f, [.02, .0485, 0], 'y', 'z', .06, .07, 'thisSideUp');
+      Kt.label('eec', f, [.19, .0479, -.02], 'y', 'z', .05, .03, 'dataBlack'); Kt.label('eec', f, [.12, .0479, -.02], 'y', 'z', .04, .045, 'white');   // black data plate and white label (photo)
       Kt.fitting('eec', f, [.262, 0, .04], 'x', .008); Kt.fitting('eec', f, [.262, 0, -.03], 'x', .008);
       PW.part('dsu', { parent: 'eec', label: 'Data storage unit (DSU)', src: 'p.90-91, p.104-105',
         info: 'Small round plug, a Hamilton Sundstrand DSU1230-1, in connector J99 on the face of the EEC, on a lanyard. It holds the engine serial number and the rating and trim data in flash memory, read by both channels\' protection processors. It stays with the engine: when an EEC is changed, the new EEC reads the engine\'s data from it.' });
@@ -406,7 +405,11 @@
       /* WC08 up the left of the core forward of the IFPC, over the layshaft, and over the HPC to the top; WC05 branches from it and runs
          aft along the top in the pylon gap, over the clearance control manifolds, to the EGT harness ring behind the LPT */
       line('harnesses', [P(-1.35, 6.9, .42), P(-1.19, 7.4, .38), P(-1.19, 8.2, .375), P(-1.25, 9.5, .325), P(-1.4, 11.2, .31), P(-1.68, 12.15, .31)], .012, 'harness', { clamps: 4 });
-      line('harnesses', [P(-1.66, 12.1, .32), P(-1.75, 12.05, .37), P(-1.95, 12.1, .42), P(-2.13, 12.15, .47), P(-2.24, 12.08, .555), P(-2.40, 12.0, .56), P(-2.48, 12.05, .50), P(-2.505, 12.2, .445)], .012, 'harness', { clamps: 4 }); }
+      line('harnesses', [P(-1.66, 12.1, .32), P(-1.75, 12.05, .37), P(-1.95, 12.1, .42), P(-2.13, 12.15, .47), P(-2.24, 12.08, .555), P(-2.40, 12.0, .56), P(-2.45, 12.0, .52), P(-2.465, 12.0, .478)], .012, 'harness', { clamps: 4 });
+      /* WC05 then rings the LPT's aft flange both ways to the EGT probe junctions at 3 and 9 o'clock (p.107, p.129) */
+      for (const [h0, h1] of [[12, 15], [12, 9]]) { const pts = []; for (let i = 0; i <= 15; i++) pts.push(P(-2.465, h0 + (h1 - h0) * i / 15, .474));
+        line('harnesses', pts, .009, 'harness', { clamps: 5, ends: false });
+        line('harnesses', [P(-2.465, h1, .474), P(-2.49, h1, .474), P(-2.51, h1, .468), P(-2.518, h1, .462)], .006, 'harness', { clamps: 0, ends: false }); } }
     PW.part('ignition', { label: 'Ignition system', explode: [0, 0, -.35], src: 'p.306-323; TTM ch. 74',
       info: 'One exciter, the black box with the red-orange HIGH VOLTAGE label low on the left of the fan case at 8 o\'clock, cooled by fan compartment air, with two independent capacitor-discharge circuits: system A run by EEC channel A, system B by channel B. Each fires its own igniter at 5 kV, 1 to 3 sparks a second, through a braided steel cable that runs under the engine to the diffuser case: igniter A at 4 o\'clock, igniter B at 5 o\'clock. On this (right) engine the circuits are powered from DC ESS BUS 2 and 3; the left engine uses DC ESS BUS 1 and 3.\n\nAn automatic start uses one igniter, alternating each start: on at 20.4 to 23.5 percent N2, off at 49.3 to 53.3 percent. If the first attempt fails, the EEC dry motors the engine and tries again on both. The EEC selects both igniters continuously after a flameout in flight or on the takeoff roll above 60 kt, an in-flight surge, or for an in-flight start.\n\nWait at least 5 minutes after the ignition last operated before removing a plug or cable: the voltage can injure.' });
     /* the exciter (p.317, and Brian's photo from below the EEC): a black box with a red-orange high-voltage label and a small yellow
@@ -448,22 +451,65 @@
         Kt.hex('igniters', g, [0, .083, 0], 'y', .0135, .012, 'steel'); Kt.cyl('igniters', g, [0, .096, 0], 'y', .0095, .014, 'steel');
         Kt.cyl('igniters', g, [0, -.012, 0], 'y', .0055, .022, 'nickel'); } }
     PW.part('sensors', { label: 'Engine sensors', explode: [0, .2, .2], src: 'p.102-161',
-      info: 'Speed probes for N1 (station 2.5 at 4:30 on the CIC) and fan speed (No. 1 bearing support at 1 o\'clock), PMAG for N2, T3 and P3 at the HPC exit, the EGT thermocouple harness behind the LPT at station 5, two vibration sensors, and the oil sensors on the OCM. Their signals go to the EEC; vibration and oil debris also go to the PHMU.' });
-    { for (let i = 0; i < 8; i++) { const a = G.clock(i * 1.5 + .75), xx = -2.47; PW.add('sensors', G.rod(G.onRing(xx, .40, a), G.onRing(xx, .30, a), .007), 'steel'); }        // EGT probes at station 5
-      PW.add('sensors', G.revolve(circ(-2.47, .405, .006, 8), { seg: 96 }), 'steel');
-      PW.add('sensors', G.revolve(circ(-2.505, .43, .009, 8), { seg: 96 }), 'harness');                                                      // WC05 harness ring round the turbine exhaust (p.107)
-      box('sensors', -1.05, 4.5, .43, .05, .06, .05, 'darkBox');                                                                                // N1 speed probe, station 2.5 at 4:30 (p.112)
+      info: 'Speed probes for N1 (station 2.5 at 4:30 on the CIC) and fan speed (inside the No. 1 bearing support at 1 o\'clock), the PMAG\'s coils for N2, T3 and P3 at the HPC exit, the EGT probes at station 5 on the turbine exhaust case, two vibration sensors, and the oil sensors on the OCM. Their signals go to the EEC; vibration and oil debris also go to the PHMU.' });
+    { /* EGT (p.126-129): two semi-rigid probe and cable assemblies of four probes each on the forward cone of the turbine exhaust case,
+         just aft of the LPT flange: right probes at 0:45 to 5:15 with their probe junction at 3 o'clock, left ones at 6:45 to 11:15 with
+         theirs at 9. Each probe stands normal to the cone (25 deg), its sheath reaching forward and in to the gas path; the cable runs
+         round just aft of the flange with a stub into each probe head */
+      PW.part('egt', { parent: 'sensors', label: 'EGT probe and cable assemblies (2)', src: 'p.126-133',
+        info: 'Exhaust gas temperature at station 5: two probe and cable assemblies, left and right, each of four thermocouple probes on a semi-rigid cable round the turbine exhaust case. The probes are not replaceable on their own: the whole assembly is changed. The four signals of each assembly are averaged at its probe junction (3 and 9 o\'clock) and compensated at the oil temperature probe on the OCM; the left assembly goes to EEC channel A, the right to channel B.\n\nOne failed assembly gives an L(R) ENGINE FAULT advisory. Limits: 1054 deg C for start and takeoff, 1006 deg C maximum continuous (p.131).' });
+      const xe = -2.52, re = .41, tilt = .444;
+      for (const [hs, hj] of [[[.75, 2.25, 3.75, 5.25], 3], [[6.75, 8.25, 9.75, 11.25], 9]]) {
+        for (const h of hs) { const f = Kt.frame('egt', xe, h, re, { rz: tilt });
+          Kt.box('egt', f, [0, .002, 0], [.026, .004, .016], 'steel', { round: .002 }); for (const s of [-1, 1]) Kt.hex('egt', f, [s * .01, .0055, 0], 'y', .0032, .003, 'steel');   // two-bolt flange
+          Kt.box('egt', f, [0, .013, 0], [.016, .018, .018], 'steel', { round: .003 });                                        // terminal head
+          Kt.cyl('egt', f, [.02, .016, 0], 'x', .0028, .026, 'steel');                                                        // stub to the cable
+          Kt.cyl('egt', f, [0, -.04, 0], 'y', .0042, .08, 'nickel'); Kt.cyl('egt', f, [0, -.083, 0], 'y', .0055, .012, 'nickel'); }   // sheath and tip shield
+        const run = (a, b) => { const pts = [], n = Math.max(2, Math.ceil(Math.abs(b - a) / .2)); for (let i = 0; i <= n; i++) pts.push(P(-2.497, a + (b - a) * i / n, .438)); return pts; };
+        line('egt', run(hs[0], hj - .09), .0028, 'tube', { clamps: 0, ends: false }); line('egt', run(hs[3], hj + .09), .0028, 'tube', { clamps: 0, ends: false });
+        const g = Kt.frame('egt', -2.512, hj, .418, { rz: tilt });                                                             // probe junction
+        Kt.box('egt', g, [0, .014, 0], [.03, .028, .045], 'steel', { round: .004 }); Kt.connector('egt', g, [0, .028, 0], 'y', .0075, { lead: 'x' }); }
+      /* N1 speed probe (p.112-115): on the CIC's conical aft face at 4:30, normal to it; a flat head with one bolted ear and its two
+         connectors side by side pointing down; the 20 cm shank reaches forward and in to the No. 2 bearing coupling nut */
+      PW.part('n1-probe', { parent: 'sensors', label: 'N1 speed probe', src: 'p.108-115',
+        info: 'Dual probe at station 2.5, on the aft face of the compressor intermediate case at 4:30. Its tip reads the teeth of the No. 2 bearing coupling nut on the LPC; two isolated coils, one per EEC channel, each with its own connector. 100 percent N1 is 10,600 rpm.\n\nLosing one of the two N1 signals gives an L(R) ENGINE FAULT advisory that affects dispatch. With both lost, the EEC computes N1 from fan speed. The probe is about 20 cm long: support its tip during removal and installation.' });
+      { const f = Kt.frame('n1-probe', -1.05, 4.5, .395, { rz: .88 });
+        Kt.box('n1-probe', f, [0, .004, 0], [.05, .008, .032], 'steel', { round: .003 }); Kt.box('n1-probe', f, [0, .004, -.027], [.022, .006, .024], 'steel', { round: .008 });
+        Kt.hex('n1-probe', f, [0, .0095, -.033], 'y', .005, .004, 'steel');
+        Kt.box('n1-probe', f, [0, .02, .006], [.056, .024, .036], 'castAl', { round: .006 });
+        for (const s of [-1, 1]) Kt.connector('n1-probe', f, [s * .014, .02, .025], 'z', .0085, { lead: 'z', boot: true });
+        Kt.plate('n1-probe', f, [0, .0322, .0], 'y', 'z', .04, .018);
+        Kt.cyl('n1-probe', f, [0, -.012, 0], 'y', .0095, .024, 'steel'); Kt.cyl('n1-probe', f, [0, -.1, 0], 'y', .0055, .16, 'steel'); Kt.cyl('n1-probe', f, [0, -.185, 0], 'y', .0045, .012, 'steel'); }
+      /* vibration sensors (p.138-141): forward, an accelerometer on a three-bolt bracket on the intermediate case at 9 o'clock, its lead
+         down the cone into WC08; aft, a block sensor on the LPT case at 3 o'clock, behind the clearance control rings, into WC05 */
+      PW.part('vib-sensors', { parent: 'sensors', label: 'Vibration sensors (2)', src: 'p.134-141',
+        info: 'Two accelerometers feeding the PHMU. The forward one is on the intermediate case at 9 o\'clock; with fan speed it gives fan vibration and the fan trim balance solutions. The aft one is on the LPT case at 3 o\'clock.\n\nThe PHMU works out fan, N1 and N2 vibration and sends it to the EEC for EICAS: an amber VIB flag on N1 above 0.52 in/s and next to N2 above 1.2 in/s; FAN VIB in units from 0 to 8, where 4.0 is 100 percent of its 1.2 in/s threshold. Exceedances give the ENG VIBRATION caution.' });
+      { const f = Kt.frame('vib-sensors', -1.0, 9, .455, { rz: .88 });
+        Kt.box('vib-sensors', f, [0, .003, 0], [.05, .006, .042], 'steel', { round: .004 });
+        for (const [a, b] of [[-.017, .014], [.017, .014], [0, -.015]]) Kt.hex('vib-sensors', f, [a, .0075, b], 'y', .0042, .004, 'steel');
+        Kt.box('vib-sensors', f, [0, .015, .0], [.03, .018, .022], 'steel', { round: .004 });
+        Kt.cyl('vib-sensors', f, [0, .02, -.012], 'z', .012, .034, 'steel', { edge: .003 });
+        Kt.connector('vib-sensors', f, [0, .02, -.03], '-z', .0085, { lead: '-z' });
+        line('vib-sensors', [P(-1.012, 8.82, .468), P(-1.02, 8.74, .46), P(-1.05, 8.62, .43), P(-1.09, 8.52, .385), P(-1.15, 8.43, .37), P(-1.19, 8.36, .375)], .005, 'harness', { clamps: 0, ends: false }); }
+      { const xa = -2.425, f = Kt.frame('vib-sensors', xa, 3, rCase(xa));
+        Kt.box('vib-sensors', f, [0, .007, 0], [.026, .014, .026], 'steel', { round: .003 });
+        Kt.cyl('vib-sensors', f, [0, .009, .019], 'z', .012, .012, 'steel', { edge: .002 }); Kt.cyl('vib-sensors', f, [0, .021, 0], 'y', .009, .014, 'steel');
+        Kt.connector('vib-sensors', f, [0, .028, 0], 'y', .0075, { lead: '-x' });
+        line('vib-sensors', [P(xa - .014, 3.0, rCase(xa) + .042), P(xa - .03, 3.04, rCase(xa) + .036), P(-2.462, 3.12, .476)], .005, 'harness', { clamps: 0, ends: false }); }
       box('sensors', -.94, 2.5, .44, .05, .07, .05, 'steel'); can('sensors', -.94, 2.5, .40, .012, .06, 'steel', { rot: [G.clock(2.5), 0, Math.PI / 2] });   // P2.5/T2.5 probe on the CIC (p.107)
       box('sensors', -1.74, 2.6, .33, .06, .04, .07, 'steel');                                                                                  // T3 probe on the diffuser case (p.107)
       can('sensors', -1.35, 10.6, .36, .016, .09, 'steel', { rot: [G.clock(10.6), 0, Math.PI / 2] });                                          // burner pressure (PB) sensor (p.105)
-      box('sensors', -.86, 10.5, 1.0, .07, .04, .06, 'darkBox'); box('sensors', -2.5, 10.5, .48, .07, .04, .06, 'darkBox'); }               // vibration sensors
-    PW.part('phmu', { label: 'Prognostics and health management unit (PHMU)', explode: [0, .3, .3], src: 'p.92-95', info: 'Box on the fan case that records vibration and oil debris data for trend monitoring and fan trim balance solutions. It talks to the EEC over a CAN bus.' });
-    { const f = Kt.frame('phmu', -.40, 10.3, .97);                                                                           // on four isolators on the case
-      for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { Kt.box('phmu', f, [a * .1, .0015, b * .055], [.03, .003, .03], 'steel', { round: .002, rot: [0, Math.PI / 4, 0] });
-        Kt.cyl('phmu', f, [a * .1, .0095, b * .055], 'y', .011, .013, 'blackHose'); }
-      Kt.box('phmu', f, [0, .054, 0], [.25, .075, .15], 'eecGrey', { round: .01 });
-      for (const s of [-1, 1]) Kt.connector('phmu', f, [.125, .054, s * .035], 'x', .012, { lead: 'y' });
-      Kt.plate('phmu', f, [-.03, .0917, 0], 'y', 'z', .07, .04, 'PHMU'); }
+    }
+    PW.part('phmu', { label: 'Prognostics and health monitoring unit (PHMU)', explode: [0, .3, .3], src: 'p.92-95, p.134-139; photos',
+      info: 'Grey box on the left of the fan case at 9 o\'clock, immediately aft of the EEC, with its own THIS SIDE UP placard. It takes the two vibration sensors and the oil debris monitor, and N1, N2 and fan speed from the EEC over the CAN bus, works out fan, N1 and N2 vibration for EICAS, and records the data for trend monitoring and the fan trim balance solutions. Powered from DC BUS 1.' });
+    /* p.139 and Brian's photo: a separate grey box just aft of the EEC (until 2026-10-07 the model had it as a cross-braced module of the
+       EEC, with a second box at 10:30), a connector at each aft corner; built in the EEC's frame */
+    { const f = Kt.frame('phmu', -.08, 9, 1.045), xc = -.36;
+      Kt.box('phmu', f, [xc, -.002, 0], [.19, .085, .21], 'eecGrey', { round: .01 });
+      for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) Kt.box('phmu', f, [xc + a * .07, -.0615, b * .07], [.03, .034, .03], 'lime', { round: .003 });
+      Kt.placard('phmu', f, [xc, .0408, .045], 'y', 'z', .045, .05, 'thisSideUp');
+      Kt.label('phmu', f, [xc, .0408, -.02], 'y', 'z', .04, .03, 'white'); Kt.label('phmu', f, [xc, .0408, -.065], 'y', 'z', .03, .02, 'dataBlack');
+      for (const s of [-1, 1]) Kt.connector('phmu', f, [xc - .06, 0, s * .105], s > 0 ? 'z' : '-z', .013, { lead: s > 0 ? 'z' : '-z' }); }
     PW.part('pdos', { label: 'Power door opening system', explode: [0, .3, .4], src: 'p.32-43',
       info: 'Hydraulic powerpack on the fan case at about 2 o\'clock and one opening actuator per reverser door, which lifts the door to the hold-open rod position. A hand pump can be connected at the quick-disconnect instead; the TTM notes that newer production aircraft have no powerpack and use the hand pump only. Never stand under a door held only by its actuator: install the hold-open rods.' });
     /* p.33-35: the powerpack at the aft end of the fan case on the right: an AC motor driving a gear pump, a reservoir and manifold

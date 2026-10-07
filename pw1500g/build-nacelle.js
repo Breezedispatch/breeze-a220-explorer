@@ -277,7 +277,7 @@
     set('air', [0, 0, 0]); set('hpc-sva', [off.hpc, 0, 0]); set('lpc-sva', [off.lpc, 0, 0]); set('bleed-25', [off.cic, 0, 0]); set('bleed-hp', [off.hpc, 0, 0]);
     set('precooler', [off.hpc, 1.4, 0]); set('tacc', null, true); set('cai', null, true);
     /* units on the fan case move out from it a little */
-    set('eec', [0, 0, -.45]); set('phmu', [0, .25, -.25]); set('ignition', [0, 0, -.35]); set('pdos', [0, .25, .3]);
+    set('eec', [0, 0, -.45]); set('phmu', [-.15, 0, -.45]); set('ignition', [0, 0, -.35]); set('pdos', [0, .25, .3]);
     for (const id of ['harnesses', 'sensors', 'fire', 'fire-left', 'fire-right', 'mounts', 'drain-mast']) set(id, [0, 0, 0], true);
     PW.EXPLODE_SPAN = cur;
   });
