@@ -582,6 +582,29 @@
         /* the sense line aft along 10 o'clock, between the core harness and the coolers, to a boss on the diffuser case */
         line('pb-sensor', [P(-1.084, 10, .385), P(-1.12, 10.0, .36), P(-1.20, 10.0, .345), P(-1.30, 10.0, .345), P(-1.40, 10.0, .345), P(-1.52, 10.02, .345), P(-1.60, 10.05, .345), P(-1.63, 10.15, .30), P(-1.64, 10.2, .26)], .004, 'tube', { clamps: 3 }); }
     }
+    /* ============================== THRUST REVERSER CONTROL UNITS ============================== */
+    /* p.344-345: the ICU in the aft pylon behind access panels on both sides, the DCU in the forward pylon above the core. They are
+       inside the pylon, so they show with the nacelle ghosted or off */
+    PW.part('tras-control', { label: 'Thrust reverser control units (ICU, DCU)', explode: [0, .35, 0], src: 'p.326-345',
+      info: 'The thrust reverser actuation system is electrically controlled and hydraulically worked. The EEC opens the isolation control unit to let aircraft hydraulic pressure into the system and the directional control unit to unlock, deploy, stow and lock the sleeves; the CDCs work the track lock valves. Thrust reverse needs the aircraft on the ground (weight on wheels or wheel spin-up), no manual inhibit, no reverser fault and the engine running. Once the sleeves pass 85 percent of travel the thrust levers can go to maximum reverse; an inadvertent deploy brings the engine to idle.' });
+    PW.part('tras-icu', { parent: 'tras-control', label: 'Isolation control unit (ICU)', src: 'p.334-345',
+      info: 'In the aft pylon, reached through access panels on both sides of the pylon. It isolates the thrust reverser actuation system from the aircraft hydraulic system until either EEC channel energizes its dual-channel solenoid, which works a pilot valve onto the isolation spool valve.\n\nThe manual inhibit lever on its side stops the isolation spool valve from operating: it is used to dispatch with a reverser inoperative and to make the system safe for maintenance, it is locked by the inhibit pin stored on the ICU, and dual-channel proximity sensors report its position.' });
+    { const f = Kt.frame('tras-icu', -2.9, 12, 1.25);
+      Kt.box('tras-icu', f, [0, 0, 0], [.16, .1, .12], 'castAl', { round: .012 }); Kt.box('tras-icu', f, [-.03, .065, 0], [.08, .03, .14], 'castAl', { round: .006 });   // body and mounting flange
+      Kt.cyl('tras-icu', f, [.11, .02, -.02], 'x', .022, .07, 'castAl'); Kt.connector('tras-icu', f, [.145, .02, -.02], 'x', .011, { lead: 'y' });   // dual-channel solenoid
+      for (const s of [-1, 1]) Kt.fitting('tras-icu', f, [s * .035, -.05, -.02], '-y', .012);                                    // pressure in, return
+      Kt.box('tras-icu', f, [-.03, -.01, .068], [.03, .12, .008], 'steel', { round: .004, mat: { color: '#c0262b', metalness: .2, roughness: .5 } });   // manual inhibit lever
+      Kt.cyl('tras-icu', f, [.02, .03, .07], 'z', .0055, .03, 'steel'); Kt.rod('tras-icu', f, [.02, .03, .085], [-.01, .045, .07], .0012, 'steel');   // inhibit pin on its lanyard
+      for (const y of [-.02, .02]) { Kt.cyl('tras-icu', f, [-.07, y, .065], 'z', .007, .02, 'steel'); }                       // inhibit proximity sensors
+      Kt.plate('tras-icu', f, [.03, .02, .0605], 'z', 'y', .05, .03); }
+    PW.part('tras-dcu', { parent: 'tras-control', label: 'Directional control unit (DCU)', src: 'p.334-345',
+      info: 'In the forward pylon, above the engine core. Its dual-channel solenoid, worked by either EEC channel, operates the directional control valve onto the directional spool valve, which sends hydraulic pressure to the actuators and the track lock valves to unlock, deploy, stow and lock the sleeves. A dual-channel pressure proximity sensor tells each EEC channel when there is pressure at the ICU outlet.' });
+    { const f = Kt.frame('tras-dcu', -1.35, 12, 1.12);
+      Kt.box('tras-dcu', f, [0, 0, 0], [.22, .07, .08], 'castAl', { round: .01 }); Kt.cyl('tras-dcu', f, [.13, 0, 0], 'x', .02, .05, 'castAl'); Kt.connector('tras-dcu', f, [.16, 0, 0], 'x', .01, { lead: 'y' });
+      for (const z of [-.015, .015]) Kt.connector('tras-dcu', f, [-.06, .035, z], 'y', .007, { lead: '-x' });                 // pressure proximity sensor, two channels
+      for (const xr of [-.08, -.03, .02, .07]) Kt.fitting('tras-dcu', f, [xr, -.035, 0], '-y', .01);                          // pressure, return, deploy, stow
+      Kt.plate('tras-dcu', f, [0, 0, .0405], 'z', 'y', .05, .03); }
+
     /* ============================== BORESCOPE PORTS ============================== */
     /* p.70-73: every port with its clock position and what it looks at. Each sits in the gap behind the first row it names, as a plugged
        boss on the case; radii from the model's case surfaces */

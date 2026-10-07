@@ -129,7 +129,7 @@
 
     /* ============================== THRUST REVERSER DOORS ============================== */
     PW.part('thrust-reverser', { parent: 'nacelle', label: 'Thrust reverser doors', src: 'p.18-43, p.324-379; TTM ch. 78',
-      info: 'Two C-duct doors, left and right, hinged at the pylon hinge beam and latched together at the bottom. Each door carries its translating sleeve, fixed cascade segments, blocker doors and three hydraulic actuators, and its half of the inner fixed structure (IFS) that encloses the core.\n\nIn reverse the sleeves move aft to uncover the cascades and the blocker doors swing into the fan duct, turning the fan air forward. The core stream is not reversed. The doors are opened for core access with the power door opening system or a hand pump; an inoperative reverser can be locked out for dispatch under the MEL.' });
+      info: 'Two C-duct doors, left and right, hinged at the pylon hinge beam and latched together at the bottom. Each carries its translating sleeve, eight carbon fibre cascade boxes, five blocker doors, two hydraulic actuators on the torque box at its forward end, and its half of the inner fixed structure (IFS) that encloses the core.\n\nThe actuation is electrically controlled and hydraulically worked (from hydraulic system No. 1 on the left engine). The EEC opens the isolation control unit (ICU) in the aft pylon and the directional control unit (DCU) in the forward pylon; the CDCs open the track lock valves. In reverse the sleeves move aft to uncover the cascades and the blocker doors swing into the fan duct, turning the fan air forward; the core stream is not reversed. A white REV icon shows in transit, green when deployed, amber for a fault.\n\nFor dispatch with a reverser inoperative, and for safety during maintenance, the manual inhibit lever on the ICU isolates the system and is locked by the inhibit pin stored on the ICU.' });
     const yhT = 1.0;
     /* the IFS outer line (inner wall of the fan duct) and the duct's outer wall (inside the T/R door) */
     const bi = D.GEN.lines.bypassInner, xI0 = bi[bi.length - 1][0], rI0 = bi[bi.length - 1][1];
@@ -163,7 +163,7 @@
       /* translating sleeve (ZS 772 to 794): its own group so it can slide aft; blocker doors in its inner wall */
       const sid = `${pid}-sleeve`;
       PW.part(sid, { parent: pid, label: `${side === 'left' ? 'Left' : 'Right'} translating sleeve`, attach: hinge, src: 'p.18-19, p.332-337; TTM ch. 78',
-        info: 'The outer aft cowl of the door. Three hydraulic actuators (the upper one locking, with feedback) move it aft to uncover the cascades; a flexible shaft keeps them in step and a track lock holds it stowed. Its inner wall carries the blocker doors.' });
+        info: 'The outer aft cowl of the door. Two hydraulic actuators move it aft to uncover the cascades: the locking feedback actuator in the upper section, whose LVDT reports its position, and the locking actuator in the lower section, kept in step by a flexible drive shaft. A track lock unit on the latch beam holds it stowed. Its inner wall carries five composite blocker doors that the drag links pull into the fan duct as it moves aft; the upper and lower blocker doors are unique to their positions.' });
       const sl = PW.parts.get(sid).obj; S.sleeves.push(sl);
       const so = []; for (let i = 0; i <= 10; i++) { const xx = xSF + (xTE - xSF) * i / 10; so.push([xx, rOut(xx)]); }
       const si = so.map(([xx, r]) => [xx, Math.min(r - .015, rDuct(xx) + .055 * (1 - Math.pow((xx - xSF) / (xTE - xSF), 1.6)))]);
@@ -250,9 +250,34 @@
         PW.kit.box('tr-latch-access-door', f, [0, .0002, 0], [.326, .003, .146], 'darkBox', { round: .002 }); PW.kit.box('tr-latch-access-door', f, [0, .0016, 0], [.32, .004, .14], 'nacellePaint', { round: .008 });
         for (const s of [-1, 1]) PW.kit.box('tr-latch-access-door', f, [s * .12, .0036, .05], [.026, .002, .016], 'greyPrimer', { round: .003 }); }
       { const a = sg > 0 ? t0 : t0 + tl, m = new THREE.Mesh(G.roundedBox(1.5, .05, .04, .01)); m.position.copy(G.onRing(-1.75, yhT + .03, a)); m.rotation.x = a; PW.add(pid, m, 'nickel', { solid: true, into: hinge }); }
-      // three actuators on the forward frame: upper locking actuator and two lower ones, with the flexible synchronising shaft
-      for (const h of [1.6, 3.0, 4.4]) { const a = sg > 0 ? G.clock(h) : G.clock(12 - h), act = G.rod(G.onRing(xJ2 - .07, 1.04, a), G.onRing(xSF - .02, 1.04, a), .02);
-        PW.add(pid, act, 'steel', { into: hinge }); }
+      /* actuation (p.334-351, p.347): on the torque box at the forward end of the door, the locking feedback actuator in the upper section
+         and the locking actuator in the lower one, joined round the ring by the flexible drive shaft and the deploy tube, with the stow,
+         deploy and return lines coming down from the hinge beam. The rods belong to the sleeve and slide with it (0.48 m stroke, still
+         inside the bodies at full deploy). The track lock unit sits on the latch beam at the sleeve's forward end, its valve nearby */
+      { const Kt = PW.kit, aid = `${pid}-actuators`, xm = xJ2 - .075, ra = 1.06, hU = sg > 0 ? 1.5 : 10.5, hL = sg > 0 ? 4.5 : 7.5, hBot = (sg > 0 ? t0 + tl : t0) / (Math.PI / 6);
+        PW.part(aid, { parent: pid, attach: hinge, label: `${side === 'left' ? 'Left' : 'Right'} sleeve actuators, drive shaft and track lock`, src: 'p.326-351',
+          info: 'Two hydraulic jackscrew actuators move this door\'s translating sleeve. The locking feedback actuator in the upper section carries the LVDT on its forward end that reports sleeve position to the EEC; the locking actuator in the lower section carries the manual drive unit. Each has an internal lock released by hydraulic pressure, a proximity sensor on the lock and a manual lock lever. The flexible drive shaft keeps the two in step and the deploy tube feeds the locking actuator.\n\nThe track lock unit on the latch beam, worked by its track lock valve, locks the stowed sleeve: with the actuator locks it gives mechanical protection against an inadvertent deploy. To move a sleeve by hand, release the manual locks and turn the manual drive unit; its torque limiter protects the actuators.' });
+        for (const [h, feedback] of [[hU, true], [hL, false]]) {
+          const f = Kt.frame(aid, xm, h, ra);
+          Kt.box(aid, f, [.02, 0, 0], [.05, .075, .075], 'steel', { round: .008 });                                              // gimbal mount on the torque box
+          Kt.cyl(aid, f, [-.27, 0, 0], 'x', .033, .5, 'steel', { edge: .006 }); Kt.cyl(aid, f, [-.525, 0, 0], 'x', .027, .03, 'steel');   // body and rod gland
+          for (const xr of [-.12, -.36]) Kt.tube(aid, f, [xr, 0, 0], 'x', .033, .037, .012, 'steel');
+          Kt.cyl(aid, f, [-.1, .038, 0], 'y', .009, .02, 'steel'); Kt.connector(aid, f, [-.1, .048, 0], 'y', .007, { lead: 'x' });    // lock proximity sensor
+          Kt.box(aid, f, [-.18, .036, .02], [.05, .01, .012], 'steel', { round: .003, mat: { color: '#c0262b', metalness: .2, roughness: .5 } });   // manual lock lever
+          for (const xr of [-.06, -.44]) Kt.fitting(aid, f, [xr, .028, -.03], 'y', .008);                                           // stow and deploy ports
+          if (feedback) { Kt.cyl(aid, f, [.085, 0, 0], 'x', .016, .1, 'steel'); Kt.connector(aid, f, [.135, 0, 0], 'x', .009, { lead: 'y' }); }   // LVDT
+          else { Kt.cyl(aid, f, [.035, .04, 0], 'y', .015, .03, 'steel'); Kt.hex(aid, f, [.035, .06, 0], 'y', .011, .01, 'steel'); Kt.cyl(aid, f, [.035, .068, 0], 'y', .008, .006, 'capBlack'); }   // manual drive unit
+          const g = Kt.frame(sid, xm, h, ra); Kt.cyl(sid, g, [-.49, 0, 0], 'x', .016, .94, 'steel'); Kt.box(sid, g, [-.96, 0, 0], [.04, .05, .05], 'steel', { round: .006 }); }   // rod and rod end on the sleeve
+        const arc = (h0, h1, r, dx) => { const pts = [], n = Math.ceil(Math.abs(h1 - h0) / .2); for (let i = 0; i <= n; i++) pts.push(G.onRing(xm + dx, r, G.clock(h0 + (h1 - h0) * i / n))); return pts; };
+        const tube = (pts, r, mat) => { const tg = G.tube(pts, r, { radial: 8, tension: .3 }); PW.add(aid, tg, mat).userData.isLine = true; };
+        tube(arc(hU, hL, ra + .048, -.002), .009, 'blackHose'); tube(arc(hU, hL, ra + .03, -.03), .006, 'tube');                // flexible drive shaft and deploy tube
+        for (const [k, dr] of [[0, .0], [1, .018], [2, .036]]) tube(arc(sg > 0 ? .35 : 11.65, hU, ra + .02 + dr, -.06 - k * .012), .006, 'tube');   // stow, deploy and return lines from the hinge beam
+        const ft = Kt.frame(aid, -1.93, hBot - sg * .1, 1.08);                                                                  // track lock unit on the latch beam
+        Kt.box(aid, ft, [0, 0, 0], [.09, .05, .045], 'steel', { round: .006 }); Kt.cyl(aid, ft, [-.06, 0, 0], 'x', .008, .03, 'steel');
+        Kt.cyl(aid, ft, [.02, .035, 0], 'y', .009, .02, 'steel'); Kt.connector(aid, ft, [.02, .045, 0], 'y', .007, { lead: 'x' });
+        const fv = Kt.frame(aid, -1.72, hBot - sg * .18, 1.07);                                                                 // track lock valve
+        Kt.box(aid, fv, [0, 0, 0], [.06, .04, .04], 'castAl', { round: .005 }); Kt.cyl(aid, fv, [0, .03, 0], 'y', .012, .025, 'darkBox'); Kt.connector(aid, fv, [0, .043, 0], 'y', .007, { lead: 'x' });
+        for (const z of [-.012, .012]) Kt.fitting(aid, fv, [-.03, 0, z], '-x', .006); }
     }
     /* IFS features: oil tank access door (right, 3 o'clock), AOC window and pressure-relief door (left, 9 o'clock), ACC scoop (right, 1:30) */
     const ifsPanel = (pid, parentDoor, label, info, xx, h, l, w, mat) => { PW.part(pid, { parent: parentDoor, label, info, src: 'p.20-23', attach: PW.parts.get(parentDoor).obj.children[0] }); const a = G.clock(h);
@@ -290,6 +315,9 @@
       PW.add('pylon', G.loft(hsSecs, { n: 32, exp: 8 }), 'bareCowl');
       /* the aft mount fitting: pylon structure from the aft mount's main beam (r 0.64) up into the pylon box (p.45, p.49) */
       { const xa = D.GEN.nacelle.engineAftMountPlane.x, f = PW.kit.frame('pylon', xa, 12, .40); PW.kit.box('pylon', f, [0, .43, 0], [.11, .38, .15], 'greyPrimer', { round: .012 }); }
+      /* the access panels on both sides of the aft pylon over the thrust reverser isolation control unit (p.344) */
+      for (const s of [-1, 1]) { const hw = G.interp(WID, -2.9) / 2, f = PW.kit.frame('pylon', -2.9, 12, 1.25);
+        PW.kit.box('pylon', f, [0, 0, s * (hw + .0005)], [.266, .206, .003], 'darkBox', { round: .002 }); PW.kit.box('pylon', f, [0, 0, s * (hw + .0018)], [.26, .2, .003], 'whitePaint', { round: .012 }); }
     }
 
     /* the nacelle animation: hinges, sleeves and blocker doors follow the toolbar state */
