@@ -44,6 +44,7 @@
       const big = kind === 'duct' || r > .03, band = Math.min(r * 1.6, big ? .022 : .016);
       PW.add(pid, G.alongCurve(curve, ts, () => new THREE.CylinderGeometry(r + Math.min(.008, r * .35), r + Math.min(.008, r * .35), band, 16)), big ? 'steel' : kind === 'harness' ? 'connector' : 'clampOrange', { shadow: false }).userData.isLine = true; }
     if (o.ends !== false && kind !== 'duct') PW.add(pid, G.alongCurve(curve, [0.012, .988], () => new THREE.CylinderGeometry(r * 1.6, r * 1.6, r * 2.2, 6)), kind === 'harness' ? 'connector' : 'steel', { shadow: false }).userData.isLine = true;
+    if (o.bands) PW.add(pid, G.alongCurve(curve, o.bands, () => new THREE.CylinderGeometry(r + .0018, r + .0018, .012, 14)), 'clampOrange', { shadow: false }).userData.isLine = true;   // orange identification sleeves (photos)
     return curve;
   }
 
@@ -391,26 +392,65 @@
       Kt.rod('dsu', g, [-.07, .057, .05], [-.03, .05, .035], .0015, 'steel'); }
     PW.part('harnesses', { label: 'Engine harnesses', explode: [0, .25, 0], src: 'p.102-107; photos',
       info: 'Braided harnesses from the EEC to every sensor, valve and actuator, clipped to the fan case on lime-green stand-offs. WF01 and WF02 bring the aircraft connections down from the pylon to the EEC; W03 and W04 run from the EEC along the bottom of the fan case into the core; WC05 rings the turbine exhaust for the EGT probes and WC08 runs over the HPC (p.105, p.107). Chafe at clamps and connector security are the usual findings.' });
-    /* p.105 / p.107: WF01 and WF02 come down from the pylon interface at 12 o'clock to the EEC; W03 and W04 leave its lower face, run
-       down to 6 o'clock, aft along the bottom of the fan case and up into the core at the gearbox; the core harnesses (WC05 round the
-       turbine exhaust for the EGT probes, WC08 over the HPC) branch from there */
-    /* the harnesses ride 27 mm off the composite case (outer surface r 0.97) in cushioned clamps on lime-green stand-offs (photos) */
-    { const rc = .97, rh = .997, arc = (x0, x1, h0, h1, n) => { const o = []; for (let i = 0; i <= n; i++) { const t = i / n; o.push([x0 + (x1 - x0) * t, h0 + (h1 - h0) * t]); } return o; };
+    /* p.105 (traced at 300 dpi) and the photos. Five connectors on a bracket at 12 o'clock form the aircraft interface. WF02 and WF01
+       come down the left of the case from the first four, held by a ladder of three clamp brackets, and split to the EEC's forward and
+       aft pairs of upper connectors. W04 leaves the forward pair of lower connectors and runs down the forward part of the case to the
+       bottom; W03 leaves the aft pair and runs diagonally down and aft; both go aft along the bottom, lift over the mount ring, cross
+       under the reverser, go down the lower bifurcation at x -1.29 and into the core, where WC08 and WC05 branch off. The PHMU's upper
+       connector ties into WF01 and its lower one into W03; the ignition exciter's power comes off W03 too. The fifth interface
+       connector feeds a run down the right of the case to the door opening powerpack. Orange sleeves identify each run near its
+       connectors. The harnesses ride 27 mm off the composite case (r 0.97) */
+    { const rc = .97, rh = .999, eT = 9.3135, eB = 8.6865, eR = 1.0592;                     // the EEC backshell ends, upper and lower
+      const harn = (pts, r, o) => line('harnesses', pts, r, 'harness', Object.assign({ clamps: 0, ends: false, tension: .3 }, o || {}));
       const standoff = (x, h, d, rr) => { const f = Kt.frame('harnesses', x, h, rc), y = (rr || .014) + .013;
         Kt.box('harnesses', f, [0, .006, 0], [.026, .012, .02], 'lime', { round: .003 }); Kt.box('harnesses', f, [0, y * .55, 0], [.006, y * .8, .016], 'lime', { round: .001 });
         Kt.tube('harnesses', f, [0, y, 0], d, (rr || .014) + .0005, (rr || .014) + .0045, .012, 'lime'); };
-      const runs = [arc(.16, .1, 12, 9.3, 10), arc(.12, .02, 12, 9.3, 10), arc(-.1, -.32, 8.7, 6.05, 10), arc(-.02, -.40, 8.7, 6.0, 10), arc(.0, -.45, 12, 15.0, 12)];   // to and from the EEC's upper and lower connectors
-      for (const xh of runs) { line('harnesses', xh.map(([x, h]) => P(x, h, rh)), .014, 'harness', { clamps: 0, tension: .3 });
-        for (let i = 1; i < xh.length - 1; i += 2) standoff(xh[i][0], xh[i][1], [xh[i + 1][0] - xh[i - 1][0], 0, rh * G.clock(xh[i + 1][1] - xh[i - 1][1])]); }
-      /* W03 and W04 aft along the bottom of the case, lifting over the mount ring, under the reverser, outboard of the ignition cables
-         and the anti-ice duct, down the lower bifurcation at x -1.29 and into the core */
-      for (const [dz, dh] of [[-.03, .05], [.03, -.05]]) { const hz = 6 - dz / rh * 6 / Math.PI;                         // world z offset dz at 6 o'clock as a clock offset
-        line('harnesses', [P(-.36, hz, rh + .002), P(-.58, hz, rh + .002), P(-.66, hz, 1.025), P(-.74, 6 + dh * .5, 1.05), P(-.82, 6 + dh, 1.09), P(-1.20, 6 + dh, 1.09), P(-1.28, 6 + dh, .95), P(-1.29, 6 + dh, .75), P(-1.30, 6 + dh * .8, .58), P(-1.33, 6.3 + dh * .5, .50), P(-1.35, 6.9, .42)], .016, 'harness', { clamps: 5 });
-        standoff(-.47, hz, 'x', .016); }
-      for (const [x, h] of [[.12, 12], [.08, 11.85]]) { const c = new THREE.Mesh(G.can(.024, .05)); c.geometry.rotateZ(Math.PI / 2); G.aim(c, P(x, h, 1.01), P(0, h, 1).normalize()); PW.add('harnesses', c, 'connector', { solid: true }); }
-      /* WC08 up the left of the core forward of the IFPC, over the layshaft, and over the HPC to the top; WC05 branches from it and runs
-         aft along the top in the pylon gap, over the clearance control manifolds, to the EGT harness ring behind the LPT */
-      line('harnesses', [P(-1.35, 6.9, .42), P(-1.19, 7.4, .38), P(-1.19, 8.2, .375), P(-1.25, 9.5, .325), P(-1.4, 11.2, .31), P(-1.68, 12.15, .31)], .012, 'harness', { clamps: 4 });
+      /* stand-offs at every other point of a run's on-case stretch (points given as [x, clock]) */
+      const stands = (xh, rr) => { for (let i = 1; i < xh.length - 1; i += 2) standoff(xh[i][0], xh[i][1], [xh[i + 1][0] - xh[i - 1][0], 0, rh * G.clock(xh[i + 1][1] - xh[i - 1][1])], rr); };
+      const onCase = xh => xh.map(([x, h]) => P(x, h, rh));
+      /* the aircraft interface: five connectors on a bracket at 12 o'clock, backshells turned down the sides */
+      { const f = Kt.frame('harnesses', .02, 12, rc); Kt.box('harnesses', f, [-.005, .004, 0], [.29, .008, .05], 'lime', { round: .003 });
+        for (const xi of [.11, .05, 0, -.06]) Kt.connector('harnesses', f, [xi, .008, 0], 'y', .014, { lead: '-z' });
+        Kt.connector('harnesses', f, [-.12, .008, 0], 'y', .014, { lead: 'z' }); }
+      const iT = 11.952, iR = 1.005;                                                                   // their backshell ends
+      /* WF02 and WF01: legs from the interface, the trunks down the case, legs into the EEC */
+      for (const [xa, xb, xt, xe1, xe2] of [[.13, .07, .10, .10, .02], [.02, -.04, -.10, -.10, -.18]]) {
+        for (const xi of [xa, xb]) harn([P(xi, iT, iR), P(xi + (xt - xi) * .2, 11.9, 1.0), P(xi + (xt - xi) * .7, 11.83, rh), P(xt, 11.78, rh)], .012, { bands: [.35] });
+        const trunk = [[xt, 11.78], [xt, 11.4], [xt, 11.0], [xt, 10.6], [xt, 10.2], [xt, 9.85]]; harn(onCase(trunk), .016);
+        for (const xe of [xe1, xe2]) harn([P(xt, 9.85, rh), P(xt + (xe - xt) * .6, 9.6, 1.01), P(xe, 9.42, 1.04), P(xe, eT, eR)], .012, { bands: [.7] }); }
+      /* the ladder: three lime-green brackets across both trunks, a cushioned loop round each */
+      for (const h of [11.2, 10.6, 10.0]) { const f = Kt.frame('harnesses', 0, h, rc);
+        Kt.box('harnesses', f, [0, .008, 0], [.27, .006, .018], 'lime', { round: .002 }); for (const s of [-1, 1]) Kt.box('harnesses', f, [s * .125, .0025, 0], [.02, .005, .024], 'lime', { round: .001 });
+        for (const xt of [.10, -.10]) Kt.tube('harnesses', f, [xt, .029, 0], 'z', .0165, .0205, .014, 'lime'); }
+      /* W04 from the forward lower pair, W03 from the aft lower pair; on the bottom W04 runs right of 6 o'clock and W03 left of it */
+      const w04 = [[.065, 8.15], [.06, 7.7], [.04, 7.2], [.0, 6.75], [-.06, 6.4], [-.15, 6.12], [-.28, 5.96], [-.45, 5.94], [-.58, 5.94]];
+      const w03 = [[-.135, 8.2], [-.19, 7.9], [-.25, 7.55], [-.31, 7.15], [-.37, 6.75], [-.43, 6.4], [-.49, 6.15], [-.55, 6.06], [-.6, 6.06]];
+      for (const [xe, xm, hb] of [[.10, .065, 8.15], [.02, .065, 8.15], [-.10, -.135, 8.2], [-.18, -.135, 8.2]])
+        harn([P(xe, eB, eR), P(xe, 8.58, 1.04), P(xe + (xm - xe) * .5, 8.4, 1.01), P(xm, hb, rh)], .012, { bands: [.3] });
+      for (const [run, dh] of [[w04, -.05], [w03, .05]]) { const h6 = 6 + dh * 1.15;
+        harn(onCase(run).concat([P(-.66, h6, 1.025), P(-.74, 6 + dh * .5, 1.05), P(-.82, 6 + dh, 1.09), P(-1.20, 6 + dh, 1.09), P(-1.28, 6 + dh, .95), P(-1.29, 6 + dh, .75), P(-1.30, 6 + dh * .8, .58), P(-1.33, 6.3 + dh * .5, .50), P(-1.35, 6.9, .42)]), .016, { clamps: 4 });
+        stands(run, .016); }
+      /* the PHMU's two connectors (backshell ends at 9.277 and 8.723 o'clock, r 1.056), the exciter's power lead */
+      harn([P(-.50, 9.277, 1.056), P(-.50, 9.42, 1.03), P(-.45, 9.75, 1.0), P(-.33, 10.05, rh), P(-.2, 10.25, rh), P(-.115, 10.3, rh)], .01, { bands: [.12] });
+      harn([P(-.50, 8.723, 1.056), P(-.49, 8.58, 1.03), P(-.42, 8.36, 1.0), P(-.33, 8.25, rh), P(-.24, 8.05, rh), P(-.19, 7.93, rh)], .01, { bands: [.12] });
+      /* down the right of the case to the door opening powerpack's motor connector */
+      { const run = []; for (let i = 0; i <= 10; i++) run.push([-.12 - .28 * i / 10, 12.2 + 1.8 * i / 10]);
+        harn([P(-.10, 12.048, iR), P(-.115, 12.12, 1.0)].concat(onCase(run), [P(-.44, 14.06, 1.02), P(-.464, 14.094, 1.041)]), .012, { bands: [.04, .97] }); stands(run); }
+      /* the P2/T2 probe harness from the inlet's disconnect at flange A to WF02 (the inlet side is built with the probe) */
+      { const g = Kt.frame('harnesses', .33, 11.1, rc); Kt.cyl('harnesses', g, [0, .046, 0], 'x', .011, .02, 'connector', { edge: .002 }); }
+      harn([P(.32, 11.1, 1.016), P(.29, 11.1, 1.01), P(.22, 11.15, rh), P(.14, 11.25, rh), P(.105, 11.3, rh)], .008, { bands: [.1] });
+      /* the left core harness from the junction at the bottom (p.105): up the left forward of the IFPC, over the layshaft, past the Pb
+         sensor and over the HPC to the top; WC05 branches from it and runs aft along the top in the pylon gap, over the clearance control
+         manifolds, to the EGT probe junctions behind the LPT */
+      line('harnesses', [P(-1.35, 6.9, .42), P(-1.19, 7.4, .38), P(-1.19, 8.2, .375), P(-1.25, 9.5, .325), P(-1.30, 10.1, .325), P(-1.35, 10.65, .32), P(-1.4, 11.2, .315), P(-1.47, 11.38, .312), P(-1.58, 11.6, .31), P(-1.65, 11.9, .31), P(-1.68, 12.15, .31)], .012, 'harness', { clamps: 4 });
+      line('harnesses', [P(-1.0606, 10.16, .413), P(-1.09, 10.1, .385), P(-1.13, 10.0, .375), P(-1.18, 9.8, .345), P(-1.22, 9.62, .33), P(-1.245, 9.55, .326)], .006, 'harness', { clamps: 0, ends: false });   // Pb sensor
+      /* WC08 (p.107) up the right of the core along the CIC fire seal, under the 2.5 bleed and LPC vane actuators and behind the N1
+         probe, to 1 o'clock; branches to the N1 probe's two connectors, the P2.5/T2.5 probe and, aft over the HPC, the T3 probe */
+      line('harnesses', [P(-1.35, 6.9, .42), P(-1.3, 6.7, .40), P(-1.2, 6.3, .36), P(-1.13, 6.0, .345), P(-1.115, 5.5, .34), P(-1.115, 5.0, .34), P(-1.115, 4.5, .34), P(-1.115, 4.0, .34),
+        P(-1.115, 3.5, .34), P(-1.115, 3.0, .34), P(-1.115, 2.5, .34), P(-1.115, 2.0, .34), P(-1.115, 1.5, .34), P(-1.115, 1.2, .34)], .011, 'harness', { clamps: 5, ends: false, bands: [.03] });
+      for (const dx of [-.009, .009]) line('harnesses', [P(-1.065 + dx, 4.8, .41), P(-1.09 + dx * .5, 4.86, .38), P(-1.112, 4.92, .345)], .005, 'harness', { clamps: 0, ends: false });   // N1 probe
+      line('harnesses', [P(-1.0355, 1.19, .486), P(-1.05, 1.22, .47), P(-1.09, 1.22, .40), P(-1.115, 1.2, .35)], .006, 'harness', { clamps: 0, ends: false });                  // P2.5/T2.5 probe
+      line('harnesses', [P(-1.115, 1.2, .34), P(-1.2, 1.1, .33), P(-1.35, 1.05, .327), P(-1.5, 1.02, .31), P(-1.6, 1.0, .295), P(-1.645, 1.0, .287)], .007, 'harness', { clamps: 3, ends: false });   // T3 probe
       line('harnesses', [P(-1.66, 12.1, .32), P(-1.75, 12.05, .37), P(-1.95, 12.1, .42), P(-2.13, 12.15, .47), P(-2.24, 12.08, .555), P(-2.40, 12.0, .56), P(-2.45, 12.0, .52), P(-2.465, 12.0, .478)], .012, 'harness', { clamps: 4 });
       /* WC05 then rings the LPT's aft flange both ways to the EGT probe junctions at 3 and 9 o'clock (p.107, p.129) */
       for (const [h0, h1] of [[12, 15], [12, 9]]) { const pts = []; for (let i = 0; i <= 15; i++) pts.push(P(-2.465, h0 + (h1 - h0) * i / 15, .474));
@@ -433,7 +473,7 @@
       Kt.connector('ignition', f, [.12, .072, 0], 'x', .012, { lead: 'z', boot: true });                                     // aircraft power in
       Kt.label('ignition', f, [-.045, .1172, -.012], 'y', 'z', .075, .036, 'hv'); Kt.label('ignition', f, [-.098, .1172, .032], 'y', 'z', .022, .018, 'caution');
       Kt.plate('ignition', f, [.055, .1172, .01], 'y', 'z', .05, .03);
-      line('ignition', [P(-.367, 8.057, 1.0405), P(-.345, 8.12, 1.022), P(-.29, 8.25, 1.0), P(-.20, 8.4, .997), P(-.115, 8.52, .997)], .007, 'harness', { clamps: 0, ends: false });   // into W03
+      line('ignition', [P(-.367, 8.057, 1.0405), P(-.345, 8.12, 1.022), P(-.30, 8.1, 1.0), P(-.24, 7.95, .999), P(-.21, 7.8, .999)], .007, 'harness', { clamps: 0, ends: false });   // power in, off W03
       PW.part('igniters', { parent: 'ignition', label: 'Igniter plugs (2)', src: 'p.314, p.318-319',
         info: 'Two igniter plugs through the diffuser case into the combustion chamber: A at 4 o\'clock, B at 5 o\'clock. Each sits in a mounting boss over classified spacers that set its immersion depth; the boss and spacers stay on the case when a plug is changed. The cables are interchangeable, with ceramic-insulated terminals at the plug end.' });
       /* p.314-315: the cables run aft along the bottom of the fan case and under the reverser, down the lower bifurcation at x -1.2 and
@@ -502,9 +542,31 @@
         Kt.cyl('vib-sensors', f, [0, .009, .019], 'z', .012, .012, 'steel', { edge: .002 }); Kt.cyl('vib-sensors', f, [0, .021, 0], 'y', .009, .014, 'steel');
         Kt.connector('vib-sensors', f, [0, .028, 0], 'y', .0075, { lead: '-x' });
         line('vib-sensors', [P(xa - .014, 3.0, rCase(xa) + .042), P(xa - .03, 3.04, rCase(xa) + .036), P(-2.462, 3.12, .476)], .005, 'harness', { clamps: 0, ends: false }); }
-      box('sensors', -.94, 2.5, .44, .05, .07, .05, 'steel'); can('sensors', -.94, 2.5, .40, .012, .06, 'steel', { rot: [G.clock(2.5), 0, Math.PI / 2] });   // P2.5/T2.5 probe on the CIC (p.107)
-      box('sensors', -1.74, 2.6, .33, .06, .04, .07, 'steel');                                                                                  // T3 probe on the diffuser case (p.107)
-      can('sensors', -1.35, 10.6, .36, .016, .09, 'steel', { rot: [G.clock(10.6), 0, Math.PI / 2] });                                          // burner pressure (PB) sensor (p.105)
+      /* p.104-107: P2.5/T2.5 on the CIC at 1 o'clock (it was at 2:30), T3 on the diffuser case forward of the fuel nozzles at about
+         1 o'clock (it was at 2:36 behind them), Pb on the CIC fire seal at 10 o'clock (it was on the HPC at 10:36) */
+      PW.part('p25-probe', { parent: 'sensors', label: 'P2.5/T2.5 probe', src: 'p.102, p.106-107',
+        info: 'Pressure and temperature probe at the LPC exit (station 2.5), on the compressor intermediate case at 1 o\'clock. The pressure probe is excited by the PHMU and the temperature sensor by EEC channel A (channel B gets T2.5 over the CAN bus). Both are used to monitor LPC and HPC health.' });
+      { const f = Kt.frame('p25-probe', -1.0, 1.0, .455, { rz: .88 });                                                        // normal to the CIC's conical aft face
+        Kt.box('p25-probe', f, [0, .004, 0], [.038, .008, .03], 'steel', { round: .004 }); for (const s of [-1, 1]) Kt.hex('p25-probe', f, [s * .014, .0095, 0], 'y', .0035, .003, 'steel');
+        Kt.cyl('p25-probe', f, [0, .019, 0], 'y', .011, .022, 'steel'); Kt.box('p25-probe', f, [0, .043, 0], [.034, .03, .034], 'steel', { round: .004 });
+        Kt.connector('p25-probe', f, [0, .046, .017], 'z', .0085, { lead: 'z' }); Kt.cyl('p25-probe', f, [0, -.035, 0], 'y', .006, .07, 'nickel'); }
+      PW.part('t3-probe', { parent: 'sensors', label: 'T3 probe', src: 'p.102, p.106-107',
+        info: 'Thermocouple at the HPC exit, on the diffuser case forward of the fuel nozzles at about 1 o\'clock. A single output to EEC channel B, used to assess engine performance and compressor health.' });
+      { const f = Kt.frame('t3-probe', -1.655, 1.0, .245);                                                                      // p.107: two terminal posts on a block, a flange with two slotted ears
+        Kt.box('t3-probe', f, [0, .003, 0], [.03, .006, .072], 'steel', { round: .004 }); for (const s of [-1, 1]) Kt.hex('t3-probe', f, [0, .0075, s * .03], 'y', .0035, .003, 'steel');
+        Kt.box('t3-probe', f, [0, .016, 0], [.028, .02, .046], 'steel', { round: .003 });
+        for (const s of [-1, 1]) { Kt.cyl('t3-probe', f, [0, .032, s * .011], 'y', .0055, .014, 'steel'); Kt.hex('t3-probe', f, [0, .036, s * .011], 'y', .0065, .004, 'steel'); }
+        Kt.cyl('t3-probe', f, [0, -.03, 0], 'y', .004, .06, 'nickel'); }
+      PW.part('pb-sensor', { parent: 'sensors', label: 'Burner pressure (Pb) sensor', src: 'p.102, p.104-105',
+        info: 'Dual channel pressure sensor on the CIC fire seal at 10 o\'clock, fed by a sense line from the diffuser case. Each channel has a low and a high range transducer, excited by the EEC. Pb is used for fuel scheduling, stall detection, the autostart logic and shaft shear detection.' });
+      { const f = Kt.frame('pb-sensor', -1.04, 10, .4066, { rz: .88 });                                                        // p.105: a body with a bolted ear, the connector on its side, the elbow to the sense line
+        Kt.box('pb-sensor', f, [0, .006, 0], [.05, .008, .03], 'steel', { round: .003 });
+        Kt.cyl('pb-sensor', f, [0, .02, 0], 'x', .016, .06, 'steel', { edge: .003 });
+        Kt.box('pb-sensor', f, [.038, .02, 0], [.016, .006, .024], 'steel', { round: .008 }); Kt.hex('pb-sensor', f, [.041, .025, 0], 'y', .0045, .004, 'steel');
+        Kt.connector('pb-sensor', f, [.008, .02, .018], 'z', .009, { lead: '-x' });
+        Kt.cyl('pb-sensor', f, [-.035, .02, 0], 'x', .007, .012, 'steel'); Kt.hex('pb-sensor', f, [-.044, .02, 0], 'x', .0075, .006, 'steel');
+        /* the sense line aft along 10 o'clock, between the core harness and the coolers, to a boss on the diffuser case */
+        line('pb-sensor', [P(-1.084, 10, .385), P(-1.12, 10.0, .36), P(-1.20, 10.0, .345), P(-1.30, 10.0, .345), P(-1.40, 10.0, .345), P(-1.52, 10.02, .345), P(-1.60, 10.05, .345), P(-1.63, 10.15, .30), P(-1.64, 10.2, .26)], .004, 'tube', { clamps: 3 }); }
     }
     PW.part('phmu', { label: 'Prognostics and health monitoring unit (PHMU)', explode: [0, .3, .3], src: 'p.92-95, p.134-139; photos',
       info: 'Grey box on the left of the fan case at 9 o\'clock, immediately aft of the EEC, with its own THIS SIDE UP placard. It takes the two vibration sensors and the oil debris monitor, and N1, N2 and fan speed from the EEC over the CAN bus, works out fan, N1 and N2 vibration for EICAS, and records the data for trend monitoring and the fan trim balance solutions. Powered from DC BUS 1.' });

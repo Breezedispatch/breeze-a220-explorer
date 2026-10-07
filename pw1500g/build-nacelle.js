@@ -69,14 +69,30 @@
       // features on the outer barrel (clock positions ALF; p.10-11)
       const onBarrel = (pid, label, info, xx, h, w, l, mat) => { PW.part(pid, { parent: 'inlet', label, info, src: 'p.10-11' }); const a = G.clock(h);
         const m = new THREE.Mesh(G.roundedBox(l, .006, w, .01)); m.position.copy(G.onRing(xx, rOut(xx) + .001, a)); m.rotation.x = a; PW.add(pid, m, 'nacellePaint', { mat: { color: '#123f97' }, solid: true }); return m; };
-      onBarrel('inlet-p2t2-panel', 'P2T2 probe access panel', 'Access panel at 11 o\'clock over the P2T2 probe, its sense line and harness.', xHL - .45, 11, .16, .22);
+      onBarrel('inlet-p2t2-panel', 'P2/T2 probe access panel', 'Access panel at 11 o\'clock over the P2/T2 probe, its harness and its heater lead.', xHL - .45, 11, .16, .22);
       onBarrel('inlet-cai-panel', 'Cowl anti-ice duct access panel', 'Access panel at 5 o\'clock over the cowl anti-ice duct where it enters the inlet.', xJ1 + .25, 5, .16, .24);
       { PW.part('inlet-naca', { parent: 'inlet', label: 'NACA scoop', src: 'p.10', info: 'Flush NACA-type air scoop at 1 o\'clock near the front of the outer barrel, ventilating the space inside the inlet cowl.' });
         const a = G.clock(1), xx = xHL - .32, m = new THREE.Mesh(G.roundedBox(.16, .02, .07, .008)); m.position.copy(G.onRing(xx, rOut(xx) - .006, a)); m.rotation.x = a; PW.add('inlet-naca', m, 'darkBox', { solid: true }); }
       { PW.part('inlet-ai-exhaust', { parent: 'inlet', label: 'Cowl anti-ice exhaust slots', src: 'p.10-11', info: 'Slots at the bottom of the outer barrel, near the 5 o\'clock access panel, where the anti-ice air leaves the lip D-duct.' });
         for (let i = 0; i < 6; i++) { const a = G.clock(5.4) + i * .045, xx = xHL - .26; const m = new THREE.Mesh(G.roundedBox(.11, .006, .016, .004)); m.position.copy(G.onRing(xx, rOut(xx) + .0005, a)); m.rotation.x = a; PW.add('inlet-ai-exhaust', m, 'darkBox', { solid: true }); } }
-      { PW.part('inlet-p2t2', { parent: 'inlet', label: 'P2T2 probe', src: 'p.10, p.102-107', info: 'Fan inlet pressure and temperature probe on the inner barrel at 11 o\'clock. The EEC uses it for thrust setting and the probe is heated.' });
-        const a = G.clock(11), xx = xHL - .45, m = new THREE.Mesh(G.roundedBox(.04, .07, .02, .006)); m.position.copy(G.onRing(xx, G.interp(ib, xx) - .03, a)); m.rotation.x = a; PW.add('inlet-p2t2', m, 'steel', { solid: true }); }
+      { PW.part('inlet-p2t2', { parent: 'inlet', label: 'P2/T2 probe', src: 'p.10, p.102-105',
+          info: 'Inlet probe on the inner barrel at 11 o\'clock, reached through the access panel above it. P2 is the inlet total pressure (single channel, to EEC channel B); T2 the inlet total temperature (dual channel, to both). The EEC uses them to check the aircraft air data and in its place when that is invalid; T2 replaces it on the ground below 60 kt.\n\nThe probe is heated from AC BUS 1 on the left engine and AC BUS 2 on the right, switched on by the EEC above idle below 9 deg C (48 deg F). A heater failure gives the 73 L(R) ENGINE FAULT - P2/T2 HEATER INOP info message. If the probe fails too, the EEC uses defaults: 14.7 psi, 17,000 ft pressure altitude and a synthesized inlet temperature.' });
+        /* p.105: a rectangular four-bolt flange on the back of the acoustic barrel, the sensor body with its signal connector on top and
+           the heater connector on its side, and the sensing strut reaching about 8 cm into the airflow, its foot facing forward. Its
+           harness runs aft inside the inlet, through the aft bulkhead, to a disconnect over flange A */
+        const Kt = PW.kit, xx = xHL - .45, rb = G.interp(ib, xx) + .028, f = Kt.frame('inlet-p2t2', xx, 11, rb);
+        Kt.box('inlet-p2t2', f, [0, .003, 0], [.05, .006, .04], 'steel', { round: .004 });
+        for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) Kt.hex('inlet-p2t2', f, [a * .019, .0075, b * .014], 'y', .0035, .003, 'steel');
+        Kt.cyl('inlet-p2t2', f, [0, .03, 0], 'y', .016, .048, 'steel', { edge: .003 });
+        Kt.connector('inlet-p2t2', f, [0, .054, 0], 'y', .009, { lead: '-x' }); Kt.connector('inlet-p2t2', f, [0, .036, .016], 'z', .008, { lead: '-x' });
+        Kt.box('inlet-p2t2', f, [-.004, -.065, 0], [.022, .09, .012], 'steel', { round: .004 }); Kt.box('inlet-p2t2', f, [.004, -.106, 0], [.032, .012, .014], 'steel', { round: .004 });
+        Kt.cyl('inlet-p2t2', f, [.0205, -.106, 0], 'x', .0045, .004, 'capBlack');                                            // total pressure port
+        const P = (x, h, r) => G.onRing(x, r, G.clock(h)), lead = (pts, r) => { const g = G.tube(pts, r, { radial: 10, tension: .3 }), L = g.userData.curve.getLength(), uv = g.attributes.uv;
+          if (uv) for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * L * 8); PW.add('inlet-p2t2', g, 'harness').userData.isLine = true; };
+        lead([P(xx - .0162, 11, rb + .0711), P(xx - .05, 11.0, rb + .073), P(.62, 11.04, 1.034), P(.5, 11.07, 1.028), P(.42, 11.09, 1.02), P(.37, 11.1, 1.016)], .007);
+        lead([P(xx - .0144, 11.06, rb + .036), P(xx - .04, 11.07, 1.012), P(.66, 11.05, 1.03), P(.62, 11.04, 1.034)], .005);
+        const g = Kt.frame('inlet-p2t2', .35, 11.1, .97); Kt.cyl('inlet-p2t2', g, [0, .046, 0], 'x', .011, .02, 'connector', { edge: .002 });   // inlet half of the disconnect
+        Kt.tube('inlet-p2t2', Kt.frame('inlet-p2t2', xJ1 + .006, 11.09, .97), [0, .05, 0], 'x', .0072, .013, .016, 'rubber'); }   // grommet in the aft bulkhead
     }
 
     /* ============================== FAN COWL DOORS ============================== */
