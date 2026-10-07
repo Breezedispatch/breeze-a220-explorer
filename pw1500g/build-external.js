@@ -47,6 +47,8 @@
     if (o.bands) PW.add(pid, G.alongCurve(curve, o.bands, () => new THREE.CylinderGeometry(r + .0018, r + .0018, .012, 14)), 'clampOrange', { shadow: false }).userData.isLine = true;   // orange identification sleeves (photos)
     return curve;
   }
+  /* where along a routed line (0..1 by length) it reaches station x: for sleeves and boots where it passes through a panel */
+  function tAt(curve, x) { let tb = 0, best = Infinity; for (let i = 0; i <= 400; i++) { const d = Math.abs(curve.getPointAt(i / 400).x - x); if (d < best) { best = d; tb = i / 400; } } return tb; }
 
   function build() {
     if (!D.GEN) return;
@@ -363,8 +365,9 @@
     { /* 6th-stage port on the right of the HPC, the two valves on the right of the core, down into the lower bifurcation at 6 o'clock,
          forward under the reverser to the fan case and along it at 5 o'clock */
       const pts = [P(-1.53, 3.3, .265), P(-1.50, 3.4, .34), P(-1.42, 3.55, .44), P(-1.36, 3.9, .49), P(-1.36, 4.6, .50), P(-1.30, 5.3, .50), P(-1.16, 5.8, .47), P(-1.11, 5.98, .52), P(-1.10, 6.0, .60),
-        P(-1.10, 6.0, .80), P(-1.06, 6.0, .99), P(-.95, 6.0, .995), P(-.86, 5.85, 1.03), P(-.78, 5.55, 1.055), P(-.62, 5.1, 1.035), P(-.55, 5.0, 1.03), P(.20, 5.0, 1.0), P(.34, 5.0, 1.03)];
+        P(-1.08, 6.0, .76), P(-1.05, 6.0, .90), P(-1.03, 6.0, .99), P(-.985, 6.0, 1.02), P(-.93, 5.96, 1.035), P(-.86, 5.85, 1.04), P(-.78, 5.55, 1.055), P(-.62, 5.1, 1.035), P(-.55, 5.0, 1.03), P(.20, 5.0, 1.0), P(.34, 5.0, 1.03)];
       const c = line('cai', pts, .03, 'black', { clamps: 6 });
+      PW.add('cai', G.alongCurve(c, [tAt(c, -.985)], () => new THREE.CylinderGeometry(.036, .036, .07, 20)), 'rubber', { mat: { color: '#9cc6e8' } }).userData.isLine = true;   // light blue sleeve where it passes the bifurcation panel (photo)
       PW.add('cai', G.alongCurve(c, [.085, .16], () => new THREE.CylinderGeometry(.045, .045, .085, 20)), 'steel');                         // the two cowl anti-ice valves, in series
       for (const p of [P(-.62, 5.1, 1.035), P(.20, 5.0, 1.0)]) { const m = new THREE.Mesh(G.can(.042, .09)); m.position.copy(p); PW.add('cai', m, 'clampOrange', { solid: true }); } }
 
@@ -427,9 +430,19 @@
       const w03 = [[-.135, 8.2], [-.19, 7.9], [-.25, 7.55], [-.31, 7.15], [-.37, 6.75], [-.43, 6.4], [-.49, 6.15], [-.55, 6.06], [-.6, 6.06]];
       for (const [xe, xm, hb] of [[.10, .065, 8.15], [.02, .065, 8.15], [-.10, -.135, 8.2], [-.18, -.135, 8.2]])
         harn([P(xe, eB, eR), P(xe, 8.58, 1.04), P(xe + (xm - xe) * .5, 8.4, 1.01), P(xm, hb, rh)], .012, { bands: [.3] });
+      /* over the mount ring, forward through the bifurcation panel at x -0.985 (orange boots), down inside the bifurcation to the core */
       for (const [run, dh] of [[w04, -.05], [w03, .05]]) { const h6 = 6 + dh * 1.15;
-        harn(onCase(run).concat([P(-.66, h6, 1.025), P(-.74, 6 + dh * .5, 1.05), P(-.82, 6 + dh, 1.09), P(-1.20, 6 + dh, 1.09), P(-1.28, 6 + dh, .95), P(-1.29, 6 + dh, .75), P(-1.30, 6 + dh * .8, .58), P(-1.33, 6.3 + dh * .5, .50), P(-1.35, 6.9, .42)]), .016, { clamps: 4 });
+        const c = harn(onCase(run).concat([P(-.66, h6, 1.025), P(-.74, 6 + dh * 1.3, 1.045), P(-.86, 6 + dh * 2, 1.05), P(-.985, 6 + dh * 2.4, 1.05), P(-1.06, 6 + dh * 2.6, 1.04), P(-1.12, 6 + dh * 2.8, 1.0),
+          P(-1.18, 6 + dh * 2.8, .9), P(-1.24, 6 + dh * 2.4, .76), P(-1.29, 6 + dh * 1.6, .62), P(-1.31, 6.08 + dh * .6, .535), P(-1.335, 6.35 + dh * .5, .49), P(-1.35, 6.9, .42)]), .016, { clamps: 4 });
+        PW.add('harnesses', G.alongCurve(c, [tAt(c, -.985)], () => new THREE.CylinderGeometry(.024, .024, .036, 16)), 'silicone').userData.isLine = true;
         stands(run, .016); }
+      /* the fixed panel closing the forward end of the lower bifurcation (photo from below): engine-mounted, so it stays when the
+         reverser doors open */
+      PW.part('bif-panel', { parent: 'harnesses', label: 'Lower bifurcation pass-through panel', src: 'p.24, p.50; photos',
+        info: 'Stainless panel closing the forward end of the lower bifurcation. It is fixed to the engine, so it stays in place when the reverser doors open. The cowl anti-ice duct (with its light blue sleeve), the two ignition cables and the W03 and W04 harnesses pass forward through it from the core to the fan case, the cables and harnesses in orange silicone boots.' });
+      PW.add('bif-panel', G.revolve([[-.982, .955], [-.988, .955], [-.988, 1.075], [-.982, 1.075]], { seg: 10, thetaStart: Math.PI - .115, thetaLength: .23 }), 'nickel');
+      PW.add('bif-panel', G.revolve([[-.978, 1.065], [-.992, 1.065], [-.992, 1.077], [-.978, 1.077]], { seg: 10, thetaStart: Math.PI - .115, thetaLength: .23 }), 'nickel');
+      for (let i = 0; i < 6; i++) { const f = Kt.frame('bif-panel', -.98, 6 + (i - 2.5) * .085, 1.071); Kt.hex('bif-panel', f, [.002, 0, 0], 'x', .004, .004, 'steel'); }
       /* the PHMU's two connectors (backshell ends at 9.277 and 8.723 o'clock, r 1.056), the exciter's power lead */
       harn([P(-.50, 9.277, 1.056), P(-.50, 9.42, 1.03), P(-.45, 9.75, 1.0), P(-.33, 10.05, rh), P(-.2, 10.25, rh), P(-.115, 10.3, rh)], .01, { bands: [.12] });
       harn([P(-.50, 8.723, 1.056), P(-.49, 8.58, 1.03), P(-.42, 8.36, 1.0), P(-.33, 8.25, rh), P(-.24, 8.05, rh), P(-.19, 7.93, rh)], .01, { bands: [.12] });
@@ -480,11 +493,12 @@
          aft under the core, clear of the drain mast, VFG and oil control module, up to the plugs just aft of the fuel nozzles. A keeps to
          the right of B all the way, so they never cross */
       for (const [h0, dh, hp] of [[7.952, -.03, 4.05], [8.048, .03, 5.0]]) {
-        const run = [P(-.673, h0, 1.0403), P(-.70, h0 - .05, 1.04), P(-.735, 7.6 + dh, 1.04), P(-.765, 7.0 + dh, 1.045), P(-.82, 6.3 + dh, 1.055), P(-.90, 6.0 + dh, 1.055), P(-1.12, 6.0 + dh, 1.05), P(-1.19, 6.0 + dh, .95), P(-1.20, 6.0 + dh, .75),
-          P(-1.21, 5.97 + dh, .58), P(-1.30, 5.9 + dh, .52), P(-1.50, 5.85 + dh, .525), P(-1.75, 5.78 + dh, .53)];
+        const run = [P(-.673, h0, 1.0403), P(-.70, h0 - .05, 1.04), P(-.735, 7.6 + dh, 1.04), P(-.765, 7.0 + dh, 1.045), P(-.82, 6.3 + dh, 1.055), P(-.90, 6.0 + 3 * dh, 1.045), P(-.985, 6.0 + 3 * dh, 1.035),
+          P(-1.05, 6.0 + 3 * dh, 1.03), P(-1.11, 6.0 + 3 * dh, .99), P(-1.15, 6.0 + 2.5 * dh, .86), P(-1.18, 6.0 + 2 * dh, .72), P(-1.21, 5.97 + dh, .58), P(-1.30, 5.9 + dh, .52), P(-1.50, 5.85 + dh, .525), P(-1.75, 5.78 + dh, .53)];
         const tail = hp < 4.5 ? [P(-1.82, 5.2, .505), P(-1.82, 4.8, .50), P(-1.815, 4.5, .49), P(-1.79, 4.3, .45), P(-1.80, 4.15, .40), P(-1.81, 4.06, .37), P(-1.81, hp, .347)]
           : [P(-1.80, 5.45, .47), P(-1.81, 5.15, .42), P(-1.81, 5.02, .385), P(-1.81, hp, .347)];
-        line('ignition', run.concat(tail), .0085, 'cable', { clamps: 6, ends: false });
+        const ic = line('ignition', run.concat(tail), .0085, 'cable', { clamps: 6, ends: false });
+        PW.add('ignition', G.alongCurve(ic, [tAt(ic, -.985)], () => new THREE.CylinderGeometry(.015, .015, .03, 14)), 'silicone').userData.isLine = true;   // orange boot through the bifurcation panel
         /* p.319, from the case out: classified spacer, mounting boss (diamond flange, two bolts, collar), the plug's seating hex, body,
            large hex and terminal shell, then the cable's coupling nut and ferrule; the electrode tip goes through into the liner */
         const g = Kt.frame('igniters', -1.81, hp, .245);

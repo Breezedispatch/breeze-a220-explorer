@@ -107,12 +107,14 @@
       S.hinges.push({ obj, axis: 'fan', sign: -sg, max: deg(55) });
       const t0 = sg > 0 ? deg(10) : Math.PI + deg(1), tl = Math.PI - deg(11);
       const outer = [], inner = []; for (let i = 0; i <= 18; i++) { const xx = xJ1 - .002 + (xJ2 + .002 - xJ1) * i / 18; outer.push([xx, rOut(xx)]); inner.push([xx, rOut(xx) - .028]); }
-      PW.add(pid, G.revolve(outer.concat(inner.slice().reverse()), { seg: 72, thetaStart: t0, thetaLength: tl }), 'nacellePaint', { into: hinge });
+      PW.add(pid, G.revolve(outer.concat(inner.slice().reverse()), { seg: 72, thetaStart: sg > 0 ? t0 : Math.PI + deg(.08), thetaLength: tl + deg(.92) }), 'nacellePaint', { into: hinge });   // the skins meet at the bottom split line
       PW.add(pid, G.revolve(inner.map(([xx, r]) => [xx, r]).concat(inner.map(([xx, r]) => [xx, r - .003]).reverse()), { seg: 72, thetaStart: t0, thetaLength: tl }), 'cowlWhite', { into: hinge });
       for (const xx of [xJ1 - .03, (xJ1 + xJ2) / 2, xJ2 + .03]) PW.add(pid, G.revolve([[xx + .015, rOut(xx) - .03], [xx - .015, rOut(xx) - .03], [xx - .015, rOut(xx) - .075], [xx + .015, rOut(xx) - .075]], { seg: 72, thetaStart: t0, thetaLength: tl }), 'lime', { into: hinge });   // frames
       // three latches at the bottom edge (keepers on the right cowl, hooks on the left), three hinges at the top
-      for (const f of [.2, .5, .8]) { const xx = xJ1 + (xJ2 - xJ1) * f, a = t0 + (sg > 0 ? tl : 0), m = new THREE.Mesh(G.roundedBox(.12, .02, .03, .005));
-        m.position.copy(G.onRing(xx, rOut(xx) - .012, a)); m.rotation.x = a; PW.add(pid, m, sg < 0 ? 'darkBox' : 'steel', { solid: true, into: hinge });
+      for (const f of [.2, .5, .8]) { const xx = xJ1 + (xJ2 - xJ1) * f, a = t0 + (sg > 0 ? tl : 0), m = new THREE.Mesh(G.roundedBox(.12, .024, .03, .005));
+        m.position.copy(G.onRing(xx, rOut(xx) - .045, a)); m.rotation.x = a; PW.add(pid, m, sg < 0 ? 'darkBox' : 'steel', { solid: true, into: hinge });   // latch body / keeper inside the edge
+        if (sg < 0) { const ah = a + deg(1.3);                                                                   // the flush handle in the left cowl's skin, as on the reverser
+          for (const [w, t, l, dr, mat] of [[.156, .003, .04, -.0005, 'darkBox'], [.15, .003, .034, .0008, 'greyPrimer']]) { const hd = new THREE.Mesh(G.roundedBox(w, t, l, .0015)); hd.position.copy(G.onRing(xx, rOut(xx) + dr, ah)); hd.rotation.x = ah; PW.add(pid, hd, mat, { solid: true, into: hinge }); } }
         const hm = new THREE.Mesh(G.roundedBox(.08, .06, .03, .006)); hm.position.set(xx, yh - .02, sg * .22); PW.add(pid, hm, 'lime', { solid: true, into: hinge }); }
       // two hold-open rods per cowl, stowed along the inside of the door (deployed when the cowl is open)
       for (const f of [.3, .72]) { const xx = xJ1 + (xJ2 - xJ1) * f, a0 = G.clock(sg > 0 ? 3.2 : 8.8);
@@ -141,12 +143,12 @@
       const obj = PW.parts.get(pid).obj, hinge = new THREE.Group(); obj.add(hinge); obj.position.set(0, yhT + .2, sg * .2); hinge.position.set(0, -(yhT + .2), -sg * .2);
       S.hinges.push({ obj, axis: 'tr', sign: -sg, max: deg(45) });
       const t0 = sg > 0 ? deg(10) : Math.PI + deg(1), tl = Math.PI - deg(11);
-      /* inner structure (IFS, fan duct outer wall, forward frame) stops 4 deg either side of 6 o'clock for the lower bifurcation */
-      const it0 = sg > 0 ? t0 : Math.PI + deg(4), itl = Math.PI - deg(14);
+      /* inner structure (IFS, fan duct outer wall, forward frame) stops 6 deg either side of 6 o'clock for the lower bifurcation (it was 4 deg until 2026-10-07; p.31 and the photo from below show a bay about 0.2 m wide) */
+      const it0 = sg > 0 ? t0 : Math.PI + deg(6), itl = Math.PI - deg(16);
       const rev = (prof, mat, o) => PW.add(o && o.pid || pid, G.revolve(prof, { seg: 72, thetaStart: o && o.inner ? it0 : t0, thetaLength: o && o.inner ? itl : tl }), mat, Object.assign({ into: hinge }, o || {}));
       /* outer fixed cowl (ZS 732 to 772) */
       const fo = []; for (let i = 0; i <= 10; i++) { const xx = xJ2 - .002 + (xSF - xJ2 + .002) * i / 10; fo.push([xx, rOut(xx)]); }
-      rev(G.shellProfile(fo, fo.map(([xx, r]) => [xx, r - .02])), 'nacellePaint');
+      PW.add(pid, G.revolve(G.shellProfile(fo, fo.map(([xx, r]) => [xx, r - .02])), { seg: 72, thetaStart: sg > 0 ? t0 : Math.PI + deg(.08), thetaLength: tl + deg(.92) }), 'nacellePaint', { into: hinge });   // outer skin, meeting the other door's at the latch line
       /* the fan duct outer wall and the torque box / forward frame joining them */
       const dw = []; for (let i = 0; i <= 10; i++) { const xx = -.93 + (xSF + .02 - -.93) * i / 10; dw.push([xx, rDuct(xx)]); }
       rev(G.shellProfile(dw.map(([xx, r]) => [xx, r + .012]), dw), 'cowlWhite', { inner: true });
@@ -165,7 +167,7 @@
       const sl = PW.parts.get(sid).obj; S.sleeves.push(sl);
       const so = []; for (let i = 0; i <= 10; i++) { const xx = xSF + (xTE - xSF) * i / 10; so.push([xx, rOut(xx)]); }
       const si = so.map(([xx, r]) => [xx, Math.min(r - .015, rDuct(xx) + .055 * (1 - Math.pow((xx - xSF) / (xTE - xSF), 1.6)))]);
-      PW.add(sid, G.revolve(G.shellProfile(so, si), { seg: 72, thetaStart: t0, thetaLength: tl }), 'nacellePaint');
+      PW.add(sid, G.revolve(G.shellProfile(so, si), { seg: 72, thetaStart: sg > 0 ? t0 : Math.PI + deg(.08), thetaLength: tl + deg(.92) }), 'nacellePaint');
       PW.add(sid, G.revolve(G.shellProfile(si, si.map(([xx, r]) => [xx, r - .004])), { seg: 72, thetaStart: t0, thetaLength: tl }), 'cowlWhite');
       // five blocker doors per side: stowed flush in the sleeve's inner wall, they swing down into the duct on drag links
       for (let i = 0; i < 5; i++) { const a = t0 + deg(12) + (tl - deg(24)) * (i + .5) / 5, piv = new THREE.Group(), xp = xSF - .02;
@@ -176,8 +178,8 @@
       const iid = `${pid}-ifs`;
       PW.part(iid, { parent: pid, label: `${side === 'left' ? 'Left' : 'Right'} inner fixed structure (IFS)`, attach: hinge, src: 'p.18-23; photos',
         info: 'The half of the inner fixed structure carried by this door. Outside it is the inner wall of the fan duct; inside, facing the core, it is covered by quilted stainless thermal blankets with silicone fire seals along its edges, so the core compartment is a designated fire zone.' + (side === 'right' ? ' The oil tank access door (OTAD) at about 2:30 is the oil servicing point, with the precooler exhaust door aft of it.' : ' The air/oil cooler inlet and exhaust window and the IFS pressure-relief door are on this side at about 9 o\'clock; a relief door found open points to a bleed duct burst in the core compartment.') });
-      /* the IFS halves stop 4 deg either side of 6 o'clock as far aft as the bifurcation walls go: the lower bifurcation between them
-         (about 8 cm wide at the core) carries the ignition cables, the core harnesses, the cowl anti-ice duct and the drain mast across
+      /* the IFS halves stop 6 deg either side of 6 o'clock as far aft as the bifurcation walls go: the lower bifurcation between them
+         (about 12 cm wide at the core, 20 cm at the duct wall) carries the ignition cables, the core harnesses, the cowl anti-ice duct and the drain mast across
          the fan duct. The outer cowl and sleeve still meet at the latch beam */
       const xB = xTE + .25;                                                                                   // aft end of the bifurcation walls
       for (const [xa, xb, a0, al, n] of [[xI0, xB, it0, itl, 20], [xB, xTE - .02, t0, tl, 6]]) {
@@ -203,8 +205,50 @@
         // the wall lies in the plane of angle aEdge: rotate the x-y extrusion plane (y = radius) onto that angle
         m.rotation.set(aEdge, 0, 0); PW.add(pid, m, isTop ? 'cowlWhite' : 'lime', { solid: true, into: hinge });
       }
-      // latch beam latches (5) at the bottom, hinge beam at the top
-      for (let i = 0; i < 5; i++) { const xx = -1.05 - i * .32, a = sg > 0 ? t0 + tl : t0, m = new THREE.Mesh(G.roundedBox(.10, .03, .03, .006)); m.position.copy(G.onRing(xx, rOut(xx) - .03, a)); m.rotation.x = a; PW.add(pid, m, 'steel', { solid: true, into: hinge }); }
+      /* the latch beam at the bottom (p.24-31): each door's web from the fan duct outer wall to the outer skin, its five latches (hooks
+         with flush handles on the left door, keepers on the right; No. 2 and 3 sit inside the bay behind the latch access door), the
+         bifurcation latch system between the IFS halves, the bumpers on the IFS edges, and the closure assist stowed in the bay */
+      { const Kt = PW.kit, lb = `${pid}-latch-beam`, aB = sg > 0 ? t0 + tl : t0, hB = aB / (Math.PI / 6), hI = (sg > 0 ? it0 + itl : it0) / (Math.PI / 6);
+        PW.part(lb, { parent: pid, attach: hinge, label: sg > 0 ? 'Right latch beam: latch keepers, BLS receiver, bumpers' : 'Left latch beam: latches, BLS handle, closure assist, bumpers', src: 'p.24-31',
+          info: sg > 0 ? 'The bottom edge of the right door: the keepers for latches 1 to 5, the receiver for the bifurcation latch pin on the IFS edge, and the upper and lower bumpers that align the IFS halves as the doors close. The upper bumper has a compression strut for the wider gap at the top.'
+            : 'The bottom edge of the left door. Latches 1 to 5 hook onto the right door: open them 5, 4, 3, 2, 1 and close them 1 to 5, using the closure assist assembly to pull the doors together first. Latches 2 and 3 are inside the bay behind the latch access door.\n\nThe bifurcation latch system (BLS) pins the two IFS halves together at the bottom to limit IFS deflection if an air duct bursts. Its handle is painted red and is worked through the latch access door; if it is not locked, the latch access door cannot be closed. Open the BLS before the latches and close it last.' });
+        /* the web, 1.6 deg in from the door's bottom edge, from just aft of the bifurcation pass-through panel to the sleeve; the drain
+           mast passes down between the two webs */
+        const aW = aB - sg * deg(.6), hW = aW / (Math.PI / 6), web = new THREE.Shape(), xa = -1.10, xb = xSF, n = 8, pts = [];
+        for (let i = 0; i <= n; i++) { const xx = xa + (xb - xa) * i / n; pts.push([xx, rDuct(xx) + .012]); } for (let i = n; i >= 0; i--) { const xx = xa + (xb - xa) * i / n; pts.push([xx, rOut(xx) - .022]); }
+        web.moveTo(...pts[0]); pts.slice(1).forEach(p => web.lineTo(...p)); const wg = new THREE.ExtrudeGeometry(web, { depth: .008, bevelEnabled: false }); wg.translate(0, 0, -.004);
+        const wm = new THREE.Mesh(wg); wm.rotation.set(aW, 0, 0); PW.add(lb, wm, 'lime', { solid: true });
+        /* latches: [x, radius, has an outer handle]; the hooks on the left web reach across onto the keepers on the right */
+        for (const [xx, rr, outside] of [[-.99, rOut(-.99) - .035, true], [-1.22, rOut(-1.22) - .06, false], [-1.40, rDuct(-1.40) + .05, false], [-1.62, rOut(-1.62) - .035, true], [-1.88, rOut(-1.88) - .035, true]]) {
+          const f = Kt.frame(lb, xx, xx < -1.1 ? hW : hB, rr);
+          if (sg < 0) { Kt.box(lb, f, [0, 0, -.017], [.1, .03, .03], 'steel', { round: .004 }); Kt.box(lb, f, [.05, 0, -.036], [.016, .01, .014], 'steel', { round: .003 });   // hook body and hook
+            if (outside) { const g = Kt.frame(lb, xx, hB + .04, rOut(xx)); Kt.box(lb, g, [0, -.0005, 0], [.156, .003, .04], 'darkBox', { round: .0015 }); Kt.box(lb, g, [0, .0008, 0], [.15, .003, .034], 'greyPrimer', { round: .004 }); } }
+          else { Kt.box(lb, f, [0, 0, .015], [.06, .034, .03], 'steel', { round: .004 }); Kt.cyl(lb, f, [.0, 0, .022], 'x', .005, .07, 'steel'); } }                  // keeper bracket and pin
+        /* bifurcation latch system at x -1.36: the fitting and pin on the left IFS edge, the receiver on the right, the rod down to the
+           red handle in the bay */
+        const fI = Kt.frame(lb, -1.36, hI, rIFS(-1.36) - .025);
+        Kt.box(lb, fI, [0, -.01, sg * .012], [.05, .036, .028], 'steel', { round: .005 });
+        if (sg < 0) { Kt.cyl(lb, fI, [0, -.012, -.04], 'z', .0065, .04, 'steel');
+          PW.add(lb, G.rod(G.onRing(-1.36, rIFS(-1.36) - .01, G.clock(hI - .02)), G.onRing(-1.36, rOut(-1.36) - .05, G.clock(hB + .05)), .006), 'steel');
+          const fh = Kt.frame(lb, -1.36, hB + .05, rOut(-1.36) - .05);
+          Kt.box(lb, fh, [0, -.008, 0], [.014, .016, .014], 'steel', { round: .003, mat: { color: '#b3191f', metalness: .15, roughness: .5 } });
+          Kt.box(lb, fh, [.035, -.008, 0], [.07, .012, .014], 'steel', { round: .004, mat: { color: '#b3191f', metalness: .15, roughness: .5 } }); }   // the red L-handle
+        else Kt.tube(lb, fI, [0, -.012, .028], 'z', .0068, .013, .016, 'steel');
+        /* bumpers: lower on the bottom IFS edge, upper on the top edge (where the compression strut bridges the wider gap) */
+        const hT = (sg > 0 ? it0 : it0 + itl) / (Math.PI / 6);
+        for (const [xx, h] of [[-1.08, hI], [-1.86, hI], [-1.08, hT], [-1.86, hT]]) { const f = Kt.frame(lb, xx, h, rIFS(xx) - .03), tw = h === hI ? (sg > 0 ? 'z' : '-z') : (sg > 0 ? '-z' : 'z');
+          Kt.box(lb, f, [0, 0, 0], [.04, .024, .02], 'steel', { round: .004 }); Kt.cyl(lb, f, [0, 0, Kt.dir(tw).z * .016], tw, .011, .012, 'rubber', { edge: .003 }); }
+        /* closure assist assembly, stowed along the left web in the bay: a turnbuckle with a hook at its forward end */
+        if (sg < 0) { const fc = Kt.frame(lb, -1.34, hB + .08, rOut(-1.34) - .09);
+          Kt.cyl(lb, fc, [0, 0, 0], 'x', .009, .16, 'steel', { edge: .002 }); for (const s of [-1, 1]) Kt.hex(lb, fc, [s * .088, 0, 0], 'x', .011, .016, 'steel');
+          Kt.box(lb, fc, [.11, .006, 0], [.03, .012, .008], 'steel', { round: .003 }); }
+        }
+      /* the latch access door on the bottom of the left door, ahead of the drain mast (p.31) */
+      if (sg < 0) { PW.part('tr-latch-access-door', { parent: pid, attach: hinge, label: 'Latch access door', src: 'p.24, p.30-31, p.50',
+          info: 'Door in the bottom of the left reverser door, ahead of the drain mast. Behind it are latches 2 and 3, the red bifurcation latch system handle and the closure assist assembly. It will not close unless the BLS handle is locked, so a latch access door that will not close means the BLS is not latched. The drain mast exits next to it, and the drain map placard is inside it.' });
+        const f = PW.kit.frame('tr-latch-access-door', -1.34, 6.2, rOut(-1.34));
+        PW.kit.box('tr-latch-access-door', f, [0, .0002, 0], [.326, .003, .146], 'darkBox', { round: .002 }); PW.kit.box('tr-latch-access-door', f, [0, .0016, 0], [.32, .004, .14], 'nacellePaint', { round: .008 });
+        for (const s of [-1, 1]) PW.kit.box('tr-latch-access-door', f, [s * .12, .0036, .05], [.026, .002, .016], 'greyPrimer', { round: .003 }); }
       { const a = sg > 0 ? t0 : t0 + tl, m = new THREE.Mesh(G.roundedBox(1.5, .05, .04, .01)); m.position.copy(G.onRing(-1.75, yhT + .03, a)); m.rotation.x = a; PW.add(pid, m, 'nickel', { solid: true, into: hinge }); }
       // three actuators on the forward frame: upper locking actuator and two lower ones, with the flexible synchronising shaft
       for (const h of [1.6, 3.0, 4.4]) { const a = sg > 0 ? G.clock(h) : G.clock(12 - h), act = G.rod(G.onRing(xJ2 - .07, 1.04, a), G.onRing(xSF - .02, 1.04, a), .02);
