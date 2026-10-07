@@ -25,7 +25,7 @@
     info.querySelector('#iIso').onclick = () => isolate(sel);
     info.querySelector('#iHide').onclick = () => { PW.setHidden(sel, true); syncTree(); select(null); };
     info.querySelector('#iFocus').onclick = () => focus(sel);
-    if (moved) info.querySelector('#iBack').onclick = () => { PW.dragPart(sel, null); recentreCut(); showInfo(); };
+    if (moved) info.querySelector('#iBack').onclick = () => PW.putBack([sel]);
     info.querySelector('#iAll').onclick = showAll;
   }
   /* ---- cutting one part: only that part (and what belongs to it) is clipped, by a plane through its own middle ---- */
@@ -116,7 +116,8 @@
     if (cutSolo) { for (const p of PW.parts.values()) p.cut = true; PW.cut.pivot.set(0, 0, 0); cutSolo = null; showInfo(); }
     PW.cut.on = m !== 'off'; if (PW.cut.on) PW.setCutPlane(m, +document.getElementById('cutOff').value); PW.applyCut(); });
   document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => { press('[data-tool]', b); tool = b.dataset.tool; });
-  document.getElementById('putBack').onclick = () => { for (const p of PW.parts.values()) p.dragW = null; PW.setExplode(PW.explodeT || 0); recentreCut(); showInfo(); };
+  document.getElementById('putBack').onclick = () => PW.putBack([...PW.parts.keys()]);
+  PW.onPutBack = () => { recentreCut(); showInfo(); };                          // when the parts have slid home
   function recentreCut() { if (!cutSolo) return; PW.root.updateMatrixWorld(true); const box = new THREE.Box3(); for (const m of PW.meshesOf(cutSolo)) if (m.visible) box.expandByObject(m);
     if (!box.isEmpty()) { box.getCenter(PW.cut.pivot); PW.setCutPlane(null); } }
   document.getElementById('cutOff').oninput = e => PW.setCutPlane(null, +e.target.value);

@@ -287,21 +287,36 @@
      modules, links, loops) are put away, as on a module breakdown drawing; they come back when the engine is put together again */
   /* Parts pulled out with the Move tool keep their offset in world space (p.dragW). It is turned into the frame of whatever the part
      hangs from each time, so a dragged rotor stays put while its spool turns and a part on a door keeps its place as the door swings */
+  /* A part hung from a spool (shafts, rotors) takes its explode offset in world space as well: applied in the spool's own frame, a
+     sideways offset would swing round the engine axis as the spool turns. Such offsets are re-applied every frame while the engine runs */
   const qInv = new THREE.Quaternion(), wv = new THREE.Vector3();
   PW.setExplode = function (t) {
-    PW.explodeT = t; const away = t > .02; let any = false;
+    PW.explodeT = t; const away = t > .02; let any = false, spin = false;
     for (const p of PW.parts.values()) {
       if (p.explodeHide) p.obj.visible = !p.hidden && !away;
       for (const m of p.meshes) if (m.userData.isLine) m.visible = !away;
       const v = p.explode.clone(); wv.set(0, 0, 0); if (p.dragW) wv.add(p.dragW);
-      if (p.detached) for (let q = PW.parts.get(p.parent); q; q = q.parent && PW.parts.get(q.parent)) { v.add(q.explode); if (q.dragW) wv.add(q.dragW); }
+      if (p.detached) { for (let q = PW.parts.get(p.parent); q; q = q.parent && PW.parts.get(q.parent)) { v.add(q.explode); if (q.dragW) wv.add(q.dragW); }
+        wv.addScaledVector(v, t); v.set(0, 0, 0); if (t > 0) spin = true; }
       if (p.dragW) any = true;
-      const dragged = wv.lengthSq() > 0;
-      if (!v.lengthSq() && !dragged && !p.wasDragged) continue;
+      const moved = wv.lengthSq() > 0;
+      if (!v.lengthSq() && !moved && !p.wasDragged) continue;
       p.obj.position.copy(p.base).addScaledVector(v, t);
-      if (dragged) { p.obj.parent.getWorldQuaternion(qInv).invert(); p.obj.position.add(wv.clone().applyQuaternion(qInv)); }
-      p.wasDragged = dragged; }
-    PW.anyDrag = any;
+      if (moved) { p.obj.parent.getWorldQuaternion(qInv).invert(); p.obj.position.add(wv.clone().applyQuaternion(qInv)); }
+      p.wasDragged = moved; }
+    PW.anyDrag = any; PW.explodeSpin = spin;
+  };
+  /* put moved parts back by sliding them home over about 0.7 s, so the eye can follow where each one goes */
+  PW.putBack = function (ids, dur) {
+    dur = dur || .7; const items = [];
+    for (const id of ids) for (const k of PW.sub(id)) { const p = PW.parts.get(k); if (p && p.dragW && !items.some(it => it.p === p)) items.push({ p, from: p.dragW.clone() }); }
+    if (!items.length) { if (PW.onPutBack) PW.onPutBack(); return; }
+    let s = 0;
+    const step = dt => { s = Math.min(1, s + dt / dur); const e = s < .5 ? 4 * s * s * s : 1 - Math.pow(-2 * s + 2, 3) / 2;
+      for (const it of items) it.p.dragW = s < 1 ? it.from.clone().multiplyScalar(1 - e) : null;
+      PW.setExplode(PW.explodeT || 0);
+      if (s >= 1) { PW.anim = PW.anim.filter(f => f !== step); if (PW.onPutBack) PW.onPutBack(); } };
+    PW.anim.push(step);
   };
   /* drag a part (and everything carried with it) by a world-space step; null puts it back */
   PW.dragPart = function (id, step) {
@@ -324,7 +339,7 @@
       PW.updateCamera(dt);
       for (const name in PW.spools) { const s = PW.spools[name]; s.angle += dt * (PW.speed || 0) * s.vis * s.dir; s.group.rotation.x = s.angle; }
       for (const f of PW.anim) f(dt, now / 1000);
-      if (PW.anyDrag) { PW.root.updateMatrixWorld(true); PW.setExplode(PW.explodeT || 0); }      // keep pulled-out parts in place as spools turn and doors swing
+      if (PW.anyDrag || (PW.explodeSpin && PW.speed)) { PW.root.updateMatrixWorld(true); PW.setExplode(PW.explodeT || 0); }   // keep moved and exploded parts in place as spools turn and doors swing
       PW.followCamera();
       onFrame && onFrame(dt, now / 1000);
       PW.renderer.render(PW.scene, PW.camera);
