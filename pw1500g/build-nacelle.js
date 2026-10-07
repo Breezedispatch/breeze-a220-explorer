@@ -125,14 +125,16 @@
       const obj = PW.parts.get(pid).obj, hinge = new THREE.Group(); obj.add(hinge); obj.position.set(0, yhT + .2, sg * .2); hinge.position.set(0, -(yhT + .2), -sg * .2);
       S.hinges.push({ obj, axis: 'tr', sign: -sg, max: deg(45) });
       const t0 = sg > 0 ? deg(10) : Math.PI + deg(1), tl = Math.PI - deg(11);
-      const rev = (prof, mat, o) => PW.add(o && o.pid || pid, G.revolve(prof, { seg: 72, thetaStart: t0, thetaLength: tl }), mat, Object.assign({ into: hinge }, o || {}));
+      /* inner structure (IFS, fan duct outer wall, forward frame) stops 4 deg either side of 6 o'clock for the lower bifurcation */
+      const it0 = sg > 0 ? t0 : Math.PI + deg(4), itl = Math.PI - deg(14);
+      const rev = (prof, mat, o) => PW.add(o && o.pid || pid, G.revolve(prof, { seg: 72, thetaStart: o && o.inner ? it0 : t0, thetaLength: o && o.inner ? itl : tl }), mat, Object.assign({ into: hinge }, o || {}));
       /* outer fixed cowl (ZS 732 to 772) */
       const fo = []; for (let i = 0; i <= 10; i++) { const xx = xJ2 - .002 + (xSF - xJ2 + .002) * i / 10; fo.push([xx, rOut(xx)]); }
       rev(G.shellProfile(fo, fo.map(([xx, r]) => [xx, r - .02])), 'nacellePaint');
       /* the fan duct outer wall and the torque box / forward frame joining them */
       const dw = []; for (let i = 0; i <= 10; i++) { const xx = -.93 + (xSF + .02 - -.93) * i / 10; dw.push([xx, rDuct(xx)]); }
-      rev(G.shellProfile(dw.map(([xx, r]) => [xx, r + .012]), dw), 'cowlWhite');
-      rev([[xJ2 - .002, rDuct(xJ2) + .012], [xJ2 - .06, rDuct(xJ2) + .012], [xJ2 - .06, rOut(xJ2) - .02], [xJ2 - .002, rOut(xJ2) - .02]], 'lime');      // forward frame with the V-blade
+      rev(G.shellProfile(dw.map(([xx, r]) => [xx, r + .012]), dw), 'cowlWhite', { inner: true });
+      rev([[xJ2 - .002, rDuct(xJ2) + .012], [xJ2 - .06, rDuct(xJ2) + .012], [xJ2 - .06, rOut(xJ2) - .02], [xJ2 - .002, rOut(xJ2) - .02]], 'lime', { inner: true });      // forward frame with the V-blade
       /* cascades: fixed segments under the stowed sleeve (ZS ~773 to 791), uncovered when the sleeve moves aft */
       const cid = `${pid}-cascades`;
       PW.part(cid, { parent: pid, label: `${side === 'left' ? 'Left' : 'Right'} cascade segments`, attach: hinge, src: 'p.18-19',
@@ -158,13 +160,26 @@
       const iid = `${pid}-ifs`;
       PW.part(iid, { parent: pid, label: `${side === 'left' ? 'Left' : 'Right'} inner fixed structure (IFS)`, attach: hinge, src: 'p.18-23; photos',
         info: 'The half of the inner fixed structure carried by this door. Outside it is the inner wall of the fan duct; inside, facing the core, it is covered by quilted stainless thermal blankets with silicone fire seals along its edges, so the core compartment is a designated fire zone.' + (side === 'right' ? ' The oil tank access door (OTAD) at about 2:30 is the oil servicing point, with the precooler exhaust door aft of it.' : ' The air/oil cooler inlet and exhaust window and the IFS pressure-relief door are on this side at about 9 o\'clock; a relief door found open points to a bleed duct burst in the core compartment.') });
-      const ifo = []; for (let i = 0; i <= 24; i++) { const xx = xI0 + (xTE - .02 - xI0) * i / 24; ifo.push([xx, rIFS(xx)]); }
-      PW.add(iid, G.revolve(G.shellProfile(ifo, ifo.map(([xx, r]) => [xx, r - .02])), { seg: 72, thetaStart: t0, thetaLength: tl }), 'cowlWhite');
-      PW.add(iid, G.revolve(G.shellProfile(ifo.map(([xx, r]) => [xx, r - .02]), ifo.map(([xx, r]) => [xx, r - .032])), { seg: 72, thetaStart: t0 + deg(1), thetaLength: tl - deg(2) }), 'blanket', { mat: { bumpMap: quiltTex(), roughnessMap: quiltTex() } });
+      /* the IFS halves stop 4 deg either side of 6 o'clock as far aft as the bifurcation walls go: the lower bifurcation between them
+         (about 8 cm wide at the core) carries the ignition cables, the core harnesses, the cowl anti-ice duct and the drain mast across
+         the fan duct. The outer cowl and sleeve still meet at the latch beam */
+      const xB = xTE + .25;                                                                                   // aft end of the bifurcation walls
+      for (const [xa, xb, a0, al, n] of [[xI0, xB, it0, itl, 20], [xB, xTE - .02, t0, tl, 6]]) {
+        const ifo = []; for (let i = 0; i <= n; i++) { const xx = xa + (xb - xa) * i / n; ifo.push([xx, rIFS(xx)]); }
+        PW.add(iid, G.revolve(G.shellProfile(ifo, ifo.map(([xx, r]) => [xx, r - .02])), { seg: 72, thetaStart: a0, thetaLength: al }), 'cowlWhite');
+        PW.add(iid, G.revolve(G.shellProfile(ifo.map(([xx, r]) => [xx, r - .02]), ifo.map(([xx, r]) => [xx, r - .032])), { seg: 72, thetaStart: a0 + deg(1), thetaLength: al - deg(2) }), 'blanket', { mat: { bumpMap: quiltTex(), roughnessMap: quiltTex() } }); }
+      /* TTM p.268-269: two fire detection elements on each core cowl, forward and aft, each a pair of sensing tubes (loops A and B)
+         clipped to the blanket and running round the core; they open with the door */
+      if (PW.parts.has('fire')) { const fid = `fire-${side}`;
+        PW.part(fid, { parent: 'fire', label: `Fire detection elements, ${side} core cowl`, attach: hinge, src: 'TTM ch. 26 (p.268-269)',
+          info: 'Two sensing elements of fire loops A and B on the inside of this core cowl, one forward and one aft, each a pair of tubes running round the core on clips. They are part of the reverser door and open with it.' });
+        for (const xx of [-1.43, -1.98]) for (const dx of [-.011, .011]) { const pts = []; for (let i = 0; i <= 18; i++) pts.push(G.onRing(xx + dx, rIFS(xx) - .042, it0 + deg(6) + (itl - deg(12)) * i / 18));
+          const g = G.tube(pts, .0035, { radial: 6 }), m = PW.add(fid, g, 'steel'); m.userData.isLine = true;
+          if (dx < 0) { const c = PW.add(fid, G.alongCurve(g.userData.curve, [.1, .3, .5, .7, .9], () => new THREE.BoxGeometry(.035, .008, .012)), 'steel'); c.userData.isLine = true; } } }
       const ac = []; for (let i = 0; i <= 10; i++) { const xx = xTE - .02 + (xCN + .004 - (xTE - .02)) * i / 10; ac.push([xx, rIFS(xx)]); }
       PW.add(iid, G.revolve(G.shellProfile(ac, ac.map(([xx, r]) => [xx, r - .008])), { seg: 72, thetaStart: t0, thetaLength: tl }), 'bareCowl');
       // bifurcation half-walls at the top (hinge beam) and bottom (latch beam)
-      for (const [aEdge, top] of [[t0, sg > 0], [t0 + tl, sg < 0]]) {
+      for (const [aEdge, top] of [[it0, sg > 0], [it0 + itl, sg < 0]]) {
         const isTop = top, wall = new THREE.Shape(), xs = [xI0 - .05, xTE + .25], r0 = .56, r1 = .94;
         wall.moveTo(xs[0], r0); wall.lineTo(xs[1], r0 - .02); wall.lineTo(xs[1], r1 - .02); wall.lineTo(xs[0], r1); wall.lineTo(xs[0], r0);
         const g = new THREE.ExtrudeGeometry(wall, { depth: .012, bevelEnabled: false }); g.translate(0, 0, -.006);
@@ -185,7 +200,13 @@
       PW.add(pid, m, mat || 'cowlWhite', { solid: true }); };
     ifsPanel('ifs-otad', 'tr-right', 'Oil tank access door (OTAD)', 'Door in the right IFS at about 2:30, over the oil tank, that gives access to its fill port and sight glass without opening the reverser door (p.21, p.223). Service within the AMM time after shutdown and check the level in the sight glass.', -1.92, 2.4, .26, .22, 'cowlWhite');
     ifsPanel('ifs-pce', 'tr-right', 'Precooler exhaust (PCE) door', 'Door aft of the oil tank access door on the right IFS (p.21).', -2.30, 2.4, .2, .18, 'cowlWhite');
-    ifsPanel('ifs-aoc-window', 'tr-left', 'Air/oil cooler window', 'Opening in the left IFS at about 9 o\'clock (ZS 748 to 779) for the air/oil cooler inlet and exhaust.', -1.54, 9.6, .62, .17, 'darkBox');
+    /* the AOC window sits over the air/oil cooler: ZS 748-779 and 9 to 10:30 o'clock on p.5, mid-length of the IFS on p.23. Curved to the IFS, in three sections */
+    { PW.part('ifs-aoc-window', { parent: 'tr-left', label: 'Air/oil cooler window', src: 'p.5, p.20-23', attach: PW.parts.get('tr-left').obj.children[0],
+        info: 'Opening in the left IFS at about 9:30 o\'clock (ZS 748 to 779), over the air/oil cooler, in three sections. Fan air enters through the forward section, passes aft through the cooler and leaves through the aft section. The IFS pressure-relief door is aft of it.' });
+      const x0 = -1.44, x1 = -2.06, a = G.clock(9.7), half = .33, at = xx => rIFS(xx) + .002;
+      PW.add('ifs-aoc-window', G.revolve([[x0, at(x0)], [x1, at(x1)], [x1, at(x1) + .004], [x0, at(x0) + .004]], { seg: 14, thetaStart: a - half, thetaLength: 2 * half }), 'darkBox');
+      for (const t of [1 / 3, 2 / 3]) { const xx = x0 + (x1 - x0) * t;
+        PW.add('ifs-aoc-window', G.revolve([[xx + .008, at(xx)], [xx - .008, at(xx)], [xx - .008, at(xx) + .008], [xx + .008, at(xx) + .008]], { seg: 14, thetaStart: a - half, thetaLength: 2 * half }), 'cowlWhite'); } }
     ifsPanel('ifs-prd', 'tr-left', 'IFS pressure-relief door', 'Spring-latched door at 9 o\'clock (ZS 795 to 803) that opens at 3.5 psi core compartment overpressure, as after a bleed duct burst. Found open on the walkaround: find out why before flight.', -2.44, 9, .2, .2, 'cowlWhite');
     ifsPanel('ifs-acc-scoop', 'tr-right', 'ACC air scoop', 'Scoop on the right IFS at about 1:30 that takes fan air for the turbine active clearance control.', -1.62, 1.5, .18, .07, 'darkBox');
 
@@ -257,7 +278,7 @@
     set('precooler', [off.hpc, 1.4, 0]); set('tacc', null, true); set('cai', null, true);
     /* units on the fan case move out from it a little */
     set('eec', [0, 0, -.45]); set('phmu', [0, .25, -.25]); set('ignition', [0, 0, -.35]); set('pdos', [0, .25, .3]);
-    for (const id of ['harnesses', 'sensors', 'fire', 'mounts', 'drain-mast']) set(id, [0, 0, 0], true);
+    for (const id of ['harnesses', 'sensors', 'fire', 'fire-left', 'fire-right', 'mounts', 'drain-mast']) set(id, [0, 0, 0], true);
     PW.EXPLODE_SPAN = cur;
   });
 
