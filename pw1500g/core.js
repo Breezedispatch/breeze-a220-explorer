@@ -74,7 +74,11 @@
   /* section-cut face: the cutaway red with fine hatching, as on a museum cutaway */
   const hatchTex = () => tex.hatch || (tex.hatch = canvasTex(128, 128, (c, w, h) => { c.fillStyle = '#b8352a'; c.fillRect(0, 0, w, h);
     c.strokeStyle = 'rgba(60,10,6,.55)'; c.lineWidth = 3; for (let i = -h; i < w; i += 16) { c.beginPath(); c.moveTo(i, h); c.lineTo(i + h, 0); c.stroke(); } }, { srgb: true }));
-  PW.tex = { noise: noiseTex, perf: perfTex, hatch: hatchTex, canvas: canvasTex };
+  /* braided harness overbraid: black with a light green tracer yarn spiralling along it; u runs along the harness (8 repeats a metre) */
+  const braidTex = () => tex.braid || (tex.braid = canvasTex(64, 64, (c, w, h) => { c.fillStyle = '#1f2123'; c.fillRect(0, 0, w, h); c.strokeStyle = '#34373a'; c.lineWidth = 2;
+    for (let i = -h; i < w + h; i += 6) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i + h, h); c.stroke(); c.beginPath(); c.moveTo(i + h, 0); c.lineTo(i, h); c.stroke(); }
+    c.fillStyle = '#a6c96a'; for (let k = 0; k < 4; k++) c.fillRect(k * 16 + 2, (k * 16 + 4) % h, 6, 3); }, { srgb: true }));
+  PW.tex = { noise: noiseTex, perf: perfTex, hatch: hatchTex, canvas: canvasTex, braid: braidTex };
 
   const col = h => new THREE.Color(h);
   /* the library: name -> constructor arguments. Values are first estimates and are refined against photos. */
@@ -101,7 +105,7 @@
     darkBox:      () => new THREE.MeshStandardMaterial({ color: col('#2b2f34'), roughness: .5, metalness: .4 }),
     tube:         () => new THREE.MeshStandardMaterial({ color: col('#c6cbd0'), roughness: .25, metalness: 1 }),
     braid:        () => new THREE.MeshStandardMaterial({ color: col('#9fa4a8'), roughness: .5, metalness: .8, bumpMap: noiseTex('weave', 256, 30, .6, 1), bumpScale: .0006 }),
-    harness:      () => new THREE.MeshStandardMaterial({ color: col('#2a2c2e'), roughness: .8, metalness: .1, bumpMap: noiseTex('weave', 256, 30, .6, 1), bumpScale: .0005 }),
+    harness:      () => new THREE.MeshStandardMaterial({ color: col('#ffffff'), map: braidTex(), roughness: .78, metalness: .1, bumpMap: braidTex(), bumpScale: .0006 }),   // black overbraid, light green tracer (photos)
     connector:    () => new THREE.MeshStandardMaterial({ color: col('#8f969d'), roughness: .35, metalness: .9 }),
     insulation:   () => new THREE.MeshStandardMaterial({ color: col('#c7c9c6'), roughness: .55, metalness: .6, bumpMap: noiseTex('cast', 256, 14, .55, 1), bumpScale: .0012 }),
     rubber:       () => new THREE.MeshStandardMaterial({ color: col('#1d1f21'), roughness: .9, metalness: 0 }),

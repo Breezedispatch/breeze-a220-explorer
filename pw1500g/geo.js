@@ -190,7 +190,10 @@
     s.moveTo(x, -h / 2); s.lineTo(x + W, -h / 2); s.absarc(x + W, y, r, -Math.PI / 2, 0); s.lineTo(w / 2, y + H); s.absarc(x + W, y + H, r, 0, Math.PI / 2);
     s.lineTo(x, h / 2); s.absarc(x, y + H, r, Math.PI / 2, Math.PI); s.lineTo(-w / 2, y); s.absarc(x, y, r, Math.PI, Math.PI * 1.5);
     const g = new THREE.ExtrudeGeometry(s, { depth: Math.max(1e-4, d - 2 * r), bevelEnabled: true, bevelThickness: r, bevelSize: r * .999, bevelSegments: seg, curveSegments: seg * 2 });
-    g.translate(0, 0, -(d - 2 * r) / 2); g.computeVertexNormals(); const out = G.merge([g]); out.userData.solid = true; return out;
+    g.translate(0, 0, -(d - 2 * r) / 2);
+    /* the bevel grows the outline by r all round: scale back so the box is exactly w x h x d (until 2026-10-07 every rounded box came out 2r too big) */
+    g.computeBoundingBox(); const bb = g.boundingBox; g.scale(w / (bb.max.x - bb.min.x), h / (bb.max.y - bb.min.y), d / (bb.max.z - bb.min.z));
+    g.computeVertexNormals(); const out = G.merge([g]); out.userData.solid = true; return out;
   };
   /* a cylinder along x with rounded or chamfered ends (pumps, generators, filter bowls); r and length in metres */
   G.can = (r, len, opts) => { opts = opts || {}; const e = Math.min(opts.edge === undefined ? r * .12 : opts.edge, len / 2.2), x0 = len / 2, x1 = -len / 2;
