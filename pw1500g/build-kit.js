@@ -26,7 +26,13 @@
     quilt:      () => new THREE.MeshStandardMaterial({ color: col('#c9cbc8'), roughness: .42, metalness: .75, bumpMap: quiltTex(), bumpScale: .002, roughnessMap: quiltTex() }),
     silicone:   () => new THREE.MeshStandardMaterial({ color: col('#c9531f'), roughness: .6, metalness: 0 }),
     tankAl:     () => new THREE.MeshStandardMaterial({ color: col('#c6cacb'), roughness: .5, metalness: .32, roughnessMap: PW.tex.noise('fine', 256, 40, .6, 1) }),   // formed and welded aluminium (oil tank)
+    exciterBlack: () => new THREE.MeshStandardMaterial({ color: col('#17181a'), roughness: .62, metalness: .2 }),                 // ignition exciter case (photo)
+    braidSteel: () => new THREE.MeshStandardMaterial({ color: col('#ffffff'), map: steelBraidTex(), roughness: .38, metalness: .8, bumpMap: steelBraidTex(), bumpScale: .0004 }),   // ignition cable overbraid
   });
+  /* flexible braided stainless overbraid: u runs along the cable (repeated by the line's length) */
+  let sbTex; function steelBraidTex() { return sbTex || (sbTex = PW.tex.canvas(64, 64, (c, w, h) => { c.fillStyle = '#868c90'; c.fillRect(0, 0, w, h);
+    for (const [s, lw] of [['#5c6266', 3], ['#c8cdd0', 1.5]]) { c.strokeStyle = s; c.lineWidth = lw;
+      for (let i = -h; i < w + h; i += 5) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i + h, h); c.stroke(); c.beginPath(); c.moveTo(i + h, 0); c.lineTo(i, h); c.stroke(); } } }, { srgb: true })); }
   /* quilted stainless thermal blanket */
   function quiltTex() { return PW.tex.canvas(128, 128, (c, w, h) => { c.fillStyle = '#9a9a9a'; c.fillRect(0, 0, w, h); c.strokeStyle = '#4a4a4a'; c.lineWidth = 3;
     for (let i = 0; i <= 4; i++) { c.beginPath(); c.moveTo(0, i * 32); c.lineTo(w, i * 32); c.stroke(); c.beginPath(); c.moveTo(i * 32, 0); c.lineTo(i * 32, h); c.stroke(); }
@@ -149,6 +155,14 @@
       else { c.font = 'bold 52px Arial'; c.fillText(kind === 'noStep' ? 'NO STEP' : kind, W / 2, H * .6); } }, 256, kind === 'thisSideUp' ? 220 : 128);
     backing(pid, f, pos, n, up, w, .0012, h, 'darkBox', .0004);
     return faceQuad(pid, f, add(pos, dir(n), .00065), n, up, w * .96, h * .96, 'darkBox', { map: t, color: '#ffffff' }); };
+  /* printed adhesive label: 'hv' (red-orange high-voltage warning, as on the ignition exciter in the photos) or 'caution' (yellow) */
+  K.label = (pid, f, pos, n, up, w, h, style) => {
+    const hv = style === 'hv', t = plateTex('label-' + style, (c, W, H) => { c.fillStyle = hv ? '#e2552c' : '#efc41a'; c.fillRect(0, 0, W, H);
+      c.fillStyle = hv ? '#ffffff' : '#141414'; c.textAlign = 'center';
+      if (hv) { c.font = 'bold 40px Arial'; c.fillText('WARNING', W / 2, 46); c.font = 'bold 27px Arial'; c.fillText('HIGH VOLTAGE', W / 2, 82); c.font = '15px Arial'; c.fillText('WAIT 5 MINUTES AFTER IGNITION', W / 2, 108); }
+      else { c.font = 'bold 30px Arial'; c.fillText('CAUTION', W / 2, 40); for (let i = 0; i < 4; i++) c.fillRect(24, 58 + i * 15, W - 48 - (i * 29) % 60, 6); } }, 256, 128);
+    backing(pid, f, pos, n, up, w, .0008, h, hv ? 'clampOrange' : 'lime', .0003);
+    return faceQuad(pid, f, add(pos, dir(n), .00045), n, up, w * .98, h * .98, 'plateAl', { map: t, color: '#ffffff', metalness: 0, roughness: .6 }); };
   /* raised cast lettering (FILL, OIL...) on a part's own surface: a bump-mapped quad in the surface colour */
   K.decal = (pid, f, pos, n, up, w, h, text, mat) => {
     const t = plateTex('decal-' + text, (c, W, H) => { c.fillStyle = '#000000'; c.fillRect(0, 0, W, H); c.fillStyle = '#ffffff'; c.font = 'bold 84px Arial'; c.textAlign = 'center'; c.fillText(text, W / 2, H * .78); });

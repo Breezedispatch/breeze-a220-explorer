@@ -34,9 +34,9 @@
     const ring = new THREE.Mesh(new THREE.CylinderGeometry(.026, .026, .012, 16)); ring.geometry.userData.solid = true; G.aim(ring, at.clone().addScaledVector(dir.clone().normalize(), .018), dir); PW.add(pid, ring, 'orange', { solid: true }); }
   /* a routed line with clamps: kind 'tube' | 'hose' | 'harness' | 'duct' */
   function line(pid, pts, r, kind, o) { o = o || {};
-    const mat = { tube: 'tube', hose: 'fireSleeve', harness: 'harness', duct: 'insulation', black: 'blackHose' }[kind] || 'tube';
+    const mat = { tube: 'tube', hose: 'fireSleeve', harness: 'harness', duct: 'insulation', black: 'blackHose', cable: 'braidSteel' }[kind] || 'tube';
     const g = G.tube(pts.map(p => (p.isVector3 ? p : V(...p))), r, { radial: kind === 'duct' ? 16 : 10, tension: o.tension === undefined ? .25 : o.tension });
-    if (kind === 'harness' && g.attributes.uv) { const L = g.userData.curve.getLength(), uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * L * 8); }   // braid repeats along its length
+    if ((kind === 'harness' || kind === 'cable') && g.attributes.uv) { const L = g.userData.curve.getLength(), uv = g.attributes.uv, k = kind === 'cable' ? 16 : 8; for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * L * k); }   // braid repeats along its length
     const tubeMesh = PW.add(pid, g, mat); tubeMesh.userData.isLine = true;
     const curve = g.userData.curve, n = o.clamps === undefined ? Math.max(1, Math.round(curve.getLength() / (kind === 'duct' ? .35 : .25))) : o.clamps;
     if (n > 0) { const ts = []; for (let i = 1; i <= n; i++) ts.push(i / (n + 1));
@@ -372,7 +372,10 @@
       Kt.box('eec', f, [-.255, -.003, 0], [.1, .088, .22], 'eecGrey', { round: .01 });
       for (const s of [-1, 1]) Kt.box('eec', f, [-.255, .043, 0], [.2, .005, .012], 'eecGrey', { round: .002, rot: [0, s * 1.15, 0] });
       for (const [ax, az] of [[.285, .085], [.285, -.085], [-.325, .085], [-.325, -.085]]) { Kt.box('eec', f, [ax, -.036, az], [.06, .012, .045], 'eecGrey', { round: .004 });
-        Kt.cyl('eec', f, [ax + Math.sign(ax) * .012, -.026, az], 'y', .016, .02, 'eecGrey'); Kt.hex('eec', f, [ax + Math.sign(ax) * .012, -.014, az], 'y', .006, .006, 'steel'); }
+        Kt.cyl('eec', f, [ax + Math.sign(ax) * .012, -.026, az], 'y', .016, .02, 'eecGrey'); Kt.hex('eec', f, [ax + Math.sign(ax) * .012, -.014, az], 'y', .006, .006, 'steel');
+        /* the channel bracket each foot's isolator stands on, bonded to the composite case (r 0.97) */
+        Kt.box('eec', f, [ax, -.075, az], [.06, .008, .05], 'lime', { round: .002 }); Kt.box('eec', f, [ax, -.0435, az], [.06, .003, .05], 'lime', { round: .001 });
+        for (const s of [-1, 1]) Kt.box('eec', f, [ax + s * .022, -.057, az], [.004, .03, .045], 'lime', { round: .001 }); }
       for (const x of [.18, .1, -.02, -.1]) for (const s of [1, -1]) Kt.connector('eec', f, [x, 0, s * .11], s > 0 ? 'z' : '-z', .017);
       Kt.placard('eec', f, [.02, .0485, 0], 'y', 'z', .06, .07, 'thisSideUp'); Kt.placard('eec', f, [-.255, .0445, .062], 'y', 'z', .04, .045, 'thisSideUp');
       Kt.plate('eec', f, [.19, .0485, -.025], 'y', 'z', .05, .03, 'EEC');
@@ -386,31 +389,64 @@
     /* p.105 / p.107: WF01 and WF02 come down from the pylon interface at 12 o'clock to the EEC; W03 and W04 leave its lower face, run
        down to 6 o'clock, aft along the bottom of the fan case and up into the core at the gearbox; the core harnesses (WC05 round the
        turbine exhaust for the EGT probes, WC08 over the HPC) branch from there */
-    { const r = 1.0, arc = (x0, x1, h0, h1, n) => { const pts = []; for (let i = 0; i <= n; i++) { const t = i / n; pts.push(P(x0 + (x1 - x0) * t, h0 + (h1 - h0) * t, r + .012)); } return pts; };
+    /* the harnesses ride 27 mm off the composite case (outer surface r 0.97) in cushioned clamps on lime-green stand-offs (photos) */
+    { const rc = .97, rh = .997, arc = (x0, x1, h0, h1, n) => { const o = []; for (let i = 0; i <= n; i++) { const t = i / n; o.push([x0 + (x1 - x0) * t, h0 + (h1 - h0) * t]); } return o; };
+      const standoff = (x, h, d, rr) => { const f = Kt.frame('harnesses', x, h, rc), y = (rr || .014) + .013;
+        Kt.box('harnesses', f, [0, .006, 0], [.026, .012, .02], 'lime', { round: .003 }); Kt.box('harnesses', f, [0, y * .55, 0], [.006, y * .8, .016], 'lime', { round: .001 });
+        Kt.tube('harnesses', f, [0, y, 0], d, (rr || .014) + .0005, (rr || .014) + .0045, .012, 'lime'); };
       const runs = [arc(.16, .1, 12, 9.3, 10), arc(.12, .02, 12, 9.3, 10), arc(-.1, -.32, 8.7, 6.05, 10), arc(-.02, -.40, 8.7, 6.0, 10), arc(.0, -.45, 12, 15.0, 12)];   // to and from the EEC's upper and lower connectors
-      for (const pts of runs) { line('harnesses', pts, .014, 'harness', { clamps: 6, tension: .3 });
-        for (let i = 1; i < pts.length - 1; i += 2) { const so = new THREE.Mesh(G.roundedBox(.03, .02, .02, .004)); so.position.copy(pts[i]).multiplyScalar(.995); PW.add('harnesses', so, 'lime', { solid: true }); } }
-      /* W03 and W04 aft from the fan case under the reverser, outboard of the ignition cables and the anti-ice duct, down the lower
-         bifurcation at x -1.29 and into the core */
-      for (const [dz, dh] of [[-.03, .05], [.03, -.05]]) line('harnesses', [P(-.36, 6.0, r + .012).add(V(0, 0, dz)), P(-.70, 6.0, r + .01).add(V(0, 0, dz)), P(-.82, 6 + dh, 1.09), P(-1.20, 6 + dh, 1.09), P(-1.28, 6 + dh, .95), P(-1.29, 6 + dh, .75), P(-1.30, 6 + dh * .8, .58), P(-1.33, 6.3 + dh * .5, .50), P(-1.35, 6.9, .42)], .016, 'harness', { clamps: 5 });
-      for (const [x, h] of [[.12, 12], [.08, 11.85]]) { const c = new THREE.Mesh(G.can(.024, .05)); c.geometry.rotateZ(Math.PI / 2); G.aim(c, P(x, h, 1.035), P(0, h, 1).normalize()); PW.add('harnesses', c, 'connector', { solid: true }); }
+      for (const xh of runs) { line('harnesses', xh.map(([x, h]) => P(x, h, rh)), .014, 'harness', { clamps: 0, tension: .3 });
+        for (let i = 1; i < xh.length - 1; i += 2) standoff(xh[i][0], xh[i][1], [xh[i + 1][0] - xh[i - 1][0], 0, rh * G.clock(xh[i + 1][1] - xh[i - 1][1])]); }
+      /* W03 and W04 aft along the bottom of the case, lifting over the mount ring, under the reverser, outboard of the ignition cables
+         and the anti-ice duct, down the lower bifurcation at x -1.29 and into the core */
+      for (const [dz, dh] of [[-.03, .05], [.03, -.05]]) { const hz = 6 - dz / rh * 6 / Math.PI;                         // world z offset dz at 6 o'clock as a clock offset
+        line('harnesses', [P(-.36, hz, rh + .002), P(-.58, hz, rh + .002), P(-.66, hz, 1.025), P(-.74, 6 + dh * .5, 1.05), P(-.82, 6 + dh, 1.09), P(-1.20, 6 + dh, 1.09), P(-1.28, 6 + dh, .95), P(-1.29, 6 + dh, .75), P(-1.30, 6 + dh * .8, .58), P(-1.33, 6.3 + dh * .5, .50), P(-1.35, 6.9, .42)], .016, 'harness', { clamps: 5 });
+        standoff(-.47, hz, 'x', .016); }
+      for (const [x, h] of [[.12, 12], [.08, 11.85]]) { const c = new THREE.Mesh(G.can(.024, .05)); c.geometry.rotateZ(Math.PI / 2); G.aim(c, P(x, h, 1.01), P(0, h, 1).normalize()); PW.add('harnesses', c, 'connector', { solid: true }); }
       /* WC08 up the left of the core forward of the IFPC, over the layshaft, and over the HPC to the top; WC05 branches from it and runs
          aft along the top in the pylon gap, over the clearance control manifolds, to the EGT harness ring behind the LPT */
       line('harnesses', [P(-1.35, 6.9, .42), P(-1.19, 7.4, .38), P(-1.19, 8.2, .375), P(-1.25, 9.5, .325), P(-1.4, 11.2, .31), P(-1.68, 12.15, .31)], .012, 'harness', { clamps: 4 });
       line('harnesses', [P(-1.66, 12.1, .32), P(-1.75, 12.05, .37), P(-1.95, 12.1, .42), P(-2.13, 12.15, .47), P(-2.24, 12.08, .555), P(-2.40, 12.0, .56), P(-2.48, 12.05, .50), P(-2.505, 12.2, .445)], .012, 'harness', { clamps: 4 }); }
     PW.part('ignition', { label: 'Ignition system', explode: [0, 0, -.35], src: 'p.306-323; TTM ch. 74',
-      info: 'One exciter on the left of the fan case at 8 o\'clock, cooled by fan compartment air, with two independent capacitor-discharge circuits: system A run by EEC channel A, system B by channel B. Each fires its own igniter at 5 kV, 1 to 3 sparks a second, through a braided steel cable that runs under the engine to the diffuser case: igniter A at 4 o\'clock, igniter B at 5 o\'clock. On this (right) engine the circuits are powered from DC ESS BUS 2 and 3; the left engine uses DC ESS BUS 1 and 3.\n\nAn automatic start uses one igniter, alternating each start: on at 20.4 to 23.5 percent N2, off at 49.3 to 53.3 percent. If the first attempt fails, the EEC dry motors the engine and tries again on both. The EEC selects both igniters continuously after a flameout in flight or on the takeoff roll above 60 kt, an in-flight surge, or for an in-flight start.\n\nWait at least 5 minutes after the ignition last operated before removing a plug or cable: the voltage can injure.' });
-    { box('ignition', -.53, 8.0, 1.06, .21, .09, .10, 'darkBox'); box('ignition', -.635, 8.0, 1.06, .02, .09, .10, 'steel');                   // the exciter, with its output end plate aft
+      info: 'One exciter, the black box with the red-orange HIGH VOLTAGE label low on the left of the fan case at 8 o\'clock, cooled by fan compartment air, with two independent capacitor-discharge circuits: system A run by EEC channel A, system B by channel B. Each fires its own igniter at 5 kV, 1 to 3 sparks a second, through a braided steel cable that runs under the engine to the diffuser case: igniter A at 4 o\'clock, igniter B at 5 o\'clock. On this (right) engine the circuits are powered from DC ESS BUS 2 and 3; the left engine uses DC ESS BUS 1 and 3.\n\nAn automatic start uses one igniter, alternating each start: on at 20.4 to 23.5 percent N2, off at 49.3 to 53.3 percent. If the first attempt fails, the EEC dry motors the engine and tries again on both. The EEC selects both igniters continuously after a flameout in flight or on the takeoff roll above 60 kt, an in-flight surge, or for an in-flight start.\n\nWait at least 5 minutes after the ignition last operated before removing a plug or cable: the voltage can injure.' });
+    /* the exciter (p.317, and Brian's photo from below the EEC): a black box with a red-orange high-voltage label and a small yellow
+       label, on a bracket carried by four isolator mounts on the case (r 0.97). The aircraft power connector is on its forward end; the
+       two output connectors, B above A, are on the darker aft end plate, their braided steel cables turning down the case */
+    { const f = Kt.frame('ignition', -.51, 8.0, .968);
+      for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const ax = a * .125, az = b * .065;
+        Kt.box('ignition', f, [ax, .002, az], [.034, .006, .034], 'steel', { round: .004, rot: [0, Math.PI / 4, 0] });       // isolator mount flange
+        Kt.cyl('ignition', f, [ax, .012, az], 'y', .011, .014, 'blackHose'); Kt.hex('ignition', f, [ax, .0225, az], 'y', .0055, .005, 'steel'); }
+      Kt.box('ignition', f, [0, .022, 0], [.29, .006, .165], 'accGrey', { round: .003 });                                    // bracket
+      Kt.box('ignition', f, [0, .072, 0], [.24, .09, .105], 'exciterBlack', { round: .008 });
+      Kt.box('ignition', f, [-.124, .072, 0], [.01, .084, .1], 'capBlack', { round: .004 });                                  // output end plate
+      for (const s of [1, -1]) { Kt.cyl('ignition', f, [-.1315, .072, s * .026], 'x', .0145, .005, 'steel');                 // receptacle flange, coupling nut, cable ferrule
+        Kt.hex('ignition', f, [-.141, .072, s * .026], 'x', .0125, .012, 'steel'); Kt.cyl('ignition', f, [-.155, .072, s * .026], 'x', .0095, .016, 'steel'); }
+      Kt.connector('ignition', f, [.12, .072, 0], 'x', .012, { lead: 'z', boot: true });                                     // aircraft power in
+      Kt.label('ignition', f, [-.045, .1172, -.012], 'y', 'z', .075, .036, 'hv'); Kt.label('ignition', f, [-.098, .1172, .032], 'y', 'z', .022, .018, 'caution');
+      Kt.plate('ignition', f, [.055, .1172, .01], 'y', 'z', .05, .03);
+      line('ignition', [P(-.367, 8.057, 1.0405), P(-.345, 8.12, 1.022), P(-.29, 8.25, 1.0), P(-.20, 8.4, .997), P(-.115, 8.52, .997)], .007, 'harness', { clamps: 0, ends: false });   // into W03
       PW.part('igniters', { parent: 'ignition', label: 'Igniter plugs (2)', src: 'p.314, p.318-319',
         info: 'Two igniter plugs through the diffuser case into the combustion chamber: A at 4 o\'clock, B at 5 o\'clock. Each sits in a mounting boss over classified spacers that set its immersion depth; the boss and spacers stay on the case when a plug is changed. The cables are interchangeable, with ceramic-insulated terminals at the plug end.' });
-      /* p.314: the cables run aft along the bottom of the fan case and under the reverser, down the lower bifurcation at x -1.2 and aft
-         under the core, clear of the drain mast, VFG and oil control module, to the plugs just aft of the fuel nozzles */
-      for (const [h0, dh, hp] of [[7.95, .03, 4.05], [8.05, -.03, 5.25]]) {
-        const run = [P(-.645, h0, 1.05), P(-.74, 7.0 + dh, 1.055), P(-.82, 6.3 + dh, 1.06), P(-.90, 6.0 + dh, 1.055), P(-1.12, 6.0 + dh, 1.05), P(-1.19, 6.0 + dh, .95), P(-1.20, 6.0 + dh, .75),
+      /* p.314-315: the cables run aft along the bottom of the fan case and under the reverser, down the lower bifurcation at x -1.2 and
+         aft under the core, clear of the drain mast, VFG and oil control module, up to the plugs just aft of the fuel nozzles. A keeps to
+         the right of B all the way, so they never cross */
+      for (const [h0, dh, hp] of [[7.952, -.03, 4.05], [8.048, .03, 5.0]]) {
+        const run = [P(-.673, h0, 1.0403), P(-.70, h0 - .05, 1.04), P(-.735, 7.6 + dh, 1.04), P(-.765, 7.0 + dh, 1.045), P(-.82, 6.3 + dh, 1.055), P(-.90, 6.0 + dh, 1.055), P(-1.12, 6.0 + dh, 1.05), P(-1.19, 6.0 + dh, .95), P(-1.20, 6.0 + dh, .75),
           P(-1.21, 5.97 + dh, .58), P(-1.30, 5.9 + dh, .52), P(-1.50, 5.85 + dh, .525), P(-1.75, 5.78 + dh, .53)];
-        const tail = hp < 4.5 ? [P(-1.82, 5.2, .505), P(-1.82, 4.8, .50), P(-1.82, 4.5, .49), P(-1.80, 4.25, .43), P(-1.78, hp, .33)] : [P(-1.79, 5.45, .45), P(-1.785, 5.36, .35), P(-1.78, hp, .32)];
-        line('ignition', run.concat(tail), .009, 'tube', { clamps: 6 });
-        can('igniters', -1.78, hp, .278, .013, .055, 'steel', { rot: [G.clock(hp), 0, Math.PI / 2] }); box('igniters', -1.78, hp, .258, .05, .02, .05, 'steel'); } }   // plug in its mounting boss
+        const tail = hp < 4.5 ? [P(-1.82, 5.2, .505), P(-1.82, 4.8, .50), P(-1.815, 4.5, .49), P(-1.79, 4.3, .45), P(-1.80, 4.15, .40), P(-1.81, 4.06, .37), P(-1.81, hp, .347)]
+          : [P(-1.80, 5.45, .47), P(-1.81, 5.15, .42), P(-1.81, 5.02, .385), P(-1.81, hp, .347)];
+        line('ignition', run.concat(tail), .0085, 'cable', { clamps: 6, ends: false });
+        /* p.319, from the case out: classified spacer, mounting boss (diamond flange, two bolts, collar), the plug's seating hex, body,
+           large hex and terminal shell, then the cable's coupling nut and ferrule; the electrode tip goes through into the liner */
+        const g = Kt.frame('igniters', -1.81, hp, .245);
+        Kt.tube('igniters', g, [0, .0015, 0], 'y', .011, .019, .003, 'steel');
+        Kt.box('igniters', g, [0, .007, 0], [.046, .008, .046], 'steel', { round: .006, rot: [0, Math.PI / 4, 0] });
+        for (const s of [-1, 1]) Kt.hex('igniters', g, [s * .024, .0125, 0], 'y', .0042, .004, 'steel');
+        Kt.cyl('igniters', g, [0, .019, 0], 'y', .0165, .016, 'steel', { edge: .002 });
+        Kt.hex('igniters', g, [0, .031, 0], 'y', .0135, .008, 'steel'); Kt.cyl('igniters', g, [0, .044, 0], 'y', .0105, .018, 'nickel');
+        Kt.hex('igniters', g, [0, .058, 0], 'y', .015, .01, 'steel'); Kt.cyl('igniters', g, [0, .07, 0], 'y', .0115, .014, 'steel', { edge: .002 });
+        Kt.hex('igniters', g, [0, .083, 0], 'y', .0135, .012, 'steel'); Kt.cyl('igniters', g, [0, .096, 0], 'y', .0095, .014, 'steel');
+        Kt.cyl('igniters', g, [0, -.012, 0], 'y', .0055, .022, 'nickel'); } }
     PW.part('sensors', { label: 'Engine sensors', explode: [0, .2, .2], src: 'p.102-161',
       info: 'Speed probes for N1 (station 2.5 at 4:30 on the CIC) and fan speed (No. 1 bearing support at 1 o\'clock), PMAG for N2, T3 and P3 at the HPC exit, the EGT thermocouple harness behind the LPT at station 5, two vibration sensors, and the oil sensors on the OCM. Their signals go to the EEC; vibration and oil debris also go to the PHMU.' });
     { for (let i = 0; i < 8; i++) { const a = G.clock(i * 1.5 + .75), xx = -2.47; PW.add('sensors', G.rod(G.onRing(xx, .40, a), G.onRing(xx, .30, a), .007), 'steel'); }        // EGT probes at station 5
@@ -422,10 +458,27 @@
       can('sensors', -1.35, 10.6, .36, .016, .09, 'steel', { rot: [G.clock(10.6), 0, Math.PI / 2] });                                          // burner pressure (PB) sensor (p.105)
       box('sensors', -.86, 10.5, 1.0, .07, .04, .06, 'darkBox'); box('sensors', -2.5, 10.5, .48, .07, .04, .06, 'darkBox'); }               // vibration sensors
     PW.part('phmu', { label: 'Prognostics and health management unit (PHMU)', explode: [0, .3, .3], src: 'p.92-95', info: 'Box on the fan case that records vibration and oil debris data for trend monitoring and fan trim balance solutions. It talks to the EEC over a CAN bus.' });
-    box('phmu', -.40, 10.3, 1.04, .26, .08, .16, 'eecGrey');
+    { const f = Kt.frame('phmu', -.40, 10.3, .97);                                                                           // on four isolators on the case
+      for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { Kt.box('phmu', f, [a * .1, .0015, b * .055], [.03, .003, .03], 'steel', { round: .002, rot: [0, Math.PI / 4, 0] });
+        Kt.cyl('phmu', f, [a * .1, .0095, b * .055], 'y', .011, .013, 'blackHose'); }
+      Kt.box('phmu', f, [0, .054, 0], [.25, .075, .15], 'eecGrey', { round: .01 });
+      for (const s of [-1, 1]) Kt.connector('phmu', f, [.125, .054, s * .035], 'x', .012, { lead: 'y' });
+      Kt.plate('phmu', f, [-.03, .0917, 0], 'y', 'z', .07, .04, 'PHMU'); }
     PW.part('pdos', { label: 'Power door opening system', explode: [0, .3, .4], src: 'p.32-43',
       info: 'Hydraulic powerpack on the fan case at about 2 o\'clock and one opening actuator per reverser door, which lifts the door to the hold-open rod position. A hand pump can be connected at the quick-disconnect instead; the TTM notes that newer production aircraft have no powerpack and use the hand pump only. Never stand under a door held only by its actuator: install the hold-open rods.' });
-    { box('pdos', -.70, 2.0, 1.04, .24, .1, .14, 'accGrey'); for (const h of [4, 8]) line('pdos', [P(-.80, h, 1.0), P(-1.0, h, 1.05)], .022, 'tube', { clamps: 0 }); }
+    /* p.33-35: the powerpack at the aft end of the fan case on the right: an AC motor driving a gear pump, a reservoir and manifold
+       with the solenoid valve, and the hydraulic line down to the right door's locking actuator */
+    { const f = Kt.frame('pdos', -.555, 2.2, .97);
+      Kt.box('pdos', f, [0, .004, 0], [.22, .008, .16], 'lime', { round: .003 });                                             // mounting bracket
+      Kt.box('pdos', f, [.01, .055, .018], [.17, .09, .1], 'accGrey', { round: .012 });                                      // reservoir and manifold
+      Kt.cyl('pdos', f, [-.005, .05, -.058], 'x', .04, .15, 'accGrey', { edge: .006 }); Kt.fins('pdos', f, [-.02, .05, -.058], 'x', .04, 12, .004, .003, .09, 'accGrey');   // motor
+      Kt.connector('pdos', f, [.07, .05, -.058], 'x', .011, { lead: 'y' });
+      Kt.cyl('pdos', f, [.05, .108, .035], 'y', .016, .03, 'darkBox'); Kt.connector('pdos', f, [.05, .124, .035], 'y', .008, { lead: 'x' });   // solenoid valve
+      Kt.cyl('pdos', f, [-.04, .104, .035], 'y', .013, .01, 'capBlack', { edge: .002 });                                    // reservoir filler cap
+      Kt.fitting('pdos', f, [-.075, .03, .05], '-x', .009); Kt.fitting('pdos', f, [-.075, .03, .022], '-x', .008);
+      Kt.plate('pdos', f, [.01, .055, .0685], 'z', 'y', .05, .03);
+      line('pdos', [P(-.655, 2.3, 1.0), P(-.70, 2.6, 1.03), P(-.75, 3.2, 1.03), P(-.79, 3.8, 1.01), P(-.80, 4.0, 1.0)], .007, 'black', { clamps: 2 }); }
+    for (const h of [4, 8]) line('pdos', [P(-.80, h, 1.0), P(-1.0, h, 1.05)], .022, 'tube', { clamps: 0 });                  // the door locking actuators
 
     /* ============================== FIRE PROTECTION ============================== */
     PW.part('fire', { label: 'Fire detection and extinguishing', explode: [0, .15, -.2], src: 'TTM ch. 26 (p.262-269)',
