@@ -61,6 +61,9 @@
     <button class="b" data-cut="off" aria-pressed="true">Off</button><button class="b" data-cut="top">Upper half</button><button class="b" data-cut="left">Left half</button><button class="b" data-cut="right">Right half</button><button class="b" data-cut="view">Facing me</button>
     <input type="range" id="cutOff" min="-1.2" max="1.2" step=".01" value="0" title="Move the section plane">
   </div>
+  <div class="grp"><label>Mouse</label>
+    <button class="b" data-tool="turn" aria-pressed="true" title="Drag to turn the view">Turn view</button><button class="b" data-tool="move" title="Drag a part to pull it out of the engine">Move parts</button><button class="b" id="putBack" title="Put every moved part back in place">Put all back</button>
+  </div>
   <div class="grp"><label>Nacelle</label>
     <button class="b" data-nac="on" aria-pressed="true">On</button><button class="b" data-nac="ghost">Ghost</button><button class="b" data-nac="off">Off</button>
   </div>
@@ -76,7 +79,7 @@
 /* load the model scripts in order. BUILD changes with every commit so a browser never runs stale scripts; ?v=N on the page URL
    overrides it while editing */
 (function () {
-  const BUILD = '2026-10-07c';
+  const BUILD = '2026-10-07d';
   const v = new URLSearchParams(location.search).get('v') || BUILD;
   const files = ['geo', 'core', 'data', 'build-core', 'build-external', 'build-nacelle', 'ui'];
   const next = i => { if (i >= files.length) return; const s = document.createElement('script'); s.src = `pw1500g/${files[i]}.js?v=${encodeURIComponent(v)}`;

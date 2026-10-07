@@ -167,7 +167,8 @@
      (back faces +1, front faces -1); a cap plane then fills wherever the count is non-zero, i.e. inside solid metal, so cut
      walls, discs and blades read as solid, hatched red faces instead of hollow shells. */
   PW.initCut = function () {
-    const C = PW.cut = { on: false, plane: new THREE.Plane(new THREE.Vector3(0, -1, 0), 0), mode: 'top', offset: 0, helpers: [] };
+    /* pivot: a point the plane passes through at offset 0 (the axis for the whole engine, a part's centre when one part is cut) */
+    const C = PW.cut = { on: false, plane: new THREE.Plane(new THREE.Vector3(0, -1, 0), 0), mode: 'top', offset: 0, pivot: new THREE.Vector3(), helpers: [] };
     const capMat = new THREE.MeshStandardMaterial({ map: hatchTex(), color: 0xffffff, roughness: .6, metalness: .15, side: THREE.DoubleSide,
       stencilWrite: true, stencilRef: 0, stencilFunc: THREE.NotEqualStencilFunc, stencilFail: THREE.ReplaceStencilOp, stencilZFail: THREE.ReplaceStencilOp, stencilZPass: THREE.ReplaceStencilOp });
     hatchTex().repeat.set(40, 40);
@@ -200,19 +201,20 @@
     const C = PW.cut; C.mode = mode || C.mode; C.offset = offset === undefined ? C.offset : offset;
     const n = { top: [0, -1, 0], bottom: [0, 1, 0], left: [0, 0, 1], right: [0, 0, -1], front: [-1, 0, 0] }[C.mode];
     if (n) C.plane.normal.set(...n);
-    C.plane.constant = C.offset;
+    C.plane.constant = C.offset - C.plane.normal.dot(C.pivot);
     PW.placeCap();
   };
   PW.placeCap = function () {
     const C = PW.cut; if (!C.cap) return;
-    const p = C.plane.coplanarPoint(new THREE.Vector3());
+    /* the cap sits where the plane meets the pivot's line of sight, so it covers a part cut away from the engine axis */
+    const p = C.plane.projectPoint(C.pivot, new THREE.Vector3());
     C.cap.position.copy(p); C.cap.lookAt(p.clone().add(C.plane.normal));
   };
   /* the camera-facing mode keeps the cut square to the view as the engine turns */
   PW.followCamera = function () {
     const C = PW.cut; if (C.mode !== 'view') return;
     const v = PW.camera.position.clone().sub(PW.ctl.target); v.x = 0; if (v.lengthSq() < 1e-6) v.set(0, 1, 0); v.normalize();
-    C.plane.normal.copy(v).negate(); C.plane.constant = C.offset; PW.placeCap();
+    C.plane.normal.copy(v).negate(); C.plane.constant = C.offset - C.plane.normal.dot(C.pivot); PW.placeCap();
   };
 
   /* ---------------- camera ---------------- */
@@ -221,7 +223,7 @@
     K.want = { theta: K.theta, phi: K.phi, r: K.r, target: K.target.clone() };
     let drag = null;
     cv.addEventListener('contextmenu', e => e.preventDefault());
-    cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); drag = { x: e.clientX, y: e.clientY, b: e.button, shift: e.shiftKey, moved: false }; });
+    cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); drag = { x: e.clientX, y: e.clientY, b: e.button, shift: e.shiftKey, moved: false }; if (PW.onDown) PW.onDown(e, drag); });
     cv.addEventListener('pointermove', e => {
       if (!drag) { PW.onHover && PW.onHover(e); return; }
       const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.hypot(dx, dy) > 3) drag.moved = true;
@@ -283,15 +285,31 @@
   /* a part hung on a spool or hinge is not carried by its module's group, so it adds its ancestors' explode moves itself */
   /* Exploded, routed tubes, hoses and harnesses (meshes marked isLine) and parts marked explodeHide (sensors spread over several
      modules, links, loops) are put away, as on a module breakdown drawing; they come back when the engine is put together again */
+  /* Parts pulled out with the Move tool keep their offset in world space (p.dragW). It is turned into the frame of whatever the part
+     hangs from each time, so a dragged rotor stays put while its spool turns and a part on a door keeps its place as the door swings */
+  const qInv = new THREE.Quaternion(), wv = new THREE.Vector3();
   PW.setExplode = function (t) {
-    PW.explodeT = t; const away = t > .02;
+    PW.explodeT = t; const away = t > .02; let any = false;
     for (const p of PW.parts.values()) {
       if (p.explodeHide) p.obj.visible = !p.hidden && !away;
       for (const m of p.meshes) if (m.userData.isLine) m.visible = !away;
-      const v = p.explode.clone(); if (p.detached) for (let q = PW.parts.get(p.parent); q; q = q.parent && PW.parts.get(q.parent)) v.add(q.explode);
-      if (!v.lengthSq() && !p.dragged) continue;
-      p.obj.position.copy(p.base).addScaledVector(v, t); if (p.dragged) p.obj.position.add(p.dragged); }
+      const v = p.explode.clone(); wv.set(0, 0, 0); if (p.dragW) wv.add(p.dragW);
+      if (p.detached) for (let q = PW.parts.get(p.parent); q; q = q.parent && PW.parts.get(q.parent)) { v.add(q.explode); if (q.dragW) wv.add(q.dragW); }
+      if (p.dragW) any = true;
+      const dragged = wv.lengthSq() > 0;
+      if (!v.lengthSq() && !dragged && !p.wasDragged) continue;
+      p.obj.position.copy(p.base).addScaledVector(v, t);
+      if (dragged) { p.obj.parent.getWorldQuaternion(qInv).invert(); p.obj.position.add(wv.clone().applyQuaternion(qInv)); }
+      p.wasDragged = dragged; }
+    PW.anyDrag = any;
   };
+  /* drag a part (and everything carried with it) by a world-space step; null puts it back */
+  PW.dragPart = function (id, step) {
+    for (const k of step ? [id] : PW.sub(id)) { const p = PW.parts.get(k); if (!p) continue;
+      if (!step) { p.dragW = null; continue; } p.dragW = (p.dragW || new THREE.Vector3()).add(step); }
+    PW.setExplode(PW.explodeT || 0);
+  };
+  PW.isDragged = id => PW.sub(id).some(k => PW.parts.get(k).dragW);
   /* builders can add toolbar controls: PW.addControl('Cowls', [{ label, on, apply }]) */
   PW.controls = [];
   PW.addControl = (label, buttons) => PW.controls.push({ label, buttons });
@@ -306,6 +324,7 @@
       PW.updateCamera(dt);
       for (const name in PW.spools) { const s = PW.spools[name]; s.angle += dt * (PW.speed || 0) * s.vis * s.dir; s.group.rotation.x = s.angle; }
       for (const f of PW.anim) f(dt, now / 1000);
+      if (PW.anyDrag) { PW.root.updateMatrixWorld(true); PW.setExplode(PW.explodeT || 0); }      // keep pulled-out parts in place as spools turn and doors swing
       PW.followCamera();
       onFrame && onFrame(dt, now / 1000);
       PW.renderer.render(PW.scene, PW.camera);

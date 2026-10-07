@@ -14,16 +14,34 @@
   const path = id => { const out = []; for (let p = PW.parts.get(id); p; p = p.parent && PW.parts.get(p.parent)) out.unshift(p.label); return out; };
   function showInfo() {
     if (!sel) { info.innerHTML = `<h2>PW1500G geared turbofan</h2><div class="sub">A220-300 &middot; drag to turn, right-drag to pan, scroll to zoom</div>
-      <p>Click any part, or pick it from the list, to see what it is, where it sits and what maintenance does with it. Use Section to cut the engine open and Explode to pull the modules apart.</p>`; return; }
-    const p = PW.parts.get(sel);
+      <p>Click any part, or pick it from the list, to see what it is, where it sits and what maintenance does with it. Use Section to cut the engine open and Explode to pull the modules apart.</p>
+      <p>To look inside one part, select it and press Inspect: it is shown on its own and cut in half facing you. With Move parts on, drag any part out of the engine; select a module in the list first to move it whole.</p>`; return; }
+    const p = PW.parts.get(sel), solo = cutSolo === sel, moved = PW.isDragged(sel);
     info.innerHTML = `<h2>${esc(p.label)}</h2><div class="sub">${esc(path(sel).slice(0, -1).join(' › '))}</div>${(p.info || '').split('\n\n').map(t => `<p>${esc(t)}</p>`).join('')}
-      <div class="acts"><button class="b" id="iIso">Isolate</button><button class="b" id="iHide">Hide</button><button class="b" id="iCut" aria-pressed="${p.cut}">Cut with section</button><button class="b" id="iFocus">Zoom to</button><button class="b" id="iAll">Show all</button></div>
+      <div class="acts"><button class="b" id="iInspect" title="Show this part on its own, cut in half facing you">Inspect</button><button class="b" id="iCut" aria-pressed="${solo}" title="Cut only this part, through its middle">${solo ? 'Whole again' : 'Cut in half'}</button><button class="b" id="iIso">Isolate</button><button class="b" id="iHide">Hide</button><button class="b" id="iFocus">Zoom to</button>${moved ? '<button class="b" id="iBack">Put back</button>' : ''}<button class="b" id="iAll">Show all</button></div>
       ${p.src ? `<div class="src">Source: ${esc(p.src)}</div>` : ''}`;
+    info.querySelector('#iInspect').onclick = () => { isolate(sel); cutPart(sel, 'view'); };
+    info.querySelector('#iCut').onclick = () => { if (solo) wholeAgain(); else cutPart(sel); };
     info.querySelector('#iIso').onclick = () => isolate(sel);
     info.querySelector('#iHide').onclick = () => { PW.setHidden(sel, true); syncTree(); select(null); };
-    info.querySelector('#iCut').onclick = e => { for (const k of PW.sub(sel)) PW.parts.get(k).cut = !p.cut; e.currentTarget.setAttribute('aria-pressed', String(p.cut)); PW.applyCut(); };
     info.querySelector('#iFocus').onclick = () => focus(sel);
+    if (moved) info.querySelector('#iBack').onclick = () => { PW.dragPart(sel, null); recentreCut(); showInfo(); };
     info.querySelector('#iAll').onclick = showAll;
+  }
+  /* ---- cutting one part: only that part (and what belongs to it) is clipped, by a plane through its own middle ---- */
+  let cutSolo = null;
+  function cutPart(id, mode) {
+    const keep = new Set(PW.sub(id)), box = new THREE.Box3();
+    for (const p of PW.parts.values()) p.cut = keep.has(p.id);
+    for (const m of PW.meshesOf(id)) if (m.visible) box.expandByObject(m);
+    PW.cut.pivot.copy(box.isEmpty() ? new THREE.Vector3() : box.getCenter(new THREE.Vector3()));
+    const m = mode || (PW.cut.on ? PW.cut.mode : 'view');
+    PW.cut.on = true; PW.setCutPlane(m, 0); document.getElementById('cutOff').value = 0;
+    press('[data-cut]', document.querySelector(`[data-cut="${m}"]`)); PW.applyCut(); cutSolo = id; showInfo();
+  }
+  function wholeAgain() {
+    for (const p of PW.parts.values()) p.cut = true; PW.cut.pivot.set(0, 0, 0); PW.cut.on = false; PW.setCutPlane(null, 0);
+    document.getElementById('cutOff').value = 0; press('[data-cut]', document.querySelector('[data-cut="off"]')); PW.applyCut(); cutSolo = null; showInfo();
   }
   function select(id) {
     if (sel) PW.tint(sel, null); sel = id; if (sel) PW.tint(sel, 'sel');
@@ -65,16 +83,42 @@
 
   /* ---- canvas picking ---- */
   function setHover(id) { if (hover === id) return; if (hover && hover !== sel) PW.tint(hover, null); hover = id; if (hover && hover !== sel) PW.tint(hover, 'hover'); }
-  let hoverT = 0;
-  PW.onHover = e => { const now = performance.now(); if (now - hoverT < 50) return; hoverT = now; const h = PW.pick(e); setHover(h && h.id); PW.renderer.domElement.style.cursor = h ? 'pointer' : 'grab'; };
-  PW.onClick = e => { const h = PW.pick(e); select(h ? (sel === h.id ? null : h.id) : null); };
+  let hoverT = 0, tool = 'turn';
+  PW.onHover = e => { const now = performance.now(); if (now - hoverT < 50) return; hoverT = now; const h = PW.pick(e); setHover(h && h.id); PW.renderer.domElement.style.cursor = h ? (tool === 'move' ? 'move' : 'pointer') : 'grab'; };
+  PW.onClick = e => { const h = PW.pick(e); if (tool === 'move') { if (!h) select(null); return; } select(h ? (sel === h.id ? null : h.id) : null); };
+
+  /* ---- Move parts: press on a part and drag it out of the engine, in the plane facing the camera. Pressing on any piece of the
+     selected part moves the whole of it, so a module picked in the list moves as one; anywhere else picks the piece under the pointer.
+     Dragging empty space still turns the view, and right-drag still pans ---- */
+  const dragPlane = new THREE.Plane(), rc = new THREE.Raycaster(), hitV = new THREE.Vector3();
+  const rayAt = e => { const r = PW.renderer.domElement.getBoundingClientRect(); rc.setFromCamera(new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1), PW.camera); return rc.ray; };
+  PW.onDown = (e, drag) => {
+    if (tool !== 'move' || e.button !== 0 || e.shiftKey) return;
+    const h = PW.pick(e); if (!h) return;
+    const id = sel && PW.sub(sel).includes(h.id) ? sel : h.id; if (id !== sel) select(id);
+    dragPlane.setFromNormalAndCoplanarPoint(PW.camera.getWorldDirection(new THREE.Vector3()), h.point);
+    drag.grab = { id, last: h.point.clone() };
+  };
+  PW.onDrag = (e, dx, dy, drag) => {
+    if (!drag.grab) return false;
+    if (rayAt(e).intersectPlane(dragPlane, hitV)) { const step = hitV.clone().sub(drag.grab.last); PW.dragPart(drag.grab.id, step); drag.grab.last.copy(hitV);
+      if (cutSolo && PW.sub(drag.grab.id).includes(cutSolo)) { PW.cut.pivot.add(step); PW.setCutPlane(null); } }          // a part cut on its own takes its cut with it
+    return true;
+  };
+  PW.onDragEnd = () => { if (sel) showInfo(); };
 
   /* ---- toolbar ---- */
   const press = (sel0, el) => document.querySelectorAll(sel0).forEach(b => b.setAttribute('aria-pressed', String(b === el)));
   const VIEWS = { left: [-Math.PI / 2, 1.45, 8.5], right: [Math.PI / 2, 1.45, 8.5], front: [0, 1.45, 8.5], rear: [Math.PI, 1.45, 8.5], top: [-Math.PI / 2, .12, 8.5], below: [-Math.PI / 2, 3.0, 8.5] };
   document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => { const v = VIEWS[b.dataset.view]; PW.look(v[0], v[1], v[2], [PW.CENTER_X || -.8, 0, 0]); });
+  /* the toolbar Section cuts the whole engine about its axis; it clears a one-part cut */
   document.querySelectorAll('[data-cut]').forEach(b => b.onclick = () => { press('[data-cut]', b); const m = b.dataset.cut;
+    if (cutSolo) { for (const p of PW.parts.values()) p.cut = true; PW.cut.pivot.set(0, 0, 0); cutSolo = null; showInfo(); }
     PW.cut.on = m !== 'off'; if (PW.cut.on) PW.setCutPlane(m, +document.getElementById('cutOff').value); PW.applyCut(); });
+  document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => { press('[data-tool]', b); tool = b.dataset.tool; });
+  document.getElementById('putBack').onclick = () => { for (const p of PW.parts.values()) p.dragW = null; PW.setExplode(PW.explodeT || 0); recentreCut(); showInfo(); };
+  function recentreCut() { if (!cutSolo) return; PW.root.updateMatrixWorld(true); const box = new THREE.Box3(); for (const m of PW.meshesOf(cutSolo)) if (m.visible) box.expandByObject(m);
+    if (!box.isEmpty()) { box.getCenter(PW.cut.pivot); PW.setCutPlane(null); } }
   document.getElementById('cutOff').oninput = e => PW.setCutPlane(null, +e.target.value);
   /* exploding spreads the engine over about 11 m: pull the camera back as it opens so the whole breakdown stays in view */
   let lastT = 0;
@@ -113,7 +157,7 @@
   addEventListener('resize', fitList); fitList();
   showInfo();
   PW.look(-.8, 1.32, 9.6, [-1.0, .1, 0]);                                       // front three-quarter view from the left
-  window.PWUI = { select, isolate, showAll, focus, setNacelle };
+  window.PWUI = { select, isolate, showAll, focus, setNacelle, cutPart, wholeAgain, setTool: t => { tool = t; press('[data-tool]', document.querySelector(`[data-tool="${t}"]`)); } };
   /* URL options for review and testing: ?part=<id> isolates and selects a part, ?cut=top|left|right|view, ?view=left|right|front|rear|top|below,
      ?nacelle=off|ghost, ?run=0..1, ?explode=0..1 */
   const Q = new URLSearchParams(location.search);
