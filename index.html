@@ -5373,10 +5373,16 @@ const airport = (() => {
   const termCv = rm => canvas(896, 480, (c, w, h) => { const px = w / 28, Y = m => h - m / TH * h;                                                    // tile 28 x 15 m; rm: roughness (G) and metalness (B)
     const panel = rm ? 'rgb(0,190,30)' : '#c3c8cd', frame = rm ? 'rgb(0,110,150)' : '#9aa3ab';
     c.fillStyle = panel; c.fillRect(0, 0, w, h);
-    if (rm) { c.fillStyle = 'rgb(0,26,160)'; c.fillRect(0, Y(14.2), w, Y(5.6) - Y(14.2)); c.fillRect(0, Y(4.5), w, Y(3.5) - Y(4.5)); }
+    if (rm) { c.fillStyle = 'rgb(0,26,115)'; c.fillRect(0, Y(14.2), w, Y(5.6) - Y(14.2)); c.fillRect(0, Y(4.5), w, Y(3.5) - Y(4.5)); }
     else { const gr = c.createLinearGradient(0, Y(14.2), 0, Y(5.6)); gr.addColorStop(0, '#30465a'); gr.addColorStop(1, '#1c2a37'); c.fillStyle = gr; c.fillRect(0, Y(14.2), w, Y(5.6) - Y(14.2));
       c.fillStyle = '#1f2c38'; c.fillRect(0, Y(4.5), w, Y(3.5) - Y(4.5));                                                                              // service level windows
       c.fillStyle = 'rgba(255,240,200,.06)'; for (let k = 0; k < 6; k++) c.fillRect(rnd() * w, Y(9.5 + rnd() * 3), (2 + rnd() * 4) * px, .4 * px);      // lights inside
+      for (const [y0, y1] of [[5.6, 10], [10, 14.2]]) {                                                                                                 // inside, behind the glass:
+        c.fillStyle = 'rgba(205,210,214,.22)'; c.fillRect(0, Y(y1 - .15), w, Y(y1 - .85) - Y(y1 - .15)); c.fillStyle = 'rgba(255,250,236,.45)'; for (let x = .5; x < 28; x += 1.75) c.fillRect(x * px, Y(y1 - .55), .55 * px, 3);   // the ceiling and its lights,
+        c.fillStyle = 'rgba(8,12,16,.35)'; for (let x = 3.2; x < 28; x += 7) c.fillRect(x * px, Y(y1 - .15), .45 * px, Y(y0) - Y(y1 - .15));                        // columns,
+        if (y0 < 6) for (let k = 0; k < 3; k++) { const x = (1 + k * 9.3 + lrnd() * 2) * px; c.fillStyle = ['rgba(150,60,45,.32)', 'rgba(40,110,90,.32)', 'rgba(60,80,140,.32)'][k]; c.fillRect(x, Y(9.2), 3.4 * px, Y(6.6) - Y(9.2)); c.fillStyle = 'rgba(255,245,225,.4)'; c.fillRect(x, Y(9.2), 3.4 * px, .3 * px); }   // shop fronts,
+        for (let k = 0; k < 10; k++) { const x = lrnd() * w, hh = (1.55 + lrnd() * .25) * h / TH; c.fillStyle = 'rgba(10,14,18,' + (.3 + lrnd() * .25) + ')'; c.fillRect(x, Y(y0 + .1) - hh * .82, .42 * px, hh * .82);
+          c.beginPath(); c.arc(x + .21 * px, Y(y0 + .1) - hh * .9, .12 * px, 0, 7); c.fill(); } }                                                     // and people
       c.fillStyle = '#58616a'; for (const x of [4, 17]) c.fillRect(x * px, Y(3.4), 4.5 * px, Y(0) - Y(3.4));                                            // roller doors
       c.fillStyle = 'rgba(0,0,0,.1)'; for (const x of [4, 17]) for (let m = .3; m < 3.4; m += .3) c.fillRect(x * px, Y(m), 4.5 * px, 1); }
     c.fillStyle = frame; for (let m = 0; m < 28; m += 1.75) c.fillRect(m * px, Y(14.2), 3, Y(5.6) - Y(14.2));                                          // mullions and transoms
@@ -5691,7 +5697,7 @@ const airport = (() => {
       g.userData.beacon = [X, G0 + H + .65, Z]; shade(rectFoot(X - .75, X + .75, Z - .75, Z + .75), H + 1); }
   }
 
-  /* ---- trees: broadleaf (a lumpy canopy on a trunk), conifers (three stacked cones) and shrubs, in belts and clumps beyond the buildings,
+  /* ---- trees: broadleaf (a cluster of lumpy balls on a trunk), conifers (seven ragged tiers) and shrubs, in belts and clumps beyond the buildings,
      never on the runway strip or under the approach; each paints its shadow into the ground ---- */
   const trees = [], belt = (x0, x1, z0, z1, n, conifer = .3) => { for (let i = 0; i < n; i++) { const x = x0 + rnd() * (x1 - x0), z = z0 + rnd() * (z1 - z0), k = rnd() < conifer ? 1 : rnd() < .18 ? 2 : 0;
     if (x > 128 && x < 320 && z < 1600) continue; trees.push([x, z, k === 2 ? 1.2 + rnd() * 1.4 : 3 + rnd() * 3.8, k]); } };
@@ -5700,26 +5706,61 @@ const airport = (() => {
   for (let c = 0; c < 16; c++) { const x = -500 + rnd() * 1000, z = rnd() < .5 ? -525 + rnd() * 60 : 400 + rnd() * 160; belt(x - 16, x + 16, z - 12, z + 12, 7, .2); }   // clumps
   { const shadeCols = (geo, lo) => { const p = geo.attributes.position; let y0 = Infinity, y1 = -Infinity; for (let i = 0; i < p.count; i++) { y0 = Math.min(y0, p.getY(i)); y1 = Math.max(y1, p.getY(i)); }
       const cols = []; for (let i = 0; i < p.count; i++) { const k = lo + (1 - lo) * Math.pow((p.getY(i) - y0) / (y1 - y0), .8); cols.push(k, k, k); } geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); return geo; };   // darker underneath, where the foliage shades itself
-    const crown = new THREE.IcosahedronGeometry(1, 2), p = crown.attributes.position, v = new THREE.Vector3();                     // a lumpy canopy: smooth balls read as lollipops
-    for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const n = .8 + .14 * Math.sin(v.x * 5.1 + v.y * 3.7) + .1 * Math.sin(v.z * 6.3 - v.y * 2.4) + .06 * Math.sin(v.x * 11 + v.z * 9); p.setXYZ(i, v.x * n, v.y * n, v.z * n); }
-    crown.computeVertexNormals(); shadeCols(crown, .38);
-    const cone = (r, h, y) => new THREE.ConeGeometry(r, h, 9).translate(0, y, 0).toNonIndexed(), parts = [cone(1, 1.1, .85), cone(.78, 1, 1.35), cone(.52, .9, 1.85)];
-    const fir = new THREE.BufferGeometry(); for (const n of ['position', 'normal']) { const arr = new Float32Array(parts.reduce((s, q) => s + q.attributes[n].array.length, 0)); let o = 0; for (const q of parts) { arr.set(q.attributes[n].array, o); o += q.attributes[n].array.length; } fir.setAttribute(n, new THREE.BufferAttribute(arr, 3)); }
-    shadeCols(fir, .45);
+    const smooth = geo => { geo.computeVertexNormals(); const p = geo.attributes.position, nn = geo.attributes.normal, acc = new Map(), key = i => Math.round(p.getX(i) * 1e3) + ',' + Math.round(p.getY(i) * 1e3) + ',' + Math.round(p.getZ(i) * 1e3);
+      for (let i = 0; i < p.count; i++) { const k = key(i), a = acc.get(k) || [0, 0, 0]; a[0] += nn.getX(i); a[1] += nn.getY(i); a[2] += nn.getZ(i); acc.set(k, a); }   // smooth normals: faces meeting at a corner average theirs (unshared, they read as facets)
+      for (let i = 0; i < p.count; i++) { const a = acc.get(key(i)), l = Math.hypot(a[0], a[1], a[2]) || 1; nn.setXYZ(i, a[0] / l, a[1] / l, a[2] / l); } return geo; };
+    const merge = parts => { const out = new THREE.BufferGeometry(); for (const n of ['position', 'normal', 'color']) { if (!parts.every(q => q.attributes[n])) continue; const arr = new Float32Array(parts.reduce((t, q) => t + q.attributes[n].array.length, 0)); let o = 0;
+      for (const q of parts) { arr.set(q.attributes[n].array, o); o += q.attributes[n].array.length; } out.setAttribute(n, new THREE.BufferAttribute(arr, 3)); } return out; };
+    /* a broadleaf crown: a cluster of lumpy balls in an ellipsoid, smooth-shaded, darker underneath and inside where the foliage shades itself.
+       One ball read as a lollipop, a faceted one as a game asset, eight big ones as broccoli. Three variants, about 1.9 across */
+    const crownGeo = vi => { let sd = 31 + vi * 977; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647, parts = [], v = new THREE.Vector3();
+      for (let k = 0; k < 13 + vi * 3; k++) { const ball = new THREE.IcosahedronGeometry(1, 1), p = ball.attributes.position, a = r() * 9, b = r() * 9;
+        for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const f = .82 + .13 * Math.sin(v.x * 4.3 + v.y * 3.1 + a) + .09 * Math.sin(v.z * 5.7 - v.y * 2.9 + b); p.setXYZ(i, v.x * f, v.y * f, v.z * f); }
+        const sc = k === 0 ? .58 : .24 + .18 * r(), th = r() * 6.283, cy = 1 - 1.7 * r(), d = k === 0 ? 0 : .5 + .22 * r(), sy = Math.sqrt(Math.max(0, 1 - cy * cy));
+        ball.scale(sc, sc * (.8 + .25 * r()), sc).translate(sy * Math.cos(th) * d, cy * d * .75, sy * Math.sin(th) * d); parts.push(smooth(ball)); }
+      const geo = merge(parts); geo.computeBoundingBox(); const c = geo.boundingBox.getCenter(new THREE.Vector3()), e = geo.boundingBox.getSize(new THREE.Vector3());
+      geo.translate(-c.x, -c.y, -c.z).scale(1.9 / e.x, 1.9 / e.y, 1.9 / e.z);
+      const p = geo.attributes.position, cols = []; for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const k = (.36 + .64 * Math.pow((v.y + .95) / 1.9, .8)) * (.55 + .45 * Math.min(1, v.length() / .95)); cols.push(k, k, k); }
+      geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); return geo; };
+    /* a conifer: seven tiers with ragged, drooping edges on a short trunk, each tier darker underneath, the lower tiers darker */
+    const firGeo = (() => { const parts = [], T = 7;
+      for (let t = 0; t < T; t++) { const f = t / (T - 1), rad = 1 - f * .82, h = .62 - f * .2, y = .25 + f * 1.62, cg = new THREE.ConeGeometry(rad, h, 12, 1).toNonIndexed(), p = cg.attributes.position;
+        for (let i = 0; i < p.count; i++) { const x = p.getX(i), yy = p.getY(i), z = p.getZ(i); if (yy < 0 && Math.hypot(x, z) > 1e-4) { const an = Math.atan2(z, x), k = 1 + .17 * Math.cos(an * 6) + .06 * Math.sin(an * 3 + t * 1.7); p.setXYZ(i, x * k, yy - .25 * h * (k - .8), z * k); } }
+        cg.rotateY(t * .7).translate(0, y + h / 2, 0); smooth(cg);
+        const cols = []; for (let i = 0; i < p.count; i++) { const k = (.42 + .58 * f) * (p.getY(i) < y + h * .2 ? .72 : 1); cols.push(k, k, k); } cg.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); parts.push(cg); }
+      const tr = smooth(new THREE.CylinderGeometry(.06, .09, .4, 6).toNonIndexed().translate(0, .2, 0)); tr.setAttribute('color', new THREE.Float32BufferAttribute(new Array(tr.attributes.position.count * 3).fill(.2), 3)); parts.push(tr);
+      return merge(parts); })();
+    /* foliage: leaf clumps and leaves in light and shade from 3D noise on the world position, and the shading normal bent by it, so a crown
+       reads as foliage, not a smooth solid. Both fade with distance (far off the noise would sparkle) */
+    const foliage = m => { m.customProgramCacheKey = () => 'foliage'; m.onBeforeCompile = sh => {
+      sh.vertexShader = 'varying vec3 vLeafP;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+        { vec4 lp = vec4(transformed, 1.0);
+        #ifdef USE_INSTANCING
+          lp = instanceMatrix * lp;
+        #endif
+          vLeafP = (modelMatrix * lp).xyz; }`);
+      sh.fragmentShader = 'varying vec3 vLeafP;\nfloat lHash(vec3 p) { p = fract(p * .3183099 + .1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }\n' +
+        'float lNoise(vec3 x) { vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f); return mix(mix(mix(lHash(i), lHash(i + vec3(1, 0, 0)), f.x), mix(lHash(i + vec3(0, 1, 0)), lHash(i + vec3(1, 1, 0)), f.x), f.y), mix(mix(lHash(i + vec3(0, 0, 1)), lHash(i + vec3(1, 0, 1)), f.x), mix(lHash(i + vec3(0, 1, 1)), lHash(i + vec3(1, 1, 1)), f.x), f.y), f.z); }\n' +
+        sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+          { float d = length(vLeafP - cameraPosition), amp = 1.0 - smoothstep(120.0, 380.0, d), n1 = lNoise(vLeafP * 1.6), n2 = mix(lNoise(vLeafP * 5.5), .5, smoothstep(50.0, 180.0, d));
+            diffuseColor.rgb *= 1.0 + amp * (.55 + .9 * n1 * (.55 + .9 * n2) - 1.0); }`).replace('#include <normal_fragment_begin>', `#include <normal_fragment_begin>
+          { float fd = smoothstep(30.0, 140.0, length(vLeafP - cameraPosition)); vec3 q = vLeafP * 3.2;
+            normal = normalize(normal + (1.0 - fd) * .6 * (vec3(lNoise(q), lNoise(q + 7.1), lNoise(q + 13.7)) - .5)); }`); }; return m; };
     const trunk = new THREE.CylinderGeometry(.6, 1, 1, 6).translate(0, .5, 0), M4 = new THREE.Matrix4(), col = new THREE.Color(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
-    const kinds = [0, 1, 2].map(k => trees.filter(t => t[3] === k)), leafM = mat({ color: 0xffffff, roughness: 1, envMapIntensity: .15, vertexColors: true });
-    const crowns = new THREE.InstancedMesh(crown, leafM, kinds[0].length + kinds[2].length), firs = new THREE.InstancedMesh(fir, leafM, kinds[1].length), trunks = new THREE.InstancedMesh(trunk, mat({ color: lin('#3d342b'), roughness: 1 }), kinds[0].length);
+    const kinds = [0, 1, 2].map(k => trees.filter(t => t[3] === k)), leafM = foliage(mat({ color: 0xffffff, roughness: 1, envMapIntensity: .15, vertexColors: true }));
+    const crownVar = [0, 1, 2].map(crownGeo), sets = [[], [], []], firs = new THREE.InstancedMesh(firGeo, leafM, kinds[1].length), trunks = new THREE.InstancedMesh(trunk, mat({ color: lin('#3d342b'), roughness: 1 }), kinds[0].length);
     let ci = 0;
     kinds[0].forEach(([x, z, r], i) => { const h = r * (1 + rnd() * .4), th = r * (.45 + rnd() * .25), tr = .18 + r * .03;
-      M4.compose(new THREE.Vector3(x, G0 + th + h * .8, z), q.setFromAxisAngle(up, rnd() * 6), new THREE.Vector3(r * (.85 + rnd() * .3), h, r)); crowns.setMatrixAt(ci, M4);
-      crowns.setColorAt(ci++, col.setStyle(['#2e3b22', '#37452a', '#40502e', '#2b3524', '#4a5531', '#55603a'][i % 6]).convertSRGBToLinear());
+      M4.compose(new THREE.Vector3(x, G0 + th + h * .8, z), q.setFromAxisAngle(up, rnd() * 6), new THREE.Vector3(r * (.85 + rnd() * .3), h, r));
+      sets[ci++ % 3].push([M4.clone(), col.setStyle(['#2e3b22', '#37452a', '#40502e', '#2b3524', '#4a5531', '#55603a'][i % 6]).convertSRGBToLinear().clone()]);
       M4.compose(new THREE.Vector3(x, G0, z), q.identity(), new THREE.Vector3(tr, th + h * .5, tr)); trunks.setMatrixAt(i, M4); shade(circFoot(x, z, r * .85, 8), th + h * 1.8, th); });
-    kinds[2].forEach(([x, z, r], i) => { M4.compose(new THREE.Vector3(x, G0 + r * .5, z), q.setFromAxisAngle(up, rnd() * 6), new THREE.Vector3(r * 1.2, r * .75, r)); crowns.setMatrixAt(ci, M4);
-      crowns.setColorAt(ci++, col.setStyle(['#3f4a2c', '#4b5533', '#46512f'][i % 3]).convertSRGBToLinear()); shade(circFoot(x, z, r, 8), r * 1.2, 0); });
+    kinds[2].forEach(([x, z, r], i) => { M4.compose(new THREE.Vector3(x, G0 + r * .5, z), q.setFromAxisAngle(up, rnd() * 6), new THREE.Vector3(r * 1.2, r * .75, r));
+      sets[ci++ % 3].push([M4.clone(), col.setStyle(['#3f4a2c', '#4b5533', '#46512f'][i % 3]).convertSRGBToLinear().clone()]); shade(circFoot(x, z, r, 8), r * 1.2, 0); });
     kinds[1].forEach(([x, z, r], i) => { const H = r * (2.3 + rnd() * 1.4), rr = r * .5;
       M4.compose(new THREE.Vector3(x, G0, z), q.setFromAxisAngle(up, rnd() * 6), new THREE.Vector3(rr, H / 2.3, rr)); firs.setMatrixAt(i, M4);
       firs.setColorAt(i, col.setStyle(['#1f2b1d', '#243221', '#1b261b', '#2a3a26'][i % 4]).convertSRGBToLinear()); shade(circFoot(x, z, rr * .9, 8), H, 0); });
-    g.add(crowns, firs, trunks); }
+    const crowns = sets.map((set, vi) => { const im = new THREE.InstancedMesh(crownVar[vi], leafM, set.length); set.forEach(([m, c], i) => { im.setMatrixAt(i, m); im.setColorAt(i, c); }); return im; });
+    g.add(...crowns, firs, trunks); }
 
   /* ---- the ground: grass with mown stripes, asphalt taxiways and roads, concrete aprons in 5 m slabs, building pads, the runway, and the
      sun shadows of all of the above painted in as one fill (so overlapping shadows do not double up). 1.2 km at 0.6 m a pixel ---- */
@@ -5785,6 +5826,38 @@ const airport = (() => {
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
     const p = new THREE.Points(geo, new THREE.PointsMaterial({ map: glowTex, size, vertexColors: true, transparent: true, depthWrite: false, toneMapped: false, fog: false })); p.visible = false; g.add(p); return p; };
   const lit = [points(glows, 1.5), points(midGlows, 4), points(bigGlows, 10)];
+  /* traffic on the service roads, the only thing moving round the stand: a baggage tug with three carts and a catering truck on the airside road
+     along the terminal, a fuel truck and a follow-me car on the road past the hangars. They keep right and turn at the road ends. Each has an
+     amber beacon (flashing at dusk) and headlights at dusk, and a soft shadow under it (the shadow map covers only the aircraft). The frame
+     loop drives them through userData.tick */
+  { const loop = (x0, x1, zA, zB, rx) => { const pts = [], zc = (zA + zB) / 2, rz = Math.abs(zB - zA) / 2, sg = Math.sign(zB - zA);   // +x along zA, round an end, -x along zB, round the other
+      for (let k = 0; k <= 12; k++) { const a = -Math.PI / 2 + k / 12 * Math.PI; pts.push([x1 + rx * Math.cos(a), zc + sg * rz * Math.sin(a)]); }
+      for (let k = 0; k <= 12; k++) { const a = -Math.PI / 2 + k / 12 * Math.PI; pts.push([x0 - rx * Math.cos(a), zc - sg * rz * Math.sin(a)]); }
+      const cum = [0]; for (let i = 1; i <= pts.length; i++) { const a = pts[i - 1], b = pts[i % pts.length]; cum.push(cum[i - 1] + Math.hypot(b[0] - a[0], b[1] - a[1])); } return { pts, cum, L: cum[pts.length] }; };
+    const at = (P, s) => { s = ((s % P.L) + P.L) % P.L; let lo = 0, hi = P.pts.length; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (P.cum[m] <= s) lo = m; else hi = m; }
+      const a = P.pts[lo], b = P.pts[(lo + 1) % P.pts.length], f = (s - P.cum[lo]) / (P.cum[lo + 1] - P.cum[lo]); return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]; };
+    const PT = loop(-165, 105, -162.8, -165.4, 6), PH = loop(-150, 125, 101.3, 96.9, 6);
+    const ambM = new THREE.MeshBasicMaterial({ color: 0xff9a1a }), vShM = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .42, depthWrite: false, map: alphaTexture(32, (x, y) => Math.min(1, (1 - Math.max(Math.abs(x), Math.abs(y))) * 3)), polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+    const cateringM = mat({ color: lin('#f3f3ef'), roughness: .4 }), followM = mat({ color: lin('#f2c21b'), roughness: .35, metalness: .3 }), tankM = mat({ color: lin('#dcdfe2'), roughness: .3, metalness: .6, envMapIntensity: 1 });
+    const checkM = mat({ roughness: .5, map: tex(canvas(64, 16, (c, w, h) => { for (let i = 0; i < 8; i++) for (let j = 0; j < 2; j++) { c.fillStyle = (i + j) % 2 ? '#111' : '#f2c21b'; c.fillRect(i * 8, j * 8, 8, 8); } })) });
+    const vehicle = (L, W, parts, beacon, lights) => { const v = new THREE.Group(); v.position.y = G0;                                  // parts: [w, h, d, material, x, y0, z] boxes, x forward
+      for (const [w, h, d, m, x, y0, z, geo] of parts) { const o = new THREE.Mesh(geo || new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y0 + h / 2, z); if (geo) o.rotation.z = Math.PI / 2; v.add(o); }
+      const sh = new THREE.Mesh(new THREE.PlaneGeometry(L + .8, W + .8), vShM); sh.rotation.x = -Math.PI / 2; sh.position.y = .03; v.add(sh);
+      let bg = null; if (beacon) { const bc = new THREE.Mesh(new THREE.CylinderGeometry(.12, .14, .2, 8), ambM); bc.position.set(...beacon); v.add(bc);
+        bg = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xffa53a, depthWrite: false, transparent: true, toneMapped: false })); bg.position.set(beacon[0], beacon[1] + .12, beacon[2]); bg.scale.set(1.8, 1.8, 1); v.add(bg); }
+      const hl = lights.map(p => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xfff2d8, depthWrite: false, transparent: true, toneMapped: false })); sp.position.set(...p); sp.scale.set(1.2, 1.2, 1); v.add(sp); return sp; });
+      g.add(v); return { v, bg, hl, ph: lrnd() }; };
+    const tug = () => vehicle(2.4, 1.5, [[2.2, .35, 1.4, darkM, 0, .1, 0], [2.4, .9, 1.5, gseW, .2, .4, 0], [1.1, .8, 1.4, bandM, -.4, 1.3, 0], [1.2, .08, 1.5, gseW, -.4, 2.1, 0]], [-.4, 2.18, 0], [[1.42, .85, .55], [1.42, .85, -.55]]);
+    const cart = () => vehicle(2.6, 1.5, [[2.6, .45, 1.5, darkM, 0, .25, 0], [2.5, 1.15, 1.45, tarpM, 0, .7, 0]], null, []);
+    const catering = () => vehicle(7, 2.4, [[7, .6, 2.2, darkM, 0, .35, 0], [2.2, 2, 2.4, gseW, 2.4, .7, 0], [.06, .8, 2.1, bandM, 3.52, 1.6, 0], [4.6, .6, 2, darkM, -1.2, .95, 0], [4.8, 2.5, 2.4, cateringM, -1.2, 1.55, 0]], [2.4, 2.78, 0], [[3.6, 1.0, .85], [3.6, 1.0, -.85]]);
+    const fuel = () => vehicle(8.2, 2.5, [[8.2, .6, 2.2, darkM, 0, .35, 0], [2.2, 2.2, 2.5, gseW, 3, .7, 0], [.06, .8, 2.2, bandM, 4.12, 1.75, 0], [5.6, 2.3, 2.3, tankM, -1.1, .95, 0, new THREE.CylinderGeometry(1.15, 1.15, 5.6, 18)]], [3, 2.98, 0], [[4.2, 1.05, .9], [4.2, 1.05, -.9]]);
+    const follow = () => vehicle(4.4, 1.8, [[3.7, .32, 1.7, darkM, 0, .05, 0], [4.4, .62, 1.8, followM, 0, .34, 0], [2.4, .55, 1.62, carGlassM, -.25, .96, 0], [2.1, .07, 1.5, followM, -.25, 1.5, 0], [.12, .45, 1.5, checkM, -.25, 1.57, 0]], [-.9, 1.62, 0], [[2.25, .75, .65], [2.25, .75, -.65]]);
+    const runs = [{ P: PT, s: 0, v: 6, units: [tug(), cart(), cart(), cart()], gap: [0, 3.4, 6.4, 9.4] }, { P: PT, s: PT.L / 2, v: 6, units: [catering()], gap: [0] },
+      { P: PH, s: 40, v: 8, units: [fuel()], gap: [0] }, { P: PH, s: 40 + PH.L / 2, v: 8, units: [follow()], gap: [0] }];
+    let vt = 0; g.userData.tick = dt => { vt += dt; const dusk = !!(DUSK && DUSK.on);
+      for (const r of runs) { r.s += r.v * dt; r.units.forEach((u, k) => { const s = r.s - r.gap[k], [x, z] = at(r.P, s), [xa, za] = at(r.P, s - 1.5), [xb, zb] = at(r.P, s + 1.5);   // heading from the chord either side: smooth round the turns
+        u.v.position.set(x, G0, z); u.v.rotation.y = Math.atan2(-(zb - za), xb - xa); if (u.bg) u.bg.visible = dusk && (vt * 1.3 + u.ph) % 1 < .35; for (const h of u.hl) h.visible = dusk; }); } };
+    g.userData.tick(0); }
   const pools = g.children.find(o => o.material === poolM); pools.visible = false; pools.renderOrder = 3;
   g.userData.look = dusk => { if (dusk && !duskTex) duskTex = tex(paintSite(DUSK.shift)); siteM.map = dusk ? duskTex : dayTex; decalDay.visible = !dusk; decalDusk.visible = dusk; for (const p of lit) p.visible = dusk;
     pools.visible = dusk; for (const [m, k] of duskLit) m.emissiveIntensity = dusk ? k : 0; };
@@ -5950,6 +6023,7 @@ function frame(now) {
     for (const m of equipment) if (m.userData.cabinShell) { m.material.visible = false; const lit = selectedEquip === m || (story.active && story.parts.has(m));
       for (const lbl in MON_MATS) if (m.userData.label.startsWith(lbl)) for (const mt of MON_MATS[lbl]) { mt.emissive.setHex(lit ? 0x4fb0ff : 0x000000); mt.emissiveIntensity = lit ? .62 * k2 : 0; } } }   // lit monuments glow their own fixtures
   if (lookReady && mode === 'exterior') airport.visible = camera.position.y > GROUND_Y + .1;   // from below ground (the Belly view) only the aircraft against the sky
+  if (lookReady && airport.visible && airport.userData.tick) airport.userData.tick(dt);   // traffic on the service roads
   renderer.render(scene, camera);
   if (lookReady && mode === 'exterior') ao.render(dt);   // occlusion multiplied over the finished frame
   if (labelItems.length) updateLabels();
