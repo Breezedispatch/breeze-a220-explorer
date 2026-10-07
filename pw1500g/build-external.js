@@ -80,17 +80,18 @@
       info: 'Cast aluminium housing under the core, from about 4:30 to 9 o\'clock, with machined pads on both faces. Forward face: the fuel/oil manifold with the IFPC (8 o\'clock), the layshaft input, the hydraulic pump and the lube and scavenge oil pump (5 o\'clock). Aft face: the air turbine starter, the PMAG (7 o\'clock), the VFG and the oil control module; the deoiler is in its right arm.\n\nTwo mounting links hang it from the diffuser case and a rod link from its aft face to the turbine intermediate case takes the axial load. A heat shield over its top keeps the core\'s radiant heat off it, and a centering puck on top lines it up during installation. Replaceable carbon seals at each pad, the N2 cranking pad for turning the core by hand during a borescope, and the core drain plugs are serviced here.' });
     const mg = GB.mainGearboxBody, mx0 = mg.x_from, mx1 = mg.x_to, xm = (mx0 + mx1) / 2;
     { const th0 = G.clock(4.4), th1 = G.clock(9.1);
-      /* section from the p.53 outline (drawn at 6 o'clock): top r 0.27 under the heat shield, bottom about 0.47 */
-      const sec = [[mx0 + .008, .275], [mx0 + .008, .445], [mx0 - .008, .462], [xm, .472], [mx1 + .01, .458], [mx1 - .008, .44], [mx1 - .008, .29], [mx1 + .01, .272], [mx0 - .01, .27]];
+      /* section from the p.53 outline (drawn at 6 o'clock): bottom about 0.47; the top at r 0.285 under the heat shield leaves the
+         5 cm gap to the core that p.237 shows the deoiler vent duct crossing in (it was 0.27 until 2026-10-07, with no room for it) */
+      const sec = [[mx0 + .008, .29], [mx0 + .008, .445], [mx0 - .008, .462], [xm, .472], [mx1 + .01, .458], [mx1 - .008, .44], [mx1 - .008, .305], [mx1 + .01, .287], [mx0 - .01, .285]];
       PW.add('mgb', G.revolve(sec, { seg: 44, thetaStart: th0, thetaLength: th1 - th0, crease: 35 }), 'castTan');
       for (const [a0, a1] of [[G.clock(3.95), th0], [th1, G.clock(9.55)]])                                            // the arms rising up the sides of the core
-        PW.add('mgb', G.revolve([[mx0 - .005, .29], [mx0 - .005, .41], [mx1 + .005, .41], [mx1 + .005, .29]], { seg: 6, thetaStart: a0, thetaLength: a1 - a0 }), 'castTan');
+        PW.add('mgb', G.revolve([[mx0 - .005, .30], [mx0 - .005, .41], [mx1 + .005, .41], [mx1 + .005, .30]], { seg: 6, thetaStart: a0, thetaLength: a1 - a0 }), 'castTan');
       for (let i = 0; i <= 10; i++) { const a = th0 + (th1 - th0) * i / 10;                                                // ribs under the casting
         PW.add('mgb', G.revolve([[mx0 - .015, .455], [mx1 + .015, .455], [mx1 + .015, .48], [mx0 - .015, .48]], { seg: 2, thetaStart: a - .012, thetaLength: .024 }), 'castTan'); }
       for (const xr of [mx0 - .03, mx1 + .03]) PW.add('mgb', G.revolve([[xr + .006, .468], [xr - .006, .468], [xr - .006, .48], [xr + .006, .48]], { seg: 44, thetaStart: th0 + .05, thetaLength: th1 - th0 - .1 }), 'castTan');
       /* heat shield over the top, centering puck through it */
-      PW.add('mgb', G.revolve([[mx0 + .02, .262], [mx1 - .02, .262], [mx1 - .02, .2655], [mx0 + .02, .2655]], { seg: 44, thetaStart: th0 + .04, thetaLength: th1 - th0 - .08 }), 'insulation');
-      { const f = Kt.frame('mgb', xm - .02, 6.3, .26); Kt.cyl('mgb', f, [0, -.006, 0], 'y', .026, .016, 'steel'); Kt.bolts('mgb', f, [0, .003, 0], '-y', .036, 4, .004); }
+      PW.add('mgb', G.revolve([[mx0 - .004, .277], [mx1 + .004, .277], [mx1 + .004, .2805], [mx0 - .004, .2805]], { seg: 44, thetaStart: th0 + .04, thetaLength: th1 - th0 - .08 }), 'insulation');
+      { const f = Kt.frame('mgb', xm - .02, 6.3, .275); Kt.cyl('mgb', f, [0, -.006, 0], 'y', .026, .016, 'steel'); Kt.bolts('mgb', f, [0, .003, 0], '-y', .036, 4, .004); }
       /* aft face pads: starter, PMAG, VFG; the N2 cranking pad cover; the core drain plugs in a row near the bottom (p.67) */
       for (const [h, r, r0, r1, n] of [[8.4, .385, .085, .125, 16], [7.15, .40, .042, .066, 6], [6.15, .365, .1, .132, 16]]) {
         const f = Kt.frame('mgb', mx1, h, r); Kt.flange('mgb', f, [-.006, 0, 0], '-x', r0, r1, .012, n, 'castTan'); }
@@ -219,10 +220,15 @@
       Kt.cyl('ocm', f, [-.06, -.07, -.03], 'y', .02, .03, 'castAl'); Kt.connector('ocm', f, [-.06, -.088, -.03], '-y', .008, { lead: '-x' });  // active oil damper valve
       Kt.fitting('ocm', f, [-.03, .02, -.09], '-z', .008); Kt.fitting('ocm', f, [-.09, -.03, -.09], '-z', .008);             // pressure and temperature sensors
       Kt.fitting('ocm', f, [-.12, -.04, .04], '-x', .011); Kt.fitting('ocm', f, [-.12, .04, .02], '-x', .011); }
-    acc('deoiler', 'Deoiler', 'Self-contained centrifugal deoiler in the right arm of the MGB, driven by a gear. It takes breather air from the gearbox, the No. 3 bearing compartment and the oil tank\'s deaerator, spins the oil out of it back into the gearbox, and vents the air overboard through the deoiler vent duct. Its drive oil seal is line-replaceable.', 'p.66-67, p.236-237');
+    acc('deoiler', 'Deoiler', 'Self-contained centrifugal deoiler in the right arm of the MGB, on its aft face, driven by a gear. It takes breather air from the gearbox, the No. 3 bearing compartment and the oil tank\'s deaerator, spins the oil out of it back into the gearbox, and vents the air overboard through the deoiler vent duct, which crosses over the top of the gearbox, between it and the core, to its flattened outlet at the left end. Its drive oil seal is line-replaceable.', 'p.66-67, p.236-237');
+    /* p.237: a drum on the aft face of the right arm; the vent duct leaves its aft end, turns in over the top of the gearbox (between
+       the heat shield and the core) and runs across to the left end, where it ends in a flattened outlet */
     { const f = Kt.frame('deoiler', mx1, 4.2, .34);
       Kt.flange('deoiler', f, [-.008, 0, 0], '-x', .03, .06, .012, 8, 'castTan'); Kt.cyl('deoiler', f, [-.025, 0, 0], 'x', .032, .025, 'castAl');
-      line('deoiler', [P(mx1 - .03, 4.2, .34), P(-1.70, 4.3, .40), P(-1.75, 4.2, .50), P(-1.80, 4.2, .545)], .016, 'duct', { clamps: 1 }); }   // vent duct
+      Kt.flange('deoiler', f, [-.04, 0, 0], '-x', .011, .022, .006, 4, 'steel');                                                 // the duct's bolted flange
+      line('deoiler', [P(-1.693, 4.2, .34), P(-1.70, 4.25, .322), P(-1.688, 4.37, .298), P(-1.668, 4.55, .27), P(-1.644, 4.85, .261), P(-1.641, 5.4, .261), P(-1.641, 6.0, .261), P(-1.641, 6.6, .261),
+        P(-1.641, 7.2, .261), P(-1.641, 7.8, .261), P(-1.641, 8.4, .261), P(-1.646, 8.85, .263), P(-1.67, 9.12, .276), P(-1.684, 9.3, .296)], .011, 'tube', { clamps: 3, ends: false });
+      const g = Kt.frame('deoiler', -1.685, 9.35, .30); Kt.box('deoiler', g, [0, .013, 0], [.02, .026, .05], 'tube', { round: .005 }); }   // flattened outlet
 
     /* ============================== OIL SYSTEM ============================== */
     PW.part('oil', { label: 'Oil system', explode: [0, 0, .45], src: 'p.212-255; TTM ch. 79',
