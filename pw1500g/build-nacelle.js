@@ -183,8 +183,8 @@
     const ifsPanel = (pid, parentDoor, label, info, xx, h, l, w, mat) => { PW.part(pid, { parent: parentDoor, label, info, src: 'p.20-23', attach: PW.parts.get(parentDoor).obj.children[0] }); const a = G.clock(h);
       const m = new THREE.Mesh(G.roundedBox(l, .008, w, .012)); m.position.copy(G.onRing(xx, rIFS(xx) + .002, a)); m.rotation.x = a;
       PW.add(pid, m, mat || 'cowlWhite', { solid: true }); };
-    ifsPanel('ifs-otad', 'tr-right', 'Oil tank access door (OTAD)', 'Door in the right IFS at about 3 o\'clock that gives access to the oil tank filler and sight glass without opening the reverser door. Service within the AMM time after shutdown and check the level in the sight glass.', -1.70, 3, .28, .22, 'cowlWhite');
-    ifsPanel('ifs-pce', 'tr-right', 'PCE door', 'Access door aft of the oil tank access door on the right IFS.', -2.08, 3, .22, .2, 'cowlWhite');
+    ifsPanel('ifs-otad', 'tr-right', 'Oil tank access door (OTAD)', 'Door in the right IFS at about 2:30, over the oil tank, that gives access to its fill port and sight glass without opening the reverser door (p.21, p.223). Service within the AMM time after shutdown and check the level in the sight glass.', -1.92, 2.4, .26, .22, 'cowlWhite');
+    ifsPanel('ifs-pce', 'tr-right', 'Precooler exhaust (PCE) door', 'Door aft of the oil tank access door on the right IFS (p.21).', -2.30, 2.4, .2, .18, 'cowlWhite');
     ifsPanel('ifs-aoc-window', 'tr-left', 'Air/oil cooler window', 'Opening in the left IFS at about 9 o\'clock (ZS 748 to 779) for the air/oil cooler inlet and exhaust.', -1.54, 9.6, .62, .17, 'darkBox');
     ifsPanel('ifs-prd', 'tr-left', 'IFS pressure-relief door', 'Spring-loaded door at 9 o\'clock (ZS 795 to 803) that opens if core compartment pressure rises, as after a bleed duct burst. Found open on the walkaround: find out why before flight.', -2.44, 9, .2, .2, 'cowlWhite');
     ifsPanel('ifs-acc-scoop', 'tr-right', 'ACC air scoop', 'Scoop on the right IFS at about 1:30 that takes fan air for the turbine active clearance control.', -1.62, 1.5, .18, .07, 'darkBox');

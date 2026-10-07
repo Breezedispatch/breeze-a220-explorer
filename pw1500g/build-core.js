@@ -179,7 +179,10 @@
       PW.part('precooler-inlet', { parent: 'fan-case', label: 'Precooler duct inlet', src: 'p.60-61; p.53',
         info: 'Four-piece titanium casting at the top of the fan case, behind the exit guide vanes. It takes fan air into the precooler in the pylon and gives the seal lands for the thrust reverser door fire seals at the upper bifurcation.' });
       const pc = D.GEN.externals.precoolerDuctInletBox12oclock;
-      { const box = new THREE.Mesh(G.roundedBox(pc.x_from - pc.x_to, pc.r_out - pc.r_in, .16, .015)); box.position.set((pc.x_from + pc.x_to) / 2, (pc.r_out + pc.r_in) / 2, 0); PW.add('precooler-inlet', box, 'titanium', { solid: true }); }
+      /* p.45 shows it as an inverted U of duct rising from the FIC to the fan case top at 12 o'clock */
+      { const xf = pc.x_from - .02, xa = pc.x_to + .03, rb = pc.r_in + .02, rt = pc.r_out - .03;
+        PW.add('precooler-inlet', G.tube([[xf, rb, 0], [xf, rt - .08, 0], [xf - .03, rt, 0], [xa + .03, rt, 0], [xa, rt - .08, 0], [xa, rb, 0]], .042, { radial: 14, tension: .15 }), 'titanium');
+        PW.add('precooler-inlet', G.tube([[(xf + xa) / 2, rt, 0], [(xf + xa) / 2, pc.r_out + .06, 0]], .05, { radial: 14 }), 'titanium'); }
       /* fan exit guide vanes: 44, swept, hollow aluminium with a dark polyurethane coat (p.60; photos), from the measured hub and tip corners */
       PW.part('fegv', { parent: 'fan-case', label: 'Fan exit guide vanes (44)', src: 'p.60-61, p.53; photos',
         info: '44 hollow aluminium vanes behind the fan that take the swirl out of the fan air and carry structural load between the fan intermediate case and the fan case. Polyurethane coated against erosion.\n\nInspect from the bypass exit with the reversers open: look for FOD damage, coating loss and cracks at the platforms.' });

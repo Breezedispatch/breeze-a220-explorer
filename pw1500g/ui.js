@@ -105,7 +105,7 @@
   const fitList = () => { const hb = document.querySelector('header.top').getBoundingClientRect().bottom; document.getElementById('list').style.top = (hb + 8) + 'px'; };
   addEventListener('resize', fitList); fitList();
   showInfo();
-  PW.look(-2.2, 1.25, 8.5, [PW.CENTER_X || -.8, 0, 0]);
+  PW.look(-.8, 1.32, 9.6, [-1.0, .1, 0]);                                       // front three-quarter view from the left
   window.PWUI = { select, isolate, showAll, focus, setNacelle };
   /* URL options for review and testing: ?part=<id> isolates and selects a part, ?cut=top|left|right|view, ?view=left|right|front|rear|top|below,
      ?nacelle=off|ghost, ?run=0..1, ?explode=0..1 */

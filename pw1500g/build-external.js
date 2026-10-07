@@ -109,12 +109,19 @@
       info: 'Dry-sump system: the tank on the right of the core feeds the pressure stage of the lube and scavenge pump, the oil control module filters and monitors it, and part of the flow is cooled in the fuel/oil heat exchanger and the air/oil cooler before going to the bearings, gearboxes and the FDGS journals. Six scavenge stages return it to the tank through chip collectors.' });
     PW.part('oil-tank', { parent: 'oil', label: 'Oil tank', src: 'p.222-225; TTM ch. 79; photos',
       info: 'Engine-mounted tank on the right side of the core, 27.3 L (28.8 qt), with a de-aerator inside. Service it through the oil tank access door on the right reverser door at about 3 o\'clock: check the level on the sight glass, then fill through the filler cap. Do it within the AMM time after shutdown so the level is meaningful.\n\nA scupper round the filler drains spills to the drain mast.' });
-    { const tx = -1.72, th = 3.05, tr = .43;
-      const body = box('oil-tank', tx, th, tr, .26, .19, .38, 'accGrey', { round: .05 });
-      box('oil-tank', tx, th, tr + .1, .07, .02, .07, 'darkBox', { round: .015 });                                // filler cap and scupper
-      const sg = new THREE.Mesh(G.roundedBox(.05, .01, .09, .005)); sg.position.copy(P(tx - .08, th + .15, tr + .095)); sg.rotation.x = G.clock(th + .15); PW.add('oil-tank', sg, 'glass', { solid: true });   // sight glass
-      line('oil-tank', [P(tx, th + .6, tr - .02), P(-1.6, 4.0, .42), P(mx0 + .2, 4.7, .42)], .016, 'tube', { clamps: 2 });     // supply to the pump
-      line('oil-tank', [P(tx + .08, th - .5, tr - .03), P(-1.52, 2.6, .36), P(-1.30, 2.0, .30)], .014, 'tube', { clamps: 1 }); }
+    /* p.223: a tall upright tank on the right of the core over the diffuser and HPT, curved to the core, with the fill port on top, the
+       sight glass at its upper aft corner, and a conical sump down to the drain plug; the OTAD on the right IFS opens onto it */
+    { const tx = -1.93, len = .30, a0 = G.clock(1.45), a1 = G.clock(4.0), a2 = G.clock(4.75);
+      PW.add('oil-tank', G.revolve([[tx + len / 2, .41], [tx - len / 2, .41], [tx - len / 2 + .015, .515], [tx + len / 2 - .015, .515]], { seg: 28, thetaStart: a0, thetaLength: a1 - a0 }), 'accGrey');
+      PW.add('oil-tank', G.revolve([[tx + .10, .42], [tx - .10, .42], [tx - .09, .50], [tx + .09, .50]], { seg: 10, thetaStart: a1 - .02, thetaLength: a2 - a1 }), 'accGrey');   // conical sump
+      { const m = new THREE.Mesh(G.can(.016, .03)); m.geometry.rotateZ(Math.PI / 2); G.aim(m, P(tx, 4.8, .46), P(0, 4.8, 1).normalize()); PW.add('oil-tank', m, 'steel', { solid: true }); }   // drain plug
+      /* fill port with hinged cap and scupper on the top outboard face, sight glass at the upper aft corner */
+      const fp = new THREE.Mesh(G.roundedBox(.08, .025, .08, .02)); fp.position.copy(P(tx + .03, 1.9, .52)); fp.rotation.x = G.clock(1.9); PW.add('oil-tank', fp, 'darkBox', { solid: true });
+      const cap = new THREE.Mesh(G.can(.026, .012)); cap.geometry.rotateZ(Math.PI / 2); G.aim(cap, P(tx + .03, 1.9, .535), P(0, 1.9, 1).normalize()); PW.add('oil-tank', cap, 'steel', { solid: true });
+      const sg = new THREE.Mesh(G.roundedBox(.05, .008, .11, .006)); sg.position.copy(P(tx - .10, 2.35, .517)); sg.rotation.x = G.clock(2.35); PW.add('oil-tank', sg, 'glass', { solid: true });
+      line('oil-tank', [P(tx + .06, 4.7, .44), P(-1.65, 4.9, .44), P(mx0 + .2, 4.85, .43)], .016, 'tube', { clamps: 2 });          // to the lube and scavenge pump
+      line('oil-tank', [P(mx0 + .12, 4.6, .45), P(-1.70, 4.3, .48), P(tx + .12, 4.2, .47)], .014, 'tube', { clamps: 1 });          // scavenge return
+      line('oil-tank', [P(tx - .12, 4.3, .46), P(-2.0, 4.5, .45), P(xm, 4.4, .40)], .012, 'tube', { clamps: 1 }); }                 // vent to the deoiler
     PW.part('aoc', { parent: 'oil', label: 'Air/oil cooler (AOC)', src: 'p.232-233',
       info: 'Plate-fin air/oil heat exchanger on the left of the core at about 10 o\'clock, cooled by fan air through the window in the left IFS. It cools oil returning from the VFG and the FDGS.' });
     { box('aoc', -1.54, 9.8, .50, .5, .1, .16, 'steel'); for (let i = 0; i < 14; i++) box('aoc', -1.54, 9.8, .555, .48, .012, .002, 'darkBox').position.add(V(0, 0, 0)).copy(P(-1.54, 9.8 + (i - 6.5) * .016, .555));
@@ -171,19 +178,27 @@
     /* ============================== ELECTRICAL AND CONTROL ============================== */
     PW.part('eec', { label: 'Electronic engine control (EEC)', explode: [0, 0, -.6], src: 'p.74-95, p.104-105; photos',
       info: 'Dual-channel FADEC computer on the left side of the fan case at 9 o\'clock, on four vibration isolators, cooled by fan compartment air. Each channel has a control and a protection processor. It sets thrust, schedules fuel, vanes, bleeds and clearance control, runs starts and the reverser logic, and stores faults.\n\nThe data storage unit plugged into it holds the engine rating and trim data; it stays with the engine if the EEC is changed. Eight connectors: check them seated and locked after any EEC work.' });
-    { const ex = -.32, eh = 9, er = 1.055, b = box('eec', ex, eh, er, .40, .11, .30, 'eecGrey', { round: .012 });
-      for (let i = 0; i < 4; i++) { connector('eec', P(ex + .14 - i * .09, eh + .55, er + .02), V(.2, .5, 1).normalize()); connector('eec', P(ex + .14 - i * .09, eh - .55, er + .02), V(.2, -.5, 1).normalize()); }
-      for (const dx of [-.17, .17]) for (const dh of [-.45, .45]) { const iso = new THREE.Mesh(G.can(.018, .03)); iso.geometry.rotateZ(Math.PI / 2); iso.position.copy(P(ex + dx, eh + dh, er - .07)); iso.rotation.x = G.clock(eh + dh); PW.add('eec', iso, 'rubber', { solid: true }); }
-      box('eec', ex + .05, eh, er + .058, .08, .004, .05, 'whitePaint', { round: .002 }); }                    // data plate
+    /* p.105: on the left of the fan case about a third of the way aft, standing upright, connectors on its upper and lower faces */
+    { const ex = -.08, eh = 9, er = 1.045, b = box('eec', ex, eh, er, .44, .10, .38, 'eecGrey', { round: .012 });
+      for (let i = 0; i < 4; i++) { connector('eec', P(ex + .16 - i * .1, eh + .62, er + .015), V(.15, .6, 1).normalize()); connector('eec', P(ex + .16 - i * .1, eh - .62, er + .015), V(.15, -.6, 1).normalize()); }
+      for (const dx of [-.18, .18]) for (const dh of [-.5, .5]) { const iso = new THREE.Mesh(G.can(.018, .03)); iso.geometry.rotateZ(Math.PI / 2); iso.position.copy(P(ex + dx, eh + dh, er - .065)); iso.rotation.x = G.clock(eh + dh); PW.add('eec', iso, 'rubber', { solid: true }); }
+      box('eec', ex + .1, eh + .12, er + .053, .07, .004, .07, 'darkBox', { round: .004 }); box('eec', ex - .02, eh + .12, er + .053, .05, .004, .07, 'whitePaint', { round: .003 });   // "THIS SIDE UP" plates
+      PW.part('dsu', { parent: 'eec', label: 'Data storage unit (DSU)', src: 'p.90-91, p.104-105',
+        info: 'Small memory module plugged into the EEC that holds the engine serial number, rating and trim data. It stays with the engine: when an EEC is changed, the new one reads the engine\'s data from the DSU.' });
+      box('dsu', ex - .25, eh + .2, er + .01, .07, .06, .08, 'darkBox'); }
     PW.part('harnesses', { label: 'Engine harnesses', explode: [0, .25, 0], src: 'p.102-107; photos',
       info: 'Braided harnesses from the EEC to every sensor, valve and actuator, clipped to the fan case on lime-green stand-offs and run down to the core through the bifurcations. Each EEC channel has its own harness, so a chafed or open harness usually affects one channel only.' });
-    { const r = 1.0;
-      for (const [h0, h1, x] of [[9.3, 12.0, -.18], [8.7, 6.0, -.12], [9.3, 6.0, -.52]]) { const pts = []; const n = 10;
-        for (let i = 0; i <= n; i++) { const t = i / n, h = h0 + (h1 > h0 ? (h1 - h0) : (h1 + 12 - h0) * 0 + (h1 - h0)) * t; pts.push(P(x - .1 * Math.sin(t * Math.PI), h, r + .012)); }
-        line('harnesses', pts, .014, 'harness', { clamps: 6, tension: .3 });
-        for (let i = 1; i < n; i += 2) { const p = pts[i], so = new THREE.Mesh(G.roundedBox(.03, .02, .02, .004)); so.position.copy(p).multiplyScalar(.995); PW.add('harnesses', so, 'lime', { solid: true }); } }
-      line('harnesses', [P(-.62, 6.0, 1.0), P(-.85, 6.1, .70), P(-1.05, 6.4, .48), P(-1.40, 6.8, .40)], .016, 'harness', { clamps: 3 });
-      line('harnesses', [P(-.62, 12, 1.0), P(-.9, 12, .65), P(-1.2, 11.6, .36), P(-1.9, 11.3, .30)], .016, 'harness', { clamps: 4 }); }
+    /* p.105 / p.107: WF01 and WF02 come down from the pylon interface at 12 o'clock to the EEC; W03 and W04 leave its lower face, run
+       down to 6 o'clock, aft along the bottom of the fan case and up into the core at the gearbox; the core harnesses (WC05 round the
+       turbine exhaust for the EGT probes, WC08 over the HPC) branch from there */
+    { const r = 1.0, arc = (x0, x1, h0, h1, n) => { const pts = []; for (let i = 0; i <= n; i++) { const t = i / n; pts.push(P(x0 + (x1 - x0) * t, h0 + (h1 - h0) * t, r + .012)); } return pts; };
+      const runs = [arc(.12, .03, 12, 9.75, 10), arc(.08, -.01, 12, 9.85, 10), arc(-.12, -.32, 8.3, 6.05, 10), arc(-.04, -.40, 8.3, 6.0, 10), arc(.0, -.45, 12, 3.0, 12)];
+      for (const pts of runs) { line('harnesses', pts, .014, 'harness', { clamps: 6, tension: .3 });
+        for (let i = 1; i < pts.length - 1; i += 2) { const so = new THREE.Mesh(G.roundedBox(.03, .02, .02, .004)); so.position.copy(pts[i]).multiplyScalar(.995); PW.add('harnesses', so, 'lime', { solid: true }); } }
+      for (const dz of [-.03, .03]) line('harnesses', [P(-.36, 6.0, r + .012).add(V(0, 0, dz)), P(-.70, 6.0, r + .01).add(V(0, 0, dz)), P(-.92, 6.2, .80), P(-1.15, 6.5, .50), P(-1.35, 6.9, .42)], .016, 'harness', { clamps: 4 });
+      for (const [x, h] of [[.12, 12], [.08, 11.85]]) { const c = new THREE.Mesh(G.can(.024, .05)); c.geometry.rotateZ(Math.PI / 2); G.aim(c, P(x, h, 1.035), P(0, h, 1).normalize()); PW.add('harnesses', c, 'connector', { solid: true }); }
+      line('harnesses', [P(-1.35, 6.9, .42), P(-1.5, 8.5, .36), P(-1.75, 10.5, .33), P(-2.2, 11.5, .40), P(-2.42, 12.5, .42)], .012, 'harness', { clamps: 4 });
+      line('harnesses', [P(-1.2, 7.5, .38), P(-1.25, 9.5, .32), P(-1.4, 11.2, .30), P(-1.7, 12.2, .30)], .012, 'harness', { clamps: 3 }); }
     PW.part('ignition', { label: 'Ignition system', explode: [0, 0, -.35], src: 'p.306-323; TTM ch. 74',
       info: 'Two ignition exciters on the fan case, each feeding one igniter plug in the diffuser case through a shielded lead. The EEC fires one or both; they alternate between starts so a failed system shows up.\n\nThe exciter output is lethal: wait the AMM time after power is removed before disconnecting a lead.' });
     { for (const [h, dx] of [[8.0, 0], [7.3, -.16]]) { box('ignition', -.55 + dx, h, 1.02, .22, .09, .11, 'darkBox'); }
@@ -193,7 +208,11 @@
       info: 'Speed probes for N1 (station 2.5 at 4:30 on the CIC) and fan speed (No. 1 bearing support at 1 o\'clock), PMAG for N2, T3 and P3 at the HPC exit, the EGT thermocouple harness behind the LPT at station 5, two vibration sensors, and the oil sensors on the OCM. Their signals go to the EEC; vibration and oil debris also go to the PHMU.' });
     { for (let i = 0; i < 8; i++) { const a = G.clock(i * 1.5 + .75), xx = -2.47; PW.add('sensors', G.rod(G.onRing(xx, .40, a), G.onRing(xx, .30, a), .007), 'steel'); }        // EGT probes at station 5
       PW.add('sensors', G.revolve(circ(-2.47, .405, .006, 8), { seg: 96 }), 'steel');
-      box('sensors', -1.05, 4.5, .43, .05, .06, .05, 'darkBox'); box('sensors', -1.66, 1.5, .31, .05, .06, .05, 'darkBox');                  // N1 probe, T3 probe
+      PW.add('sensors', G.revolve(circ(-2.505, .43, .009, 8), { seg: 96 }), 'harness');                                                      // WC05 harness ring round the turbine exhaust (p.107)
+      box('sensors', -1.05, 4.5, .43, .05, .06, .05, 'darkBox');                                                                                // N1 speed probe, station 2.5 at 4:30 (p.112)
+      box('sensors', -.94, 2.5, .44, .05, .07, .05, 'steel'); can('sensors', -.94, 2.5, .40, .012, .06, 'steel', { rot: [G.clock(2.5), 0, Math.PI / 2] });   // P2.5/T2.5 probe on the CIC (p.107)
+      box('sensors', -1.74, 2.6, .33, .06, .04, .07, 'steel');                                                                                  // T3 probe on the diffuser case (p.107)
+      can('sensors', -1.35, 10.6, .36, .016, .09, 'steel', { rot: [G.clock(10.6), 0, Math.PI / 2] });                                          // burner pressure (PB) sensor (p.105)
       box('sensors', -.86, 10.5, 1.0, .07, .04, .06, 'darkBox'); box('sensors', -2.5, 10.5, .48, .07, .04, .06, 'darkBox'); }               // vibration sensors
     PW.part('phmu', { label: 'Prognostics and health management unit (PHMU)', explode: [0, .3, .3], src: 'p.92-95', info: 'Box on the fan case that records vibration and oil debris data for trend monitoring and fan trim balance solutions. It talks to the EEC over a CAN bus.' });
     box('phmu', -.40, 10.3, 1.04, .26, .08, .16, 'eecGrey');
