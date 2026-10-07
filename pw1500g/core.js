@@ -82,7 +82,7 @@
     nacellePaint: () => new THREE.MeshPhysicalMaterial({ color: col('#0b3ea3'), roughness: .38, metalness: .05, clearcoat: .7, clearcoatRoughness: .18 }),
     whitePaint:   () => new THREE.MeshPhysicalMaterial({ color: col('#e9ecef'), roughness: .42, metalness: .02, clearcoat: .5, clearcoatRoughness: .25 }),
     greyPrimer:   () => new THREE.MeshStandardMaterial({ color: col('#9aa29d'), roughness: .75, metalness: .05 }),
-    lipAl:        () => new THREE.MeshStandardMaterial({ color: col('#d4d9df'), roughness: .16, metalness: 1, roughnessMap: noiseTex('brushed', 256, 6, .5, 1, 8) }),
+    lipAl:        () => new THREE.MeshStandardMaterial({ color: col('#cfd4d9'), roughness: .3, metalness: 1, roughnessMap: noiseTex('brushed', 256, 6, .5, 1, 8) }),
     liner:        () => new THREE.MeshStandardMaterial({ color: col('#6f7a80'), roughness: .7, metalness: .2, bumpMap: perfTex(), bumpScale: .0015, roughnessMap: perfTex() }),
     composite:    () => new THREE.MeshStandardMaterial({ color: col('#2c3035'), roughness: .55, metalness: .1, roughnessMap: noiseTex('weave', 256, 30, .6, 1) }),
     fanBlade:     () => new THREE.MeshStandardMaterial({ color: col('#9ea6ae'), roughness: .32, metalness: .85, roughnessMap: noiseTex('brushed', 256, 6, .5, 1, 8) }),

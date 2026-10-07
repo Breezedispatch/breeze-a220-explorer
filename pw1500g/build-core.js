@@ -11,9 +11,9 @@
 
   /* materials for this module (real finishes from the photos in PHOTOS-LOCAL.md) */
   Object.assign(PW.MAT, {
-    fanBladePU:  () => new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#1c2027'), roughness: .42, metalness: .15, clearcoat: .35, clearcoatRoughness: .4 }),   // black polyurethane erosion paint (p.58)
-    tiSheath:    () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#cfd3d6'), roughness: .2, metalness: 1 }),
-    coneGrey:    () => new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#33363a'), roughness: .38, metalness: .1, clearcoat: .5, clearcoatRoughness: .3 }),
+    fanBladePU:  () => new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#151a22'), roughness: .52, metalness: .12, clearcoat: .15, clearcoatRoughness: .5 }),   // black polyurethane erosion paint (p.58)
+    tiSheath:    () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#b9c2bb'), roughness: .42, metalness: .55 }),   // matte sage-grey titanium sheath (photos)
+    coneGrey:    () => new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#33363a'), roughness: .58, metalness: .05, clearcoat: .12, clearcoatRoughness: .5 }),
     fanCaseOlive:() => new THREE.MeshStandardMaterial({ color: new THREE.Color('#5f5f45'), roughness: .62, metalness: .08 }),
     rubTeal:     () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#6fae98'), roughness: .7, metalness: .05 }),
     linerDark:   () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#25282b'), roughness: .62, metalness: .2 }),
@@ -124,7 +124,7 @@
       for (let k = 0; k <= n; k++) { const t = k / n, r = rh + (rt - rh) * Math.pow(t, .9);
         const xl = G.interp(le, r), xt = G.interp(te, r), ax = Math.max(.12, xl - xt);
         const g = deg(26 + 34 * Math.pow(t, .85));                             // stagger from the axis: about 26 deg at the root to 60 deg at the tip
-        const s = { r, xle: xl, chord: ax / Math.cos(g), stagger: g, camber: .075 - .05 * t, thick: .11 - .08 * t, lean: -.06 * t * t };
+        const s = { r, xle: xl, chord: ax / Math.cos(g), stagger: g, camber: .075 - .05 * t, thick: .11 - .08 * t, lean: -.10 * t * t };
         secs.push(s); sheath.push(Object.assign({}, s)); }
       const blade = G.blade(secs, { chordPts: 16, dir: -1 }), lead = G.blade(sheath, { chordPts: 6, dir: -1, uMax: .045, inflate: 1.18 });
       PW.add('fan-blades', G.ringInstances(blade, PW.partMat('fan-blades', 'fanBladePU'), 18), null);
@@ -303,15 +303,19 @@
   function coneTexture(prof) {
     const W = 1024, H = 512, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
     if (!c || !c.fillRect) return null;
-    c.fillStyle = '#2f3236'; c.fillRect(0, 0, W, H);
-    /* uv.v is the surface length from the nose in metres (texture row = 1 - v). The teardrop points at the nose and its round end lies
-       outboard: from about 0.07 m to 0.20 m along the surface, at angle 0 (12 o'clock when the fan is at rest) */
+    /* uv.v is the surface length from the nose in metres (texture row = 1 - v). Matte dark grey, with the slightly lighter inlet cone
+       cover in the nose (out to about 0.11 m along the surface). The white teardrop sits on the cover: round end at the centre, point
+       outward, at angle 0 (12 o'clock with the fan at rest). That is how it is painted on the A220s in Brian's photos; on some
+       operators' engines the drop is the other way round. */
+    c.fillStyle = '#34373b'; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#44484c'; c.fillRect(0, H * (1 - .11), W, H * .11);
+    c.fillStyle = '#26282b'; c.fillRect(0, H * (1 - .113), W, 2);                    // the cover's edge
     const acc = [0]; for (let i = 1; i < prof.length; i++) acc.push(acc[i - 1] + Math.hypot(prof[i][0] - prof[i - 1][0], prof[i][1] - prof[i - 1][1]));
     c.fillStyle = '#eef0f2';
     for (let y = 0; y < H; y++) { const s = 1 - (y + .5) / H; let r = .05; for (let i = 1; i < acc.length; i++) if (acc[i] >= s) { r = prof[i][1]; break; }
-      const f = (s - .07) / .13; if (f < 0 || f > 1) continue;
-      const f0 = .62, Rm = .021, halfW = f < f0 ? Rm * Math.pow(f / f0, 1.25) : Rm * Math.sqrt(Math.max(0, 1 - Math.pow((f - f0) / (1 - f0), 2)));
-      const du = halfW / (TAU * Math.max(.02, r)) * W;
+      const f = (s - .018) / .085; if (f < 0 || f > 1) continue;
+      const f0 = .3, Rm = .015, halfW = f < f0 ? Rm * Math.sqrt(Math.max(0, 1 - Math.pow((f0 - f) / f0, 2))) : Rm * Math.pow(1 - (f - f0) / (1 - f0), 1.15);
+      const du = Math.min(W / 2, halfW / (TAU * Math.max(.012, r)) * W);
       c.fillRect(0, y, du, 1); c.fillRect(W - du, y, du, 1); }
     const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; return t;
   }
