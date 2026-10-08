@@ -321,7 +321,10 @@
       for (const t of [1 / 3, 2 / 3]) { const xx = x0 + (x1 - x0) * t;
         PW.add('ifs-aoc-window', G.revolve([[xx + .008, at(xx)], [xx - .008, at(xx)], [xx - .008, at(xx) + .008], [xx + .008, at(xx) + .008]], { seg: 14, thetaStart: a - half, thetaLength: 2 * half }), 'cowlWhite'); } }
     ifsPanel('ifs-prd', 'tr-left', 'IFS pressure-relief door', 'Spring-latched door at 9 o\'clock (ZS 795 to 803) that opens at 3.5 psi core compartment overpressure, as after a bleed duct burst. Found open on the walkaround: find out why before flight.', -2.44, 9, .2, .2, 'cowlWhite');
-    ifsPanel('ifs-acc-scoop', 'tr-right', 'ACC air scoop', 'Scoop on the right IFS at about 1:30 that takes fan air for the turbine active clearance control.', -1.62, 1.5, .18, .07, 'darkBox');
+    ifsPanel('ifs-acc-scoop', 'tr-right', 'ACC air scoop', 'Scoop on the right IFS at about 1:30 that takes fan air for the turbine active clearance control. Its mouth faces forward into the fan stream; inside the IFS a duct takes the air to the inlet ring of the ACC air valve, and the joint parts when the reverser door is opened.', -1.62, 1.5, .18, .07, 'darkBox');
+    { const f = PW.kit.frame('ifs-acc-scoop', -1.62, 1.5, rIFS(-1.62) + .004);                                                // the raised hood, open forward
+      PW.kit.box('ifs-acc-scoop', f, [-.012, .014, 0], [.15, .026, .074], 'cowlWhite', { round: .011 });
+      PW.kit.box('ifs-acc-scoop', f, [.064, .014, 0], [.004, .02, .062], 'darkBox', { round: .003 }); }
 
     /* ============================== PYLON (lower part) ============================== */
     PW.part('pylon', { parent: 'nacelle', label: 'Pylon (lower part)', src: 'TTM ch. 01 Fig. 28, ch. 54; p.44-49',

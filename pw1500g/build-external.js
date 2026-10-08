@@ -510,17 +510,36 @@
       { const band = []; for (let i = 0; i <= 8; i++) { const xx = -2.236 - .168 * i / 8; band.push([xx, rCase(xx) + .004]); }                         // the band under the LPT spray tubes
         PW.add('tacc', G.revolve(G.shellProfile(band.map(([xx, r]) => [xx, r + .005]), band), { seg: 128 }), 'nickel'); }
       const xT = D.GEN.externals.lptCaseTorus; PW.add('tacc', G.revolve(circ(xT.x, xT.r_centre, xT.tube_od / 2, 10), { seg: 128 }), 'steel');
-      /* the valve: butterfly body with V-bands, the fuel-powered torque motor housing on top with its servo fuel ports from the IFPC,
-         and the single-channel LVDT to EEC channel A */
+      /* the valve, from p.273's render: a cast butterfly body bolted between flanges; at its forward end an elbow turns out to a large
+         flanged inlet ring facing the IFS scoop; on top the fuel-powered servo valve and torque motor housing, with the servo fuel
+         ports from the IFPC, the torque motor connector and the single-channel LVDT to EEC channel A beside it. Aft, a short duct drops
+         into a plenum sitting on the HPT manifold, which feeds it directly, and a smaller tube with a flexible bellows section carries
+         on aft to the LPT manifold */
       const f = Kt.frame('tacc', -1.64, 1.2, .40);
-      Kt.cyl('tacc', f, [0, 0, 0], 'x', .045, .12, 'castAl', { edge: .006 }); for (const s of [-1, 1]) Kt.vband('tacc', f, [s * .066, 0, 0], 'x', .03, { phase: 1.2 });
-      Kt.box('tacc', f, [0, .052, .02], [.07, .04, .05], 'castAl', { round: .006 }); Kt.connector('tacc', f, [0, .074, .02], 'y', .008, { lead: '-x' });   // backshells away from the thrust link and the scoop tube
-      Kt.cyl('tacc', f, [-.02, .05, -.035], 'x', .012, .06, 'steel'); Kt.connector('tacc', f, [.015, .05, -.035], 'x', .008, { lead: '-z' });
-      for (const z of [.008, .032]) Kt.fitting('tacc', f, [.037, .052, z], 'x', .006);
-      line('tacc', [P(-1.62, 1.5, .55), P(-1.60, 1.4, .50), P(-1.585, 1.27, .44), P(-1.578, 1.2, .40)], .03, 'tube', { clamps: 0, ends: false });   // from the IFS scoop
-      line('tacc', [P(-1.702, 1.2, .40), P(-1.78, 1.2, .38), P(-1.85, 1.22, .36), P(-1.89, 1.25, .35)], .03, 'tube', { clamps: 1, ends: false });
-      line('tacc', [P(-1.89, 1.25, .35), P(-1.92, 1.25, .32), P(-1.935, 1.25, .295)], .024, 'tube', { clamps: 0, ends: false });                      // to the HPT manifold
-      line('tacc', [P(-1.89, 1.25, .35), P(-2.0, 1.28, .37), P(-2.08, 1.33, .45), P(-2.15, 1.4, .50), P(-2.21, 1.44, .515), P(-2.245, 1.45, .516)], .026, 'tube', { clamps: 1, ends: false }); }   // to the LPT manifold
+      Kt.cyl('tacc', f, [0, 0, 0], 'x', .046, .11, 'castAl', { edge: .006 });                                                 // butterfly body
+      for (const s of [-1, 1]) Kt.flange('tacc', f, [s * .058, 0, 0], s > 0 ? 'x' : '-x', .03, .058, .01, 10, 'castAl');     // bolted end flanges
+      Kt.cyl('tacc', f, [0, -.046, 0], 'y', .012, .012, 'castAl'); Kt.hex('tacc', f, [0, -.054, 0], '-y', .006, .005, 'steel');   // butterfly shaft boss underneath
+      /* inlet elbow and its ring, turned outward toward the scoop at 1:30 */
+      f.updateMatrixWorld(true); const L = (x, y, z) => f.localToWorld(V(x, y, z));
+      const inD = V(-.1, .55, .83).normalize(), ringC = V(.088, .05, .07), onIn = s => ringC.clone().addScaledVector(inD, s);   // clear of the right thrust link at 1 o'clock
+      line('tacc', [L(.063, 0, 0), L(.08, .006, .008), L(.088, .025, .035), L(...onIn(-.01).toArray())], .036, 'tube', { clamps: 0, ends: false, mat: 'castAl' });
+      Kt.tube('tacc', f, ringC.toArray(), inD, .036, .056, .012, 'castAl'); Kt.bolts('tacc', f, onIn(.008).toArray(), inD, .047, 10, .004);
+      /* servo valve and torque motor housing on top, with its bolted cover */
+      Kt.box('tacc', f, [-.005, .056, .015], [.085, .04, .065], 'castAl', { round: .008 });
+      for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) Kt.hex('tacc', f, [-.005 + a * .034, .077, .015 + b * .025], 'y', .0035, .003, 'steel');
+      Kt.cyl('tacc', f, [-.012, .084, .02], 'y', .019, .018, 'darkBox', { edge: .003 });                                     // torque motor
+      Kt.connector('tacc', f, [-.012, .094, .02], 'y', .008, { lead: '-x' });                                                 // its connector, backshell aft, away from the thrust link and the scoop tube
+      Kt.cyl('tacc', f, [-.02, .05, -.035], 'x', .012, .06, 'steel'); Kt.cyl('tacc', f, [-.052, .05, -.035], 'x', .008, .006, 'steel');   // LVDT
+      Kt.connector('tacc', f, [.015, .05, -.035], 'x', .008, { lead: '-z' });
+      for (const z of [.008, .032]) Kt.fitting('tacc', f, [.037, .052, z], 'x', .006);                                         // servo fuel in and out
+      Kt.plate('tacc', f, [-.01, .056, .0476], 'z', 'y', .04, .025);
+      line('tacc', [P(-1.62, 1.6, .545), P(-1.60, 1.62, .51), L(...onIn(.045).toArray()), L(...onIn(.007).toArray())], .036, 'tube', { clamps: 0, ends: false, mat: 'castAl' });   // from the IFS scoop to the inlet ring
+      /* outlet: duct to the plenum on the HPT manifold, between the 6th-stage HPT cooling tubes at 0:51 and 1:36 */
+      line('tacc', [P(-1.702, 1.2, .40), P(-1.77, 1.2, .385), P(-1.84, 1.22, .36), P(-1.885, 1.225, .345)], .033, 'tube', { clamps: 1, ends: false });
+      { const g = Kt.frame('tacc', -1.93, 1.225, .307); Kt.box('tacc', g, [0, 0, 0], [.07, .04, .075], 'nickel', { round: .012 });
+        Kt.flange('tacc', g, [.03, .012, 0], 'x', .022, .036, .008, 6, 'nickel'); }
+      const lp = line('tacc', [P(-1.965, 1.25, .32), P(-2.02, 1.29, .38), P(-2.08, 1.33, .45), P(-2.15, 1.4, .50), P(-2.21, 1.44, .515), P(-2.245, 1.45, .516)], .026, 'tube', { clamps: 1, ends: false });   // to the LPT manifold
+      { const t0 = tAt(lp, -2.06); PW.add('tacc', G.alongCurve(lp, [0, 1, 2, 3, 4, 5, 6].map(k => t0 + k * .012), () => new THREE.TorusGeometry(.028, .005, 6, 20).rotateX(Math.PI / 2)), 'steel').userData.isLine = true; } }   // flexible bellows
     /* p.278-281: the split buffer system. Each unit sits at the position the manual gives; the ducts between them are only stubs */
     PW.part('buffer-air', { parent: 'air', label: 'Buffer air system', src: 'p.278-283',
       info: 'Cooling and pressurizing air for the bearing compartment seals. At high power, 2.5 (LPC exit) air feeds the front compartment (No. 1, 1.5 and 2 bearings), No. 3 and No. 5/6 through the buffer air check valve (BACV). Below 75 percent N1 the 2.5 air is too weak, so the EEC energizes the buffer air valve solenoid (BAVS), which opens the buffer air shutoff valve (BASOV) and sends 4th-stage HPC air instead; the BACV then closes so the 4th-stage air cannot flow back. The No. 4 bearing compartment always gets 4th-stage air, cooled by 2.5 air in the buffer air heat exchanger (BAHX). The buffer air pressure sensor (BAPS) downstream of the BASOV tells both EEC channels whether the valve is where it should be for the power setting.\n\nPositions: BAHX on the fan intermediate case in the 2.5 bleed cavity at 12 o\'clock, BACV at 12 o\'clock on the FIC, BAPS below the BAHX at 2 o\'clock, BASOV at the rear of the HPC at 11 o\'clock, BAVS on the right of the HPC case at 1 o\'clock. The ducts joining them are not drawn yet.' });
@@ -727,7 +746,7 @@
         PW.add('harnesses', G.alongCurve(c, [tAt(c, -1.01)], () => new THREE.CylinderGeometry(.011, .011, .02, 12)), 'silicone').userData.isLine = true; }
       /* turbine clearance control valve: the torque motor aft and down the valve's far side, the LVDT down its near side under the
          right thrust link, both into the T3 branch */
-      line('harnesses', [P(-1.654, 1.28, .49), P(-1.675, 1.3, .488), P(-1.71, 1.4, .46), P(-1.72, 1.45, .40), P(-1.69, 1.4, .345), P(-1.67, 1.2, .31), P(-1.645, 1.06, .298), P(-1.62, 1.02, .295)], .005, 'harness', { clamps: 0, ends: false });
+      line('harnesses', [P(-1.666, 1.27, .51), P(-1.69, 1.29, .505), P(-1.71, 1.4, .465), P(-1.72, 1.47, .40), P(-1.695, 1.42, .34), P(-1.67, 1.2, .31), P(-1.645, 1.06, .298), P(-1.62, 1.02, .295)], .005, 'harness', { clamps: 0, ends: false });
       line('harnesses', [P(-1.595, .99, .45), P(-1.575, .99, .445), P(-1.555, 1.0, .41), P(-1.545, 1.0, .36), P(-1.54, 1.0, .325), P(-1.53, 1.015, .307)], .005, 'harness', { clamps: 0, ends: false });
       /* WC05 aft over the fuel manifolds, under the right edge of the precooler and over the clearance control manifolds (the precooler
          sits low enough over the combustor that it can no longer run along 12 o'clock) */
