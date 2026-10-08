@@ -148,8 +148,10 @@
       Kt.connector('edp', f, [.21, .0, .072], 'z', .009, { lead: 'x' });
       Kt.fitting('edp', f, [.13, .06, .03], 'y', .014); Kt.fitting('edp', f, [.13, .06, -.03], 'y', .011); Kt.fitting('edp', f, [.07, -.02, -.065], '-z', .008);   // suction, pressure, case drain
       Kt.plate('edp', f, [.11, .0, -.063], '-z', 'x', .05, .025);
-      /* its pressure and suction hoses run up the right of the core, aft of the vane and bleed actuators, into the pylon */
-      for (const dx of [0, -.035]) line('edp', [P(mx0 + .16 + dx, 5.6, .47), P(-1.26 + dx, 5.2, .505), P(-1.25 + dx, 4.4, .51), P(-1.25 + dx, 3.2, .51), P(-1.26 + dx, 1.8, .51), P(-1.27 + dx, .6, .51), P(-1.28 + dx, .15, .58), V(-1.30 + dx, .78, .02)], .012, 'hose', { clamps: 5 }); }
+      /* its pressure and suction hoses run up the right of the core, aft of the vane and bleed actuators, into the pylon: under the cowl
+         anti-ice duct where they cross it low on the right, and under the right thrust link at 1:30 */
+      for (const dx of [0, -.035]) line('edp', [P(mx0 + .16 + dx, 5.6, .47), P(-1.30 + dx, 5.42, .45), P(-1.275 + dx, 5.15, .462), P(-1.265 + dx, 4.95, .49), P(-1.258 + dx, 4.75, .505), P(-1.25 + dx, 4.4, .51), P(-1.25 + dx, 3.2, .51),
+        P(-1.26 + dx, 1.9, .51), P(-1.262 + dx, 1.65, .44), P(-1.265 + dx, 1.35, .43), P(-1.27 + dx, 1.05, .495), P(-1.27 + dx, .6, .51), P(-1.28 + dx, .15, .58), V(-1.30 + dx, .78, .02)], .012, 'hose', { clamps: 5 }); }
     acc('lsop', 'Lubrication and scavenge oil pump (LSOP)', 'Seven-stage pump at the right end of the MGB forward face, 5 o\'clock: one pressure stage and six scavenge stages. It slides onto the gearbox pad on two guide pins and is held by captive bolts. Each scavenge return has its own chip collector with a black bayonet cap along the pump body, so a debris message can be traced to the bearing compartment it came from. A low oil pressure indication with normal quantity often points here or to the oil control module.', 'p.212-235, p.231, p.69; photos');
     { const f = Kt.frame('lsop', mx0, 4.85, .40);
       Kt.box('lsop', f, [.008, 0, 0], [.016, .13, .13], 'castTan', { round: .008 });                                       // square mounting flange
@@ -180,9 +182,9 @@
       acc('sav', 'Starter air valve (SAV)', 'Pneumatically operated butterfly valve in the starter duct, spring-loaded closed, with a regulator that holds 30 psi downstream. The EEC opens it through a dual-coil torque motor and confirms it open from starter speed and N2. It sits inside a cooling shroud fed by a tube from the air/oil cooler; its line-replaceable filter is under the cover on top.\n\nA 3/8 in square-drive manual override can be reached through an access hole in the left thrust reverser door. The 2017 manual carries a warning that a manual override start is not an approved procedure, because of the motor-to-start logic that prevents starting with a bowed rotor: follow the current AMM and MEL.', 'p.290-299; p.298 warning');
       /* p.297: the starter duct comes down from the pylon along the left of the core, through the valve at 9 o'clock, then turns forward
          and down into the aft end of the starter. It runs just aft of the HPT, over the turbine intermediate case: further aft the gap
-         between the LPT case and the IFS is too small for it */
+         between the LPT case and the IFS is too small for it. It passes under the left thrust link and rises into the pylon behind it */
       const top = P(-2.19, 11.85, .66), sv = P(-2.07, 9.1, .45), st = P(ax - .29, ah, ar);                          // into the starter's inlet cone
-      line('sav', [top, P(-2.16, 11.85, .56), P(-2.13, 11.4, .50), P(-2.10, 10.0, .475), sv], .045, 'duct', { clamps: 2 }); line('sav', [sv, P(-2.03, 8.75, .42), st], .045, 'duct', { clamps: 1 });
+      line('sav', [top, P(-2.15, 11.85, .63), P(-2.115, 11.82, .56), P(-2.10, 11.72, .48), P(-2.09, 11.5, .435), P(-2.077, 10.5, .435), P(-2.07, 9.7, .445), sv], .045, 'duct', { clamps: 2 }); line('sav', [sv, P(-2.03, 8.75, .42), st], .045, 'duct', { clamps: 1 });
       /* p.299: butterfly body in the duct, actuator and regulator on its side, filter cover on top, the override access funnel, the
          connector; the whole valve sits in a quilted cooling shroud fed by its cooling tube */
       { const g = Kt.frame('sav', -2.07, 9.1, .45);
@@ -275,7 +277,7 @@
     { const vx = -1.46, vh = 10.0; box('vfgoohx', vx, vh, .40, .085, .07, .11, 'steel'); for (const dx of [.05, -.05]) box('vfgoohx', vx + dx, vh, .405, .025, .09, .12, 'castAl', { round: .008 });
       /* VFG oil down the left of the gearbox, between the PMAG and the generator, to the fitting on the VFG's 7 o'clock side
          (points closer than 0.6 h apart, so the run does not cut in across the curve of the casting) */
-      line('vfgoohx', [P(vx, 9.72, .43), P(-1.43, 9.3, .50), P(-1.43, 9.1, .525), P(-1.51, 8.55, .512), P(-1.57, 8.0, .505), P(-1.635, 7.45, .508), P(-1.68, 7.0, .505), P(-1.69, 6.78, .48), P(-1.694, 6.65, .455)], .014, 'tube', { clamps: 3 }); }
+      line('vfgoohx', [P(vx, 9.72, .43), P(-1.48, 9.3, .50), P(-1.47, 9.1, .525), P(-1.51, 8.55, .512), P(-1.57, 8.0, .505), P(-1.635, 7.45, .508), P(-1.68, 7.0, .505), P(-1.69, 6.78, .48), P(-1.694, 6.65, .455)], .014, 'tube', { clamps: 3 }); }
     PW.part('fohe', { parent: 'oil', label: 'Fuel/oil heat exchanger (FOHX) and bypass valve', src: 'p.162-170, p.212-217, p.232-233',
       info: 'Fuel-cooled oil cooler on the upper left of the core at 11 o\'clock, over the front HPC. Its bypass valve (FOHXBV) sits at its forward end on the compressor intermediate case near 12 o\'clock, on the dark FOC manifold block. Boost-pump fuel from the fuel/oil manifold takes heat from the oil and goes back to the manifold, keeping the fuel above 0 deg C at the fuel filter inlet.\n\nThe EEC modulates the bypass valve on the fuel temperature sensor, opening it as the fuel gets colder to send more hot oil through. Normally about 75 percent of the cooled-path oil comes here and 25 percent goes to the air/oil cooler. If the fuel side blocks, a bypass valve sends the fuel round it; the oil side has a relief valve.' });
     { const fx = -1.26, f = frame('fohe', fx, 11.0, .39);
@@ -289,9 +291,11 @@
     /* ============================== FUEL ============================== */
     PW.part('fuel', { label: 'Fuel system lines', explode: [0, 0, -.45], src: 'p.162-183; TTM ch. 73',
       info: 'Fuel comes down from the pylon to the IFPC on the MGB. Its boost pump sends the fuel through the fuel/oil manifold to the fuel/oil heat exchanger and back, then through the filter to the high-pressure pump. Metered fuel passes the flow meter and leaves the manifold in two tubes for the primary and secondary manifolds round the combustor, which feed the 16 nozzles: 10 duplex and 6 simplex (secondary only), in a pattern of 4 duplex, 4 simplex, 6 duplex, 2 simplex. Every nozzle has check valves that keep the manifolds full after shutdown.\n\nServo fuel from the high-pressure pump drives the vane and bleed actuators and returns upstream of the filter.' });
-    line('fuel', [P(-1.02, 12, .64), P(-1.03, 11.9, .49), P(-1.05, 11.2, .47), P(-1.10, 10.3, .48), P(-1.20, 9.4, .50), P(-1.25, 8.6, .51)], .02, 'hose', { clamps: 3 });   // supply from the pylon to the IFPC
-    for (const [o, r1] of [[0, 0], [.12, .022]]) {                                                                                               // boost fuel to and from the FOHX
-      line('fuel', [P(-1.12, 11.55 + o, .43), P(-1.18, 10.9 + o, .49), P(-1.30, 9.9 + o, .47 + r1), P(-1.40, 9.4 + o * .4, .465 + r1 * .4), P(-1.44, 9.3, .44)], .012, 'tube', { clamps: 2 }); }
+    /* the supply crosses under the left thrust link close to its CIC end, where it is lowest; the FOHX boost lines cross over it */
+    line('fuel', [P(-1.02, 12, .64), P(-1.03, 11.9, .48), P(-1.045, 11.2, .46), P(-1.06, 10.75, .43), P(-1.07, 10.43, .40), P(-1.10, 10.05, .455), P(-1.16, 9.4, .47), P(-1.25, 8.6, .51)], .02, 'hose', { clamps: 3 });   // supply from the pylon to the IFPC
+    for (const [o, r1] of [[0, 0], [.12, .03]]) {                                                                                               // boost fuel to and from the FOHX
+      line('fuel', [P(-1.12 - o * .25, 11.55 + o, .43), P(-1.115 - o * .25, 11.2, .475), P(-1.125 - o * .25, 10.8, .49), P(-1.13 - o * .25, 10.45, .497 + o * .025), P(-1.16 - o * .28, 10.1 + o * .6, .49), P(-1.25, 9.9 + o * .8, .49 + r1 * .5),
+        P(-1.32, 9.75 + o * .8, .475 + r1), P(-1.40, 9.4 + o * .67, .465 + r1 * .83), P(-1.44 - o * .125, 9.33 + o * .33, .44 + o * .083)], .012, 'tube', { clamps: 2 }); }
     /* metered fuel: two tubes leave the top end of the FOM, turn up in front of the MGB's left arm, pass under the VFG oil/oil cooler
        and run aft above the arm, under the AOHX, to the primary and secondary manifolds */
     line('fuel', [P(-1.45, 9.22, .395), P(-1.468, 9.42, .37), P(-1.47, 9.58, .352), P(-1.50, 9.66, .345), P(-1.60, 9.66, .343), P(-1.67, 9.7, .325), P(-1.70, 9.76, .31), P(-1.725, 9.8, .305)], .012, 'tube', { clamps: 2 });
@@ -334,25 +338,25 @@
       info: 'Two-position poppet valve on top of the HPC at the 6th-stage bleed port. It is spring-loaded open for the start, dumping 6th-stage air into the core compartment, and HPC pressure (station 2.9) closes it; it is fully closed by idle. The cowl anti-ice valves open during the start as well, adding bleed through the anti-ice ducting.\n\nA sense line runs forward over the case to the pressure sensor on the CIC firewall, upper right. The EEC uses it to detect a valve that fails open after the start, putting hot air into the core compartment, or one that stays closed during the start, which can stall the HPC.' });
     { const xb = -1.53, rb = Math.max(rCase(xb), .235);
       can('hpc-bleed-valve', xb, 12, rb + .045, .035, .09, 'steel', { rot: [G.clock(12), 0, Math.PI / 2] }); box('hpc-bleed-valve', xb, 12, rb + .105, .07, .03, .07, 'darkBox');
-      line('hpc-bleed-valve', [P(xb, 12, rb + .12), P(-1.45, 12.25, .335), P(-1.34, 12.35, .33), P(-1.20, 12.7, .34), P(-1.08, 1.3, .39), P(-1.005, 1.75, .45)], .005, 'tube', { clamps: 4 });
-      box('hpc-bleed-valve', -1.005, 1.8, rFire(-1.005) + .02, .05, .04, .045, 'steel'); }                                                    // pressure sensor
+      line('hpc-bleed-valve', [P(xb, 12, rb + .12), P(-1.45, 12.25, .335), P(-1.34, 12.35, .33), P(-1.20, 12.7, .345), P(-1.13, 1.2, .37), P(-1.08, 1.75, .40), P(-1.04, 2.05, .435), P(-1.02, 2.12, .45)], .005, 'tube', { clamps: 4 });
+      box('hpc-bleed-valve', -1.005, 2.15, rFire(-1.005) + .02, .05, .04, .045, 'steel'); }                                                    // pressure sensor, clear of the right thrust link's clevis
     PW.part('bleed-hp', { parent: 'air', label: 'Bleed ports and ducts (4th and 8th stage)', src: 'p.264; TTM ch. 36; photos',
       info: 'Customer bleed is taken from the HPC case at the 4th stage, or from the 8th stage through the high-pressure valve when 4th-stage pressure is too low. Insulated ducts carry it up into the pylon, where the precooler and the pressure-regulating shutoff valve sit. A duct leak in the core compartment is detected by the overheat loops and can open the IFS pressure-relief door.' });
     { const r4 = D.GEN.rows.find(r => r.name.startsWith('HPC rotor 4')), r8 = D.GEN.rows.find(r => r.name.startsWith('HPC rotor 8'));
       const x4 = (r4.x_le + r4.x_te) / 2, x8 = (r8.x_le + r8.x_te) / 2;
       PW.add('bleed-hp', G.revolve([[x4 + .03, rCase(x4)], [x4 - .03, rCase(x4)], [x4 - .03, rCase(x4) + .035], [x4 + .03, rCase(x4) + .035]], { seg: 96 }), 'nickel');     // 4th-stage manifold collar
-      line('bleed-hp', [P(x4, 11.6, rCase(x4) + .03), P(x4 - .05, 11.8, .45), P(-1.5, 12, .62), P(-1.7, 12, .78)], .045, 'duct', { clamps: 2 });
+      line('bleed-hp', [P(x4, 11.6, rCase(x4) + .03), P(x4 - .05, 11.8, .45), P(-1.5, 12, .62), P(-1.655, 12, .645)], .045, 'duct', { clamps: 2 });
       line('bleed-hp', [P(x8, .4, rCase(x8) + .02), P(x8 + .02, .2, .42), P(-1.55, .1, .62)], .035, 'duct', { clamps: 2 });
       can('bleed-hp', -1.58, 12, .60, .06, .12, 'steel'); box('bleed-hp', -1.58, 12, .68, .1, .08, .09, 'darkBox');               // high-pressure valve
       /* p.297: the precooler sits above the core at 12 o'clock in the upper bifurcation, fed with fan air by a corrugated duct from the
          precooler duct inlet behind the FEGVs; hot bleed enters from below */
       PW.part('precooler', { parent: 'air', label: 'Precooler', src: 'p.60, p.297; TTM ch. 36',
         info: 'Air-to-air heat exchanger above the core at 12 o\'clock in the upper bifurcation, downstream of the pressure-regulating shutoff valve. Fan air from the precooler duct inlet cools the engine bleed to a temperature the aircraft ducts can take; the fan air valve modulates that flow on the bleed temperature sensor downstream. The spent cooling air is dumped into the core compartment and vents overboard through the precooler exhaust door on the right IFS.' });
-      const pcx = -1.90, pcy = .74; { const m = new THREE.Mesh(G.roundedBox(.40, .46, .24, .03)); m.position.set(pcx, pcy, 0); PW.add('precooler', m, 'steel', { solid: true });
+      const pcx = -1.85, pcy = .74; { const m = new THREE.Mesh(G.roundedBox(.40, .46, .24, .03)); m.position.set(pcx, pcy, 0); PW.add('precooler', m, 'steel', { solid: true });
         for (let i = 0; i < 9; i++) { const f = new THREE.Mesh(G.roundedBox(.36, .42, .004, .001)); f.position.set(pcx, pcy, -.1 + i * .025); PW.add('precooler', f, 'nickel', { solid: true, shadow: false }); } }
       line('precooler', [V(-1.05, .97, 0), V(-1.30, .925, 0), V(-1.55, .86, 0), V(pcx + .2, .80, 0)], .07, 'tube', { clamps: 5, ends: false });
       /* TTM ch. 36: the spent cooling air is discharged into the core compartment and vents overboard (precooler exhaust door, right IFS) */
-      line('precooler', [V(pcx - .17, .60, .04), V(-2.12, .55, .045), V(-2.17, .50, .04)], .045, 'duct', { clamps: 0 }); }
+      line('precooler', [V(pcx - .17, .60, .04), V(pcx - .21, .58, .043), V(pcx - .235, .565, .045)], .045, 'duct', { clamps: 0 }); }        // a short stub, above the WC05 harness
     PW.part('tacc', { parent: 'air', label: 'Turbine active clearance control', src: 'p.270-277',
       info: 'Fan air taken through the scoop on the right IFS at about 1:30 passes the ACC valve and is sprayed onto the HPT and LPT cases from ring manifolds. Shrinking the cases closes the blade tip clearances in cruise, saving fuel; the valve is closed for takeoff and most of the climb.' });
     /* p.270-273: the ACC air valve at 1 o'clock near the rear of the HPC (it was over the HPT until 2026-10-07), fed from the scoop on the
@@ -403,8 +407,10 @@
       info: 'HPC 6th-stage bleed for the inlet lip. It passes two cowl anti-ice valves in series (two for redundancy), controlled and monitored by the EEC from the L and R COWL switches (OFF, AUTO, ON), crosses the fan duct in the lower bifurcation and runs forward along the bottom right of the fan case into the inlet at 5 o\'clock, where its access panel is. The air leaves through the exhaust louvres at the bottom of the inlet. The valves also open during the start to help the HPC bleed valve unload the compressor.\n\nThe black hose with orange fittings along the fan case in the photos.' });
     { /* 6th-stage port on the right of the HPC, the two valves on the right of the core, down into the lower bifurcation at 6 o'clock,
          forward under the reverser to the fan case and along it at 5 o'clock */
-      const pts = [P(-1.53, 3.3, .265), P(-1.50, 3.4, .34), P(-1.42, 3.55, .44), P(-1.36, 3.9, .49), P(-1.36, 4.6, .50), P(-1.30, 5.3, .50), P(-1.16, 5.8, .47), P(-1.11, 5.98, .52), P(-1.10, 6.0, .60),
-        P(-1.08, 6.0, .76), P(-1.05, 6.0, .90), P(-1.03, 6.0, .99), P(-.985, 6.0, 1.02), P(-.93, 5.96, 1.035), P(-.86, 5.85, 1.04), P(-.78, 5.55, 1.055), P(-.62, 5.1, 1.035), P(-.55, 5.0, 1.03), P(.20, 5.0, 1.0), P(.34, 5.0, 1.03)];
+      /* it passes over the hydraulic pump hoses and the actuator drain lines where they cross under it on the right of the core, and
+         through the bifurcation panel low and in the middle, under the W04 harness and igniter cable A */
+      const pts = [P(-1.53, 3.3, .265), P(-1.50, 3.4, .34), P(-1.42, 3.55, .44), P(-1.36, 3.9, .49), P(-1.38, 4.6, .508), P(-1.32, 5.3, .505), P(-1.22, 5.6, .497), P(-1.15, 5.85, .485), P(-1.11, 5.98, .52), P(-1.10, 6.0, .60),
+        P(-1.08, 6.0, .76), P(-1.05, 6.0, .90), P(-1.03, 6.0, .975), P(-.985, 6.0, .995), P(-.93, 5.96, 1.0), P(-.88, 5.86, 1.008), P(-.833, 5.7, 1.04), P(-.78, 5.52, 1.055), P(-.62, 5.1, 1.035), P(-.55, 5.0, 1.03), P(.20, 5.0, 1.0), P(.34, 5.0, 1.03)];
       const c = line('cai', pts, .03, 'black', { clamps: 6 });
       PW.add('cai', G.alongCurve(c, [tAt(c, -.985)], () => new THREE.CylinderGeometry(.036, .036, .07, 20)), 'rubber', { mat: { color: '#9cc6e8' } }).userData.isLine = true;   // light blue sleeve where it passes the bifurcation panel (photo)
       PW.add('cai', G.alongCurve(c, [.085, .16], () => new THREE.CylinderGeometry(.045, .045, .085, 20)), 'steel');                         // the two cowl anti-ice valves, in series
@@ -471,7 +477,7 @@
         harn([P(xe, eB, eR), P(xe, 8.58, 1.04), P(xe + (xm - xe) * .5, 8.4, 1.01), P(xm, hb, rh)], .012, { bands: [.3] });
       /* over the mount ring, forward through the bifurcation panel at x -0.985 (orange boots), down inside the bifurcation to the core */
       for (const [run, dh] of [[w04, -.05], [w03, .05]]) { const h6 = 6 + dh * 1.15;
-        const c = harn(onCase(run).concat([P(-.66, h6, 1.025), P(-.74, 6 + dh * 1.3, 1.045), P(-.86, 6 + dh * 2, 1.05), P(-.985, 6 + dh * 2.4, 1.05), P(-1.06, 6 + dh * 2.6, 1.04), P(-1.12, 6 + dh * 2.8, 1.0),
+        const c = harn(onCase(run).concat([P(-.66, h6, 1.025), P(-.74, 6 + dh * 1.3, 1.045), P(-.86, 6 + dh * 2.6, 1.068), P(-.985, 6 + dh * 3.2, 1.056), P(-1.06, 6 + dh * 2.9, 1.045), P(-1.12, 6 + dh * 2.8, 1.0),
           P(-1.18, 6 + dh * 2.8, .9), P(-1.24, 6 + dh * 2.4, .76), P(-1.29, 6 + dh * 1.6, .62), P(-1.31, 6.08 + dh * .6, .535), P(-1.335, 6.35 + dh * .5, .49), P(-1.35, 6.9, .42)]), .016, { clamps: 4 });
         PW.add('harnesses', G.alongCurve(c, [tAt(c, -.985)], () => new THREE.CylinderGeometry(.024, .024, .036, 16)), 'silicone').userData.isLine = true;
         stands(run, .016); }
@@ -481,7 +487,7 @@
         info: 'Stainless panel closing the forward end of the lower bifurcation. It is fixed to the engine, so it stays in place when the reverser doors open. The cowl anti-ice duct (with its light blue sleeve), the two ignition cables and the W03 and W04 harnesses pass forward through it from the core to the fan case, the cables and harnesses in orange silicone boots.' });
       PW.add('bif-panel', G.revolve([[-.982, .955], [-.988, .955], [-.988, 1.075], [-.982, 1.075]], { seg: 10, thetaStart: Math.PI - .115, thetaLength: .23 }), 'nickel');
       PW.add('bif-panel', G.revolve([[-.978, 1.065], [-.992, 1.065], [-.992, 1.077], [-.978, 1.077]], { seg: 10, thetaStart: Math.PI - .115, thetaLength: .23 }), 'nickel');
-      for (let i = 0; i < 6; i++) { const f = Kt.frame('bif-panel', -.98, 6 + (i - 2.5) * .085, 1.071); Kt.hex('bif-panel', f, [.002, 0, 0], 'x', .004, .004, 'steel'); }
+      for (const h of [5.785, 5.955, 6.045, 6.215]) { const f = Kt.frame('bif-panel', -.98, h, 1.071); Kt.hex('bif-panel', f, [.002, 0, 0], 'x', .004, .004, 'steel'); }   // fasteners clear of the boots
       /* the PHMU's two connectors (backshell ends at 9.277 and 8.723 o'clock, r 1.056), the exciter's power lead */
       harn([P(-.50, 9.277, 1.056), P(-.50, 9.42, 1.03), P(-.45, 9.75, 1.0), P(-.33, 10.05, rh), P(-.2, 10.25, rh), P(-.115, 10.3, rh)], .01, { bands: [.12] });
       harn([P(-.50, 8.723, 1.056), P(-.49, 8.58, 1.03), P(-.42, 8.36, 1.0), P(-.33, 8.25, rh), P(-.24, 8.05, rh), P(-.19, 7.93, rh)], .01, { bands: [.12] });
@@ -494,7 +500,7 @@
       /* the left core harness from the junction at the bottom (p.105): up the left forward of the IFPC, over the layshaft, past the Pb
          sensor and over the HPC to the top; WC05 branches from it and runs aft along the top in the pylon gap, over the clearance control
          manifolds, to the EGT probe junctions behind the LPT */
-      line('harnesses', [P(-1.35, 6.9, .42), P(-1.19, 7.4, .38), P(-1.19, 8.2, .375), P(-1.25, 9.5, .325), P(-1.30, 10.1, .325), P(-1.35, 10.65, .32), P(-1.4, 11.2, .315), P(-1.47, 11.38, .312), P(-1.58, 11.6, .31), P(-1.65, 11.9, .31), P(-1.68, 12.15, .31)], .012, 'harness', { clamps: 4 });
+      line('harnesses', [P(-1.35, 6.9, .42), P(-1.19, 7.4, .38), P(-1.19, 8.2, .375), P(-1.25, 9.5, .325), P(-1.30, 10.1, .325), P(-1.35, 10.65, .315), P(-1.40, 11.1, .305), P(-1.445, 11.2, .305), P(-1.50, 11.42, .31), P(-1.58, 11.6, .31), P(-1.65, 11.9, .31), P(-1.68, 12.15, .31)], .012, 'harness', { clamps: 4 });   // under the FOHX end plate, left of the 4th-stage bleed duct
       line('harnesses', [P(-1.0606, 10.16, .413), P(-1.09, 10.1, .385), P(-1.13, 10.0, .375), P(-1.18, 9.8, .345), P(-1.22, 9.62, .33), P(-1.245, 9.55, .326)], .006, 'harness', { clamps: 0, ends: false });   // Pb sensor
       /* WC08 (p.107) up the right of the core along the CIC fire seal, under the 2.5 bleed and LPC vane actuators and behind the N1
          probe, to 1 o'clock; branches to the N1 probe's two connectors, the P2.5/T2.5 probe and, aft over the HPC, the T3 probe */
@@ -530,10 +536,10 @@
         info: 'Two igniter plugs through the diffuser case into the combustion chamber: A at 4 o\'clock, B at 5 o\'clock. Each sits in a mounting boss over classified spacers that set its immersion depth; the boss and spacers stay on the case when a plug is changed. The cables are interchangeable, with ceramic-insulated terminals at the plug end.' });
       /* p.314-315: the cables run aft along the bottom of the fan case and under the reverser, down the lower bifurcation at x -1.2 and
          aft under the core, clear of the drain mast, VFG and oil control module, up to the plugs just aft of the fuel nozzles. A keeps to
-         the right of B all the way, so they never cross */
+         the right of B all the way, so they never cross; both ride over the W03 harness where they cross it ahead of the panel */
       for (const [h0, dh, hp] of [[7.952, -.03, 4.05], [8.048, .03, 5.0]]) {
-        const run = [P(-.673, h0, 1.0403), P(-.70, h0 - .05, 1.04), P(-.735, 7.6 + dh, 1.04), P(-.765, 7.0 + dh, 1.045), P(-.82, 6.3 + dh, 1.055), P(-.90, 6.0 + 3 * dh, 1.045), P(-.985, 6.0 + 3 * dh, 1.035),
-          P(-1.05, 6.0 + 3 * dh, 1.03), P(-1.11, 6.0 + 3 * dh, .99), P(-1.15, 6.0 + 2.5 * dh, .86), P(-1.18, 6.0 + 2 * dh, .72), P(-1.21, 5.97 + dh, .58), P(-1.30, 5.9 + dh, .52), P(-1.50, 5.85 + dh, .525), P(-1.75, 5.78 + dh, .53)];
+        const k = dh > 0 ? .03 : 0, da = dh < 0 ? dh * 1.6 : dh, run = [P(-.673, h0, 1.0403), P(-.70 - k, h0 - .05, 1.04), P(-.735 - k, 7.6 + dh, 1.045), P(-.765 - k, 7.0 + dh, 1.07), P(-.82 - k * .5, 6.4 + dh * 1.5, 1.10), P(-.88, 6.15 + dh * 2.5, 1.10), P(-.94, 6.0 + 3 * dh, 1.09), P(-.985, 6.0 + 3 * dh, 1.06),
+          P(-1.05, 6.0 + 3 * dh, 1.03), P(-1.11, 6.0 + 3 * dh, .99), P(-1.15, 6.0 + 2.5 * dh, .86), P(-1.18, 6.0 + 2 * dh, .72), P(-1.21, 5.97 + da, .58), P(-1.30, 5.9 + da, .52), P(-1.50, 5.85 + da, .525), P(-1.75, 5.78 + dh * 1.5, .53)];
         const tail = hp < 4.5 ? [P(-1.82, 5.2, .505), P(-1.82, 4.8, .50), P(-1.815, 4.5, .49), P(-1.79, 4.3, .45), P(-1.80, 4.15, .40), P(-1.81, 4.06, .37), P(-1.81, hp, .347)]
           : [P(-1.80, 5.45, .47), P(-1.81, 5.15, .42), P(-1.81, 5.02, .385), P(-1.81, hp, .347)];
         const ic = line('ignition', run.concat(tail), .0085, 'cable', { clamps: 6, ends: false });
@@ -737,7 +743,7 @@
         info: 'Two links from the compressor intermediate case (CIC) to the aft mount\'s balance beam. They carry the engine thrust aft into the aft mount and keep it from bending the core. If any link of the aft mount fails, including a thrust link, the load moves to a secondary path.\n\nThe real links are straight rods; the model bends them to fit its simplified inner fixed structure.' });
       for (const s of [-1, 1]) { const h0 = s > 0 ? 1.6 : 10.4;
         const g = Kt.frame('thrust-links', -1.0, h0, .455, { rz: .88 }); Kt.box('thrust-links', g, [0, .012, 0], [.05, .024, .06], 'titanium', { round: .006 });   // clevis on the CIC
-        const c = line('thrust-links', [P(-1.0, h0, .44), P(-1.25, s > 0 ? 1.5 : 10.5, .49), P(-1.8, s > 0 ? .7 : 11.3, .52), P(-2.15, s > 0 ? .55 : 11.45, .52), P(-2.32, s > 0 ? .25 : 11.75, .555), V(xa + .07, .56, .09 * s)], .022, 'tube', { clamps: 0, tension: 0, ends: false });
+        const c = line('thrust-links', [P(-1.0, h0, .44), P(-1.25, s > 0 ? 1.5 : 10.5, .47), P(-1.8, s > 0 ? .7 : 11.3, .512), P(-2.15, s > 0 ? .55 : 11.45, .512), P(-2.32, s > 0 ? .25 : 11.75, .555), V(xa + .07, .56, .09 * s)], .022, 'tube', { clamps: 0, tension: 0, ends: false });
         PW.add('thrust-links', G.alongCurve(c, [.012, .988], () => new THREE.CylinderGeometry(.029, .029, .06, 18)), 'steel').userData.isLine = true; } }   // swaged rod-end housings
 
     /* ============================== DRAINS ============================== */
@@ -746,16 +752,25 @@
     /* p.50: each drain runs from its source to the collector under the core at 6 o'clock; the mast carries them down the lower
        bifurcation and through the reverser to the latch access panel at the bottom of the nacelle */
     { const xm2 = -1.48, runs = [
-        [P(-1.21, 5.0, .455), P(-1.23, 5.4, .48), P(-1.30, 6.0, .50)],                                                              // LPC stator vane actuator
-        [P(-1.21, 3.0, .455), P(-1.22, 3.5, .47), P(-1.22, 4.5, .485), P(-1.24, 5.4, .49), P(-1.31, 6.0, .505)],                   // 2.5 bleed valve actuator
-        [P(-1.30, 4.05, .37), P(-1.23, 4.2, .46), P(-1.225, 4.5, .49), P(-1.245, 5.4, .49), P(-1.32, 5.98, .50)],                // HPC stator vane actuator
-        [P(-1.40, 5.95, .455), P(-1.42, 6.0, .50)],                                                                                // hydraulic pump
-        [P(-1.40, 7.15, .46), P(-1.40, 6.6, .50), P(-1.42, 6.1, .51)],                                                              // fuel/oil manifold and IFPC
+        /* the three actuator drains cross under the cowl anti-ice duct on their way down the right side */
+        [P(-1.21, 5.0, .455), P(-1.222, 5.35, .448), P(-1.255, 5.7, .46), P(-1.29, 6.0, .50)],                                    // LPC stator vane actuator
+        [P(-1.21, 3.0, .455), P(-1.22, 3.5, .47), P(-1.215, 4.5, .485), P(-1.232, 5.0, .46), P(-1.24, 5.35, .448), P(-1.27, 5.7, .462), P(-1.31, 6.0, .505)],   // 2.5 bleed valve actuator
+        [P(-1.30, 4.05, .37), P(-1.23, 4.2, .46), P(-1.232, 4.5, .478), P(-1.246, 5.0, .458), P(-1.256, 5.35, .448), P(-1.285, 5.7, .464), P(-1.33, 5.98, .50)],   // HPC stator vane actuator
+        [P(-1.40, 5.95, .455), P(-1.41, 6.0, .50)],                                                                               // hydraulic pump
+        [P(-1.40, 7.15, .46), P(-1.40, 6.6, .50), P(-1.43, 6.1, .515)],                                                             // fuel/oil manifold and IFPC
         [P(-1.685, 7.95, .43), P(-1.70, 7.75, .47), P(-1.72, 7.45, .52), P(-1.68, 7.1, .545), P(-1.60, 6.8, .545), P(-1.52, 6.45, .54), P(-1.47, 6.2, .535)],   // starter pad seal, under the gearbox and the VFG oil line
-        [P(-1.70, 6.05, .515), P(-1.60, 6.03, .53), P(-1.50, 6.02, .55)],                                                           // VFG
-        [P(-1.875, 2.4, .515), P(-1.88, 2.7, .535), P(-1.89, 3.1, .54), P(-1.90, 3.5, .54), P(-1.91, 3.9, .54), P(-1.92, 4.3, .54), P(-1.92, 4.8, .54), P(-1.90, 5.15, .542), P(-1.88, 5.5, .545), P(-1.75, 5.95, .545), P(-1.55, 6.0, .55)]];   // oil tank scupper, from the fitting below the fill port
-      runs.forEach((pts, i) => { const a = (i - 3.5) * .01; line('drain-mast', pts.concat([P(xm2 + .03, 6 + a, .56), P(xm2, 6 + a, .62)]), .004, 'tube', { clamps: 1, ends: false }); });
-      line('drain-mast', [P(xm2, 6, .60), P(xm2, 6, .85), P(xm2 - .01, 6, 1.13)], .016, 'tube', { clamps: 2, tension: 0 });            // the mast, down the bifurcation and through the reverser
+        /* the VFG and oil tank drains come forward from aft into the back of the collector */
+        [P(-1.70, 6.05, .515), P(-1.60, 6.08, .54), P(-1.54, 6.09, .58), P(-1.515, 6.09, .612)],                                   // VFG
+        [P(-1.875, 2.4, .515), P(-1.88, 2.7, .535), P(-1.89, 3.1, .54), P(-1.90, 3.5, .54), P(-1.91, 3.9, .54), P(-1.92, 4.3, .54), P(-1.92, 4.8, .54), P(-1.90, 5.15, .542), P(-1.88, 5.5, .545), P(-1.75, 5.95, .545),
+          P(-1.62, 6.02, .56), P(-1.54, 6.03, .59), P(-1.515, 6.03, .612)]];                                                        // oil tank scupper, from the fitting below the fill port
+      /* the six forward drains keep their own lanes, 1 cm apart, into the top of the collector block on the mast, all to the left of the
+         igniter cables; the right-side drains take the lanes in the order they arrive, so none crosses another */
+      const lanes = [6.025, 5.99, 5.955, 6.055, 6.105, 6.145];
+      runs.forEach((pts, i) => { if (i > 5) { line('drain-mast', pts, .004, 'tube', { clamps: 1, ends: false }); return; }
+        const h = lanes[i], q = pts[pts.length - 1]; pts[pts.length - 1] = P(q.x, h, Math.hypot(q.y, q.z));
+        line('drain-mast', pts.concat([P(xm2 + .03, h, .56), P(xm2 + .01, h, .604)]), .004, 'tube', { clamps: 1, ends: false }); });
+      box('drain-mast', xm2, 6.04, .617, .045, .022, .07, 'steel');                                                                    // collector block
+      line('drain-mast', [P(xm2, 6, .62), P(xm2, 6, .85), P(xm2 - .01, 6, 1.13)], .016, 'tube', { clamps: 2, tension: 0 });            // the mast, down the bifurcation and through the reverser
       box('drain-mast', xm2 - .01, 6, 1.155, .07, .04, .045, 'steel'); }                                                             // its outlet, standing just proud of the latch access panel
   }
   /* a small circle profile (tori for manifolds) */
