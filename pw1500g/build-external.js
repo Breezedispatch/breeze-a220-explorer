@@ -141,7 +141,7 @@
     acc('fom', 'Fuel/oil manifold (FOM), fuel flow meter and fuel filter', 'Upright manifold block against the left end of the MGB front face, from about 7 to 9:30 o\'clock. It carries the IFPC on its forward face at 8 o\'clock, the fuel flow meter above it at 9 o\'clock and the fuel filter below it, and routes the boost-pump fuel to and from the fuel/oil heat exchanger, which keeps it above 0 deg C at the filter inlet.\n\nFuel filter: a disposable canister in a housing with a drain plug; the housing is turned off by the hex in its end. Its differential pressure sensor, at 7:30 on the manifold, reports to both EEC channels. Above 22 psid: L(R) ENG FUEL FILTER advisory with an IMPENDING BYPASS info message. At 25 psid the bypass valve opens (BYPASS info message). Both engines in bypass gives the L-R ENG FUEL FILTER caution: suspect fuel contamination.\n\nFuel flow meter: measures the metered fuel going to the nozzles. Its signal goes to EEC channel A, and to channel B over the CAN bus.', 'p.162-179, p.69');
     { const t0 = G.clock(7.1), t1 = G.clock(9.35);
       PW.add('fom', G.revolve([[mx0 + .055, .37], [mx0 + .004, .37], [mx0 + .004, .465], [mx0 + .055, .465]], { seg: 20, thetaStart: t0, thetaLength: t1 - t0, crease: 30 }), 'castAl');
-      for (const h of [7.9, 8.6]) { const f = Kt.frame('fom', mx0 + .03, h, .468); Kt.fitting('fom', f, [0, .004, 0], 'y', .009); }   // servo fuel return in, motive flow out
+      { const f = Kt.frame('fom', mx0 + .03, 7.9, .468); Kt.fitting('fom', f, [0, .004, 0], 'y', .009); }   // servo fuel return in (motive flow leaves the IFPC itself, TTM 73-00 fig. 2)
       /* on the top end face: boost fuel to and from the FOHX, metered fuel to the primary and secondary manifolds */
       for (const [x, r] of [[-1.444, .43], [-1.472, .455], [-1.472, .38], [-1.444, .395]]) Kt.fitting('fom', Kt.frame('fom', x, 9.35, r), [0, 0, 0], 'z', .009);
       /* fuel flow meter at 9 o'clock: a body with its connector */
@@ -172,14 +172,16 @@
        duct at 5 o'clock, where the gap between the duct and the LSOP's chip collectors is widest */
     line('edp', [P(-1.418, 5.42, .388), P(-1.405, 5.36, .40), P(-1.385, 5.3, .425), P(-1.35, 5.2, .455), P(-1.326, 5.05, .463), P(-1.322, 4.85, .482), P(-1.324, 4.7, .50), P(-1.32, 4.4, .51), P(-1.32, 3.2, .51), P(-1.33, 1.9, .51),
       P(-1.332, 1.65, .44), P(-1.335, 1.35, .43), P(-1.36, 1.05, .495), P(-1.42, .6, .51), P(-1.46, .3, .52), P(-1.468, .15, .555), V(-1.47, .62, .078), V(-1.475, .70, .097), V(-1.48, .76, .107), V(-1.485, .85, .12), V(-1.49, 1.03, .125)], .006, 'hose', { clamps: 4 });
-    acc('lsop', 'Lubrication and scavenge oil pump (LSOP)', 'Seven-stage pump at the right end of the MGB forward face, 5 o\'clock: one pressure stage and six scavenge stages. It slides onto the gearbox pad on two guide pins and is held by captive bolts. Each scavenge return has its own chip collector with a black bayonet cap along the pump body, so a debris message can be traced to the bearing compartment it came from. A low oil pressure indication with normal quantity often points here or to the oil control module.', 'p.212-235, p.231, p.69; photos');
+    acc('lsop', 'Lubrication and scavenge oil pump (LSOP)', 'Seven-stage pump at the right end of the MGB forward face, 5 o\'clock: one pressure stage and six scavenge stages. It slides onto the gearbox pad on two guide pins and is held by captive bolts. Each scavenge return has its own chip collector with a black bayonet cap along the pump body, so a debris message can be traced to the bearing compartment it came from. The No. 4 and No. 5/6 scavenge tubes come forward under the gearbox into the two fittings on its 6 o\'clock side. A low oil pressure indication with normal quantity often points here or to the oil control module.', 'p.212-235, p.231, p.69; photos');
     { const f = Kt.frame('lsop', mx0, 4.85, .40);
       Kt.box('lsop', f, [.008, 0, 0], [.016, .13, .13], 'castTan', { round: .008 });                                       // square mounting flange
       for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) Kt.hex('lsop', f, [.019, a * .052, b * .052], 'x', .006, .006, 'steel');   // captive bolts
       Kt.box('lsop', f, [.13, 0, 0], [.23, .1, .11], 'castTan', { round: .03 });                                           // pump body
       Kt.box('lsop', f, [.12, -.005, .062], [.18, .07, .014], 'castTan', { round: .005 });                                // manifold plate
       for (let i = 0; i < 6; i++) Kt.chip('lsop', f, [.05 + i * .033, .052, (i % 2 ? -.025 : .02)], 'y', .01);           // the six scavenge chip collectors
-      for (const p of [[.22, -.02, .07], [.15, .02, .07]]) Kt.fitting('lsop', f, p, 'z', .01); Kt.fitting('lsop', f, [.245, 0, 0], 'x', .012); }
+      /* the No. 4 (outer) and No. 5/6 scavenge inlets at the aft end of the manifold plate, their tubes coming forward under the gearbox
+         (p.214-215). The front compartments' and the gearboxes' stages are fed through the gearbox casting and are not drawn */
+      for (const y of [.02, -.02]) Kt.fitting('lsop', f, [.04, y, .07], 'z', .01); }
     // aft face
     acc('ats', 'Air turbine starter (ATS)', 'Pneumatic starter at the left end of the MGB aft face, held on its pad by a V-band clamp. Bleed air from the APU, ground cart or the other engine, admitted by the starter air valve, enters through the cone at its aft end and spins its turbine; it cranks the N2 rotor through the gearboxes and disengages above cutout speed. A speed sensor reports to the EEC, and a halo tube round its gearbox end blows cooling air on it.\n\nIt has its own oil: check the level on the sight glass between FULL and ADD, fill through the FILL port until oil comes out of the overfill port, and drain through the drain port. The magnetic plug at the bottom collects debris: check it in starter troubleshooting.', 'p.286-301, p.69');
     { const ax = mx1, ah = 8.4, ar = .385, f = Kt.frame('ats', ax, ah, ar);
@@ -237,7 +239,7 @@
       Kt.connector('vfg', f, [-.1, .07, .085], [0, .6, .8], .012, { lead: '-x' }); Kt.connector('vfg', f, [-.1, .07, -.085], [0, .6, -.8], .012, { lead: '-x' });
       Kt.fitting('vfg', f, [-.04, .06, .095], [0, .53, .85], .009); Kt.fitting('vfg', f, [-.11, .065, .09], [0, .53, .85], .009);   // oil to and from its oil/oil cooler, both toward it
       Kt.fitting('vfg', f, [-.05, .105, -.03], 'y', .006); }                                                                       // pad seal drain, to the drain mast
-    acc('ocm', 'Oil control module (OCM)', 'Cast module at the right end of the MGB aft face. Under the round thermal blanket cap on its outboard face is the main oil filter: a primary and a secondary element behind a bolted cover with a vent plug and a drain plug, with a bypass valve that opens at 55 psid. It also carries the filter differential pressure sensor, the oil debris monitor, the main oil pressure and temperature sensors, the active oil damper valve and the variable oil reduction valve with the journal oil shuttle valve for the FDGS.\n\nA filter impending-bypass or debris message is worked from here.', 'p.226-249, p.229, p.235; photos');
+    acc('ocm', 'Oil control module (OCM)', 'Cast module at the right end of the MGB aft face. Under the round thermal blanket cap on its outboard face is the main oil filter: a primary and a secondary element behind a bolted cover with a vent plug and a drain plug, with a bypass valve that opens at 55 psid. It also carries the filter differential pressure sensor, the oil debris monitor, the main oil pressure and temperature sensors, the active oil damper valve and the variable oil reduction valve with the journal oil shuttle valve for the FDGS.\n\nThe scavenge oil from the pump also passes through it, past the temperature sensor, on its way back to the tank: the tube up to the tank leaves its aft face, beside the pressure tube to the No. 4 and No. 5/6 bearings. A filter impending-bypass or debris message is worked from here.', 'p.214-215, p.226-249, p.229, p.235; TTM 79-00 fig. 3; photos');
     { const f = Kt.frame('ocm', mx1, 4.9, .40);
       Kt.box('ocm', f, [-.06, 0, 0], [.12, .13, .17], 'castAl', { round: .015 });
       /* main oil filter bore along y, its scalloped bolted cover, and the quilted thermal blanket cap over it (p.235; the dome in the photos) */
@@ -257,7 +259,7 @@
       Kt.cyl('ocm', f, [-.035, .025, -.097], '-z', .013, .024, 'steel'); Kt.hex('ocm', f, [-.035, .025, -.087], '-z', .011, .006, 'steel');   // main oil pressure (MOP) sensor
       Kt.connector('ocm', f, [-.035, .025, -.109], '-z', .008, { lead: '-x' });
       Kt.cyl('ocm', f, [-.095, .045, .092], [0, .5, .866], .009, .02, 'steel'); Kt.connector('ocm', f, [-.095, .055, .11], [0, .5, .866], .007, { lead: '-x' });   // main oil temperature (MOT) sensor
-      Kt.fitting('ocm', f, [-.12, -.04, .04], '-x', .011); Kt.fitting('ocm', f, [-.12, .04, .02], '-x', .011); }
+      Kt.fitting('ocm', f, [-.12, -.04, .04], '-x', .011); Kt.fitting('ocm', f, [-.12, .04, .02], '-x', .011); }   // pressure to No. 4 and No. 5/6 (inboard); scavenge on to the tank
     acc('deoiler', 'Deoiler', 'Self-contained centrifugal deoiler in the right arm of the MGB, on its aft face, driven by a gear. It takes breather air from the gearbox, the No. 3 bearing compartment and the oil tank\'s deaerator, spins the oil out of it back into the gearbox, and vents the air overboard through the deoiler vent duct, which crosses over the top of the gearbox, between it and the core, to its flattened outlet at the left end. Its drive oil seal is line-replaceable.', 'p.66-67, p.236-237');
     /* p.237: a drum on the aft face of the right arm; the vent duct leaves its aft end, turns in over the top of the gearbox (between
        the heat shield and the core) and runs across to the left end, where it ends in a flattened outlet */
@@ -270,7 +272,7 @@
 
     /* ============================== OIL SYSTEM ============================== */
     PW.part('oil', { label: 'Oil system', explode: [0, 0, .45], src: 'p.212-255; TTM ch. 79',
-      info: 'Dry-sump system: the tank on the right of the core feeds the pressure stage of the lube and scavenge pump, the oil control module filters and monitors it, and part of the flow is cooled in the fuel/oil heat exchanger and the air/oil cooler before going to the bearings, gearboxes and the FDGS journals. Six scavenge stages return it to the tank through chip collectors.' });
+      info: 'Dry-sump system: the tank on the right of the core feeds the pressure stage of the lube and scavenge pump, the oil control module filters and monitors it, and part of the flow is cooled in the fuel/oil heat exchanger and the air/oil cooler before going to the bearings, gearboxes and the FDGS journals. Six scavenge stages return it through chip collectors and back through the oil control module to the tank.' });
     PW.part('oil-tank', { parent: 'oil', label: 'Oil tank', src: 'p.222-225, p.249; TTM 79-00 fig. 2 and 4; photos',
       info: 'Aluminium tank on the right of the core, just forward of the turbine intermediate case, curved to the core from its lid at about 2:20 o\'clock down to a cone and the outlet at 5 o\'clock. It holds 27.3 L (28.8 qt): 21.8 L (23 qt) fully serviced, 9.3 L (9.8 qt) minimum. A stainless steel heat shield held together by springs wraps the body. On the lid are the quantity sensor (to the EEC), the pressurization valve, which holds about 12 psi in the tank and vents the excess to the deoiler, and the inlet to the swirl de-aerator.\n\nService it through the oil tank access door on the right IFS. Wait at least 5 minutes after shutdown before opening the cap, and read the level between 5 and 60 minutes after shutdown; outside that window the sight glass is not accurate. The sight glass reads in quarts and litres below full (FULL, 1, 2, 3, LOW), so it shows how much to add. Under the hinged cap a strainer keeps debris out and a flapper valve stops the oil being lost if the cap is left open; if the flapper is stuck shut, hold it open with a small screwdriver through a hole in the screen. Fill until oil starts to run into the scupper, which drains to the drain mast. The drain plug is at the bottom of the cone.' });
     /* p.223, 225, 249 and TTM 79-00 fig. 2 and 4, with Brian's photo from aft on the right: a tall tank curved to the core just forward of
@@ -323,14 +325,52 @@
          cooling tube where it lies lowest, into the aft end of the deoiler, clear of igniter A */
       line('oil-tank', [P(-2.0744, 2.186, .405), P(-2.094, 2.19, .405), P(-2.106, 2.29, .405), P(-2.106, 2.8, .405), P(-2.106, 3.4, .40), P(-2.10, 3.62, .385), P(-2.07, 3.72, .36),
         P(-2.0, 3.78, .35), P(-1.90, 3.8, .35), P(-1.81, 3.82, .352), P(-1.74, 3.95, .35), P(-1.71, 4.06, .345), P(-1.695, 4.11, .341), P(mx1 - .033, 4.12, .338)], .012, 'tube', { clamps: 3 });
-      /* p.223: the scavenge return comes aft from the pump past the tank's forward face, in under the tip of the cone, up the aft face and
-         in over the lid to the de-aerator */
-      line('oil-tank', [P(mx0 + .07, 4.6, .45), P(-1.50, 4.2, .47), P(-1.58, 4.05, .478), P(-1.70, 4.0, .487), P(-1.79, 4.08, .487), P(-1.83, 4.3, .48), P(-1.885, 4.55, .465),
-        P(-1.935, 4.78, .44), P(-1.99, 4.97, .40), P(-2.05, 4.99, .398), P(-2.095, 4.86, .41), P(-2.104, 4.6, .45), P(-2.104, 4.3, .48), P(-2.104, 4.0, .49), P(-2.104, 3.2, .49),
+      /* p.214-215 and TTM 79-00 fig. 3: the scavenge oil goes from the pump back through the oil control module (past its MOT sensor) to
+         the tank, so the return leaves the OCM's aft face, runs aft in under the tip of the cone, up the aft face and in over the lid to
+         the de-aerator (p.223). Until 2026-10-08 it was drawn from the pump */
+      line('oil-tank', [P(-1.79, 4.987, .4405), P(-1.82, 4.988, .438), P(-1.88, 4.99, .425), P(-1.94, 4.99, .408), P(-1.99, 4.99, .40), P(-2.05, 4.99, .398), P(-2.095, 4.86, .41),
+        P(-2.104, 4.6, .45), P(-2.104, 4.3, .48), P(-2.104, 4.0, .49), P(-2.104, 3.2, .49),
         P(-2.104, 2.5, .49), P(-2.104, 2.32, .49), P(-2.09, 2.2, .49), P(-2.05, 2.196, .49), P(-2.0173, 2.1965, .49)], .014, 'tube', { clamps: 3 });
       /* p.223: the supply leaves the outlet boss forward, up the cone's forward side, over igniter A's lead and on to the pump inlet */
       line('oil-tank', [P(-1.98, 5.146, .458), P(-1.96, 5.13, .468), P(-1.93, 5.0, .50), P(-1.90, 4.76, .522), P(-1.87, 4.56, .527), P(-1.80, 4.45, .525), P(-1.75, 4.42, .52),
         P(-1.60, 4.44, .512), P(-1.50, 4.55, .505), P(-1.455, 4.68, .49), P(-1.43, 4.75, .44)], .016, 'tube', { clamps: 3 }); }
+    /* p.214-215: the OCM sends pressure oil to the No. 4 and No. 5/6 bearing compartments in one tube that tees for the two, each branch
+       entering through a last-chance strainer; each compartment's scavenge comes back in its own tube to its stage of the LSOP (chip
+       collectors BC4 and BC5, p.230). The manual gives the circuit, not the routes. Here the scavenge tubes run aft under the gearbox at
+       5:20 and 5:30 and pass between the ignition cables where those turn up to the igniters (under A, over B). No. 4 is served through
+       two pads on the forward face of the TIC, as the TIC cooling air tubes are; No. 5/6 through two pads on the forward face of the
+       TEC's outer ring either side of 6 o'clock, its tubes running along the bottom of the LPT case through the gap left between the
+       ends of the clearance control spray rings */
+    PW.part('oil-rear', { parent: 'oil', label: 'No. 4 and No. 5/6 bearing oil tubes', src: 'p.212-215, p.230; TTM 79-00 fig. 3',
+      info: 'Pressure oil for the turbine bearings leaves the aft face of the oil control module in one tube, which tees just behind it. One branch feeds the No. 4 bearing compartment through a pad on the forward face of the turbine intermediate case; the other runs aft along the bottom of the LPT case to the No. 5 and 6 bearing compartment in the turbine exhaust case. Each branch enters through a last-chance strainer, which stops any particle that got past the main oil filter from blocking the bearing oil jets.\n\nEach compartment\'s scavenge oil comes back forward in its own tube, under the gearbox, to its own stage of the lube and scavenge pump, where the BC4 or BC5 chip collector catches bearing debris: a chip found there points to that compartment.\n\nThe manual gives this circuit but not the tube routes; the routes here are drawn through the space the other units leave.' });
+    { /* world point of a local point in a frame at (x0, clock h0, r0) turned by rz, as Kt.frame builds it */
+      const FL = (x0, h0, r0, rz) => { const c = Math.cos(rz || 0), s = Math.sin(rz || 0), a = G.clock(h0);
+        return (lx, ly, lz) => { const X = lx * c - ly * s, Y = r0 + lx * s + ly * c; return V(x0 + X, Y * Math.cos(a) - lz * Math.sin(a), Y * Math.sin(a) + lz * Math.cos(a)); }; };
+      /* a bolted pad on a forward-facing case face, turned by rz to sit on it, carrying a last-chance strainer housing with the tube's
+         fitting on its end, or the fitting alone; returns the tube's last two points, along the fitting's axis */
+      const pad = (x, h, r, rz, screen) => { const g = Kt.frame('oil-rear', x, h, r, { rz }), L = FL(x, h, r, rz); let e;
+        Kt.box('oil-rear', g, [0, .004, 0], [.03, .008, .03], 'nickel', { round: .004 }); Kt.bolts('oil-rear', g, [0, .0095, 0], 'y', .0135, 4, .0028, { phase: Math.PI / 4 });
+        if (screen) { Kt.cyl('oil-rear', g, [0, .016, 0], 'y', .0115, .016, 'steel', { edge: .002 }); Kt.hex('oil-rear', g, [0, .029, 0], 'y', .013, .01, 'steel');
+          Kt.fitting('oil-rear', g, [0, .034, 0], 'y', .008); e = .034 + .008 * 1.45; }
+        else { Kt.fitting('oil-rear', g, [0, .008, 0], 'y', .009); e = .008 + .009 * 1.45; }
+        return [L(0, e + .022, 0), L(0, e, 0)]; };
+      const n4p = pad(-2.13, 5.15, .385, -1.4, true), n4s = pad(-2.13, 5.45, .385, -1.4, false);          // No. 4: pressure through its strainer, scavenge
+      const n5p = pad(-2.549, 5.9, .437, -1.18, true), n5s = pad(-2.549, 6.1, .437, -1.18, false);         // No. 5/6
+      const Ls = FL(mx0, 4.85, .40), Lo = FL(mx1, 4.9, .40);                                                 // the LSOP's and OCM's frames
+      /* the tee behind the OCM: a forged body on the pressure tube, its branch toward 6 o'clock */
+      const T = FL(-1.875, 5.2, .368), tg = Kt.frame('oil-rear', -1.875, 5.2, .368);
+      Kt.cyl('oil-rear', tg, [0, 0, 0], 'x', .0085, .036, 'steel', { edge: .002 }); Kt.cyl('oil-rear', tg, [0, 0, .011], 'z', .0075, .022, 'steel', { edge: .002 });
+      line('oil-rear', [Lo(-.13595, -.04, .04), P(-1.81, 5.125, .3635), P(-1.835, 5.18, .366), T(.015, 0, 0)], .005, 'tube', { clamps: 0 });
+      line('oil-rear', [T(-.015, 0, 0), P(-1.93, 5.19, .372), P(-1.99, 5.165, .385), P(-2.03, 5.15, .395)].concat(n4p), .005, 'tube', { clamps: 1 });   // to No. 4, under the tank's outlet
+      line('oil-rear', [T(0, 0, .019), P(-1.878, 5.36, .369), P(-1.90, 5.42, .37), P(-1.95, 5.51, .374), P(-2.0, 5.6, .38), P(-2.05, 5.7, .39), P(-2.09, 5.78, .41), P(-2.12, 5.84, .443),
+        P(-2.14, 5.875, .465), P(-2.17, 5.915, .487), P(-2.20, 5.945, .503), P(-2.25, 5.95, .515), P(-2.32, 5.95, .512), P(-2.39, 5.95, .504), P(-2.45, 5.93, .487)].concat(n5p), .005, 'tube', { clamps: 4 });   // to No. 5/6
+      /* scavenge: No. 4 from the pump's outer fitting, No. 5/6 from its inner one, out round the hydraulic pump's flange, aft under the
+         gearbox and the oil control module's harness, between the ignition cables, then down under the oil tank */
+      line('oil-rear', [Ls(.04, .02, .0845), Ls(.04, .021, .108), P(-1.452, 5.35, .465), P(-1.462, 5.355, .498), P(-1.50, 5.355, .51), P(-1.60, 5.355, .512), P(-1.70, 5.355, .512),
+        P(-1.77, 5.355, .507), P(-1.817, 5.36, .50), P(-1.86, 5.37, .493), P(-1.92, 5.385, .478), P(-1.98, 5.405, .455), P(-2.03, 5.425, .428)].concat(n4s), .007, 'tube', { clamps: 3 });
+      line('oil-rear', [Ls(.04, -.02, .0845), Ls(.04, -.019, .118), P(-1.45, 5.47, .435), P(-1.462, 5.475, .49), P(-1.50, 5.475, .513), P(-1.60, 5.475, .516), P(-1.70, 5.475, .516),
+        P(-1.77, 5.478, .51), P(-1.808, 5.49, .505), P(-1.835, 5.5, .503), P(-1.88, 5.52, .498), P(-1.94, 5.55, .495), P(-2.0, 5.64, .492), P(-2.06, 5.8, .488), P(-2.11, 5.94, .49),
+        P(-2.16, 6.03, .497), P(-2.20, 6.05, .507), P(-2.25, 6.05, .515), P(-2.32, 6.05, .512), P(-2.39, 6.05, .504), P(-2.45, 6.07, .488)].concat(n5s), .007, 'tube', { clamps: 5 }); }
     /* thermal management (p.212-217, 232-233): three heat exchangers on the upper left of the core. The EEC's bypass valve splits the
        cooled oil between the fuel/oil and air/oil coolers on fuel temperature, normally about 75 / 25 */
     /* p.233, measured against the HPC vane lever rows: FOHX x -1.05 to -1.41 with its bypass valve at the forward end, VFGOOHX -1.43 to
@@ -363,10 +403,15 @@
 
     /* ============================== FUEL ============================== */
     PW.part('fuel', { label: 'Fuel system lines', explode: [0, 0, -.45], src: 'p.162-183; TTM ch. 73',
-      info: 'Fuel comes down from the pylon to the IFPC on the MGB. Its boost pump sends the fuel through the fuel/oil manifold to the fuel/oil heat exchanger and back, then through the filter to the high-pressure pump. Metered fuel passes the flow meter and leaves the manifold in two tubes for the primary and secondary manifolds round the combustor, which feed the 16 nozzles: 10 duplex and 6 simplex (secondary only), in a pattern of 4 duplex, 4 simplex, 6 duplex, 2 simplex. Every nozzle has check valves that keep the manifolds full after shutdown.\n\nServo fuel from the high-pressure pump drives the vane and bleed actuators and returns upstream of the filter.' });
+      info: 'Fuel comes down from the pylon to the IFPC on the MGB. Its boost pump sends the fuel through the fuel/oil manifold to the fuel/oil heat exchanger and back, then through the filter to the high-pressure pump. Metered fuel passes the flow meter and leaves the manifold in two tubes for the primary and secondary manifolds round the combustor, which feed the 16 nozzles: 10 duplex and 6 simplex (secondary only), in a pattern of 4 duplex, 4 simplex, 6 duplex, 2 simplex. Every nozzle has check valves that keep the manifolds full after shutdown.\n\nServo fuel from the high-pressure pump drives the vane and bleed actuators and returns upstream of the filter. The IFPC\'s motive flow pump sends fuel back up a small tube beside the supply to the aircraft: it drives the engine feed ejector pump in the collector tank, which normally feeds the engine. If an ejector pump fails, both AC boost pumps run instead (TTM 28-00).' });
     /* the supply crosses under the left thrust link close to its CIC end, where it is lowest; the FOHX boost lines cross over it */
     line('fuel', [P(-1.03, 11.8, 1.06), P(-1.035, 11.8, .90), P(-1.04, 11.79, .70), P(-1.042, 11.74, .50), P(-1.045, 11.55, .455), P(-1.048, 11.2, .455), P(-1.06, 10.75, .43), P(-1.07, 10.43, .40), P(-1.10, 10.05, .455),
-      P(-1.16, 9.4, .47), P(-1.25, 8.75, .49), P(-1.262, 8.58, .44), P(-1.267, 8.505, .416)], .02, 'hose', { clamps: 4 });   // supply from the pylon, beside the precooler duct, into the IFPC's boost pump inlet   // supply from the pylon to the IFPC
+      P(-1.16, 9.4, .47), P(-1.25, 8.75, .49), P(-1.262, 8.58, .44), P(-1.267, 8.505, .416)], .02, 'hose', { clamps: 4 });   // supply from the pylon, beside the precooler duct, into the IFPC's boost pump inlet
+    /* motive flow (TTM 73-00 fig. 2): from the port beside the IFPC's fuel inlet back up to the pylon, following the supply aft of it:
+       under the left thrust link with it, between it and the fuel/oil cooler, over the FOC manifold and up the upper bifurcation */
+    line('fuel', [P(-1.358, 8.467, .3995), P(-1.358, 8.576, .405), P(-1.345, 8.66, .43), P(-1.315, 8.76, .465), P(-1.27, 8.9, .50), P(-1.22, 9.3, .495), P(-1.19, 9.6, .478), P(-1.16, 9.95, .458),
+      P(-1.138, 10.15, .445), P(-1.105, 10.45, .41), P(-1.095, 10.75, .43), P(-1.088, 11.2, .462), P(-1.10, 11.45, .493), P(-1.11, 11.6, .496), P(-1.114, 11.69, .499), P(-1.117, 11.735, .53),
+      P(-1.118, 11.755, .60), P(-1.118, 11.755, .80), P(-1.118, 11.755, 1.04)], .005, 'tube', { clamps: 4 });
     for (const [o, r1] of [[0, 0], [.12, .03]]) {                                                                                               // boost fuel to and from the FOHX
       line('fuel', [P(-1.12 - o * .25, 11.55 + o, .43), P(-1.115 - o * .25, 11.2, .475), P(-1.125 - o * .25, 10.8, .49), P(-1.13 - o * .25, 10.45, .497 + o * .025), P(-1.16 - o * .28, 10.1 + o * .6, .49), P(-1.25, 9.9 + o * .8, .49 + r1 * .5),
         P(-1.32, 9.75 + o * .8, .475 + r1), P(-1.40, 9.4 + o * .67, .465 + r1 * .83), P(-1.432 - o * .233, 9.47 + o * .25, .44 + o * .2), P(-1.444 - o * .233, 9.407, .43 + o * .208)], .012, 'tube', { clamps: 2 }); }
@@ -580,7 +625,11 @@
        right IFS; the HPT manifold a shroud band on the HPT case, the LPT manifold a band of spray tubes on the LPT case */
     { PW.add('tacc', G.revolve([[-1.915, .258], [-2.015, .262], [-2.015, .286], [-1.915, .282]], { seg: 128, crease: 60 }), 'nickel');                // HPT manifold
       for (const xx of [-1.93, -1.965, -2.0]) PW.add('tacc', G.revolve(circ(xx, .29, .006, 8), { seg: 128 }), 'nickel');
-      for (const xx of [-2.25, -2.32, -2.39]) { const rr = Math.max(rCase(xx), .24) + .025; PW.add('tacc', G.revolve([[xx + .012, rr - .012], [xx - .012, rr - .012], [xx - .012, rr + .012], [xx + .012, rr + .012]], { seg: 128, crease: 80 }), 'steel'); }
+      /* the LPT spray rings stop either side of 6 o'clock, their ends closed, leaving the gap the No. 5/6 bearing oil tubes run through
+         (the gap is inferred: the manual's render shows only the top of the manifolds) */
+      { const ga = G.clock(5.85), gb = G.clock(6.15);
+        for (const xx of [-2.25, -2.32, -2.39]) { const rr = Math.max(rCase(xx), .24) + .025;
+          PW.add('tacc', G.revolve([[xx + .012, rr - .012], [xx - .012, rr - .012], [xx - .012, rr + .012], [xx + .012, rr + .012]], { seg: 128, crease: 80, thetaStart: gb, thetaLength: TAU - (gb - ga) }), 'steel'); } }
       { const band = []; for (let i = 0; i <= 8; i++) { const xx = -2.236 - .168 * i / 8; band.push([xx, rCase(xx) + .004]); }                         // the band under the LPT spray tubes
         PW.add('tacc', G.revolve(G.shellProfile(band.map(([xx, r]) => [xx, r + .005]), band), { seg: 128 }), 'nickel'); }
       const xT = D.GEN.externals.lptCaseTorus; PW.add('tacc', G.revolve(circ(xT.x, xT.r_centre, xT.tube_od / 2, 10), { seg: 128 }), 'steel');
@@ -899,7 +948,8 @@
       for (const [h0, dh, hp] of [[7.952, -.03, 4.05], [8.048, .03, 5.0]]) {
         const k = dh > 0 ? .03 : 0, da = dh < 0 ? dh * 1.6 : dh, run = [P(-.673, h0, 1.0403), P(-.70 - k, h0 - .05, 1.04), P(-.735 - k, 7.6 + dh, 1.045), P(-.765 - k, 7.0 + dh, 1.07), P(-.82 - k * .5, 6.4 + dh * 1.5, 1.10), P(-.88, 6.15 + dh * 2.5, 1.10), P(-.94, 6.0 + 3 * dh, 1.09), P(-.985, 6.0 + 3 * dh, 1.06),
           P(-1.05, 6.0 + 3 * dh, 1.03), P(-1.11, 6.0 + 3 * dh, .99), P(-1.15, 6.0 + 2.5 * dh, .86), P(-1.18, 6.0 + 2 * dh, .72), P(-1.21, 5.97 + da, .58), P(-1.30, 5.9 + da, .52), P(-1.50, 5.85 + da, .525), P(-1.75, 5.78 + dh * 1.5, .53)];
-        const tail = hp < 4.5 ? [P(-1.82, 5.2, .505), P(-1.82, 4.8, .50), P(-1.815, 4.5, .49), P(-1.79, 4.3, .45), P(-1.80, 4.15, .40), P(-1.81, 4.06, .37), P(-1.81, hp, .347)]
+        /* A turns up behind the oil control module high under the IFS, over the No. 4 and No. 5/6 scavenge tubes */
+        const tail = hp < 4.5 ? [P(-1.812, 5.45, .532), P(-1.82, 5.2, .528), P(-1.822, 4.9, .515), P(-1.82, 4.7, .50), P(-1.815, 4.5, .49), P(-1.79, 4.3, .45), P(-1.80, 4.15, .40), P(-1.81, 4.06, .37), P(-1.81, hp, .347)]
           : [P(-1.835, 5.45, .47), P(-1.835, 5.15, .42), P(-1.82, 5.03, .385), P(-1.81, hp, .347)];   // B keeps aft of the OCM's sensor harness
         const ic = line('ignition', run.concat(tail), .0085, 'cable', { clamps: 6, ends: false });
         PW.add('ignition', G.alongCurve(ic, [tAt(ic, -.985)], () => new THREE.CylinderGeometry(.015, .015, .03, 14)), 'silicone').userData.isLine = true;   // orange boot through the bifurcation panel
@@ -1066,8 +1116,14 @@
       Kt.cyl('pdos', f, [-.04, .104, .035], 'y', .013, .01, 'capBlack', { edge: .002 });                                    // reservoir filler cap
       Kt.fitting('pdos', f, [-.075, .03, .05], '-x', .009); Kt.fitting('pdos', f, [-.075, .03, .022], '-x', .008);
       Kt.plate('pdos', f, [.01, .055, .0685], 'z', 'y', .05, .03);
-      line('pdos', [P(-.655, 2.3, 1.0), P(-.70, 2.6, 1.03), P(-.75, 3.2, 1.03), P(-.79, 3.8, 1.01), P(-.80, 4.0, 1.0)], .007, 'black', { clamps: 2 }); }
-    for (const h of [4, 8]) line('pdos', [P(-.80, h, 1.0), P(-1.0, h, 1.05)], .022, 'tube', { clamps: 0 });                  // the door locking actuators
+      /* p.32-37: a hydraulic line with a quick-disconnect at the far end to each door's locking actuator, the right one short, the left
+         one down the aft flange and round the bottom of the fan case on its aft mount ring (p.37), under the cowl anti-ice duct, the
+         W03 and W04 harnesses and the ignition cables where they lift over the ring */
+      line('pdos', [P(-.655, 2.3, 1.0), P(-.70, 2.55, 1.03), P(-.76, 2.85, 1.025), P(-.80, 3.0, 1.0)], .007, 'black', { clamps: 1 });
+      { const ring = []; for (let h = 3.4; h < 8.5; h += .4) ring.push(P(h < 4.2 ? -.72 - (h - 3.4) * .0625 : h > 7.6 ? -.77 + (h - 7.6) * .05 : -.77, h, 1.008));
+        line('pdos', [P(-.6416, 2.242, 1.0), P(-.665, 2.26, 1.005), P(-.69, 2.5, 1.008), P(-.705, 2.9, 1.008)].concat(ring, [P(-.73, 8.6, 1.008), P(-.765, 8.85, 1.006), P(-.80, 9.0, 1.0)]), .005, 'black', { clamps: 6 }); } }
+    /* the door locking actuators, on the fan case at 3 and 9 o'clock (p.36; at 4 and 8 until 2026-10-08) */
+    for (const h of [3, 9]) line('pdos', [P(-.80, h, 1.0), P(-1.0, h, 1.05)], .022, 'tube', { clamps: 0 });
 
     /* ============================== FIRE PROTECTION ============================== */
     PW.part('fire', { label: 'Fire detection and extinguishing', explode: [0, .15, -.2], src: 'TTM ch. 26 (p.262-269)',
