@@ -333,6 +333,13 @@
         const ifo = []; for (let i = 0; i <= n; i++) { const xx = xa + (xb - xa) * i / n; ifo.push([xx, rIFS(xx)]); }
         PW.add(iid, G.revolve(G.shellProfile(ifo, ifo.map(([xx, r]) => [xx, r - .02])), { seg: 72, thetaStart: a0, thetaLength: al }), 'cowlWhite');
         PW.add(iid, G.revolve(G.shellProfile(ifo.map(([xx, r]) => [xx, r - .02]), ifo.map(([xx, r]) => [xx, r - .032])), { seg: 72, thetaStart: a0 + deg(1), thetaLength: al - deg(2) }), 'blanket', { mat: { bumpMap: quiltTex(), roughnessMap: quiltTex() } }); }
+      /* p.20-23: three core scoop vents on each IFS half, small scoops in the fan stream that ram air into the core compartment to
+         ventilate it; positions measured off p.23 (fraction of the IFS length, clock) */
+      { const L0 = xI0, L1 = xTE - .02;
+        for (const [f, h] of sg > 0 ? [[.08, 2.53], [.12, 3.42], [.44, 3.27]] : [[.08, 9.0], [.07, 7.37], [.38, 7.25]]) {
+          const xx = L0 + (L1 - L0) * f, fv = PW.kit.frame(iid, xx, h, rIFS(xx));
+          PW.kit.box(iid, fv, [-.004, .006, 0], [.07, .012, .042], 'cowlWhite', { round: .006 });                                     // the hood
+          PW.kit.box(iid, fv, [.031, .0065, 0], [.004, .008, .03], 'darkBox', { round: .002 }); } }                                  // its mouth, facing forward
       /* TTM p.268-269: two fire detection elements on each core cowl, forward and aft, each a pair of sensing tubes (loops A and B)
          clipped to the blanket and running round the core; they open with the door. On the right the aft pair runs just aft of the oil
          tank, clear of the oil tank access door */

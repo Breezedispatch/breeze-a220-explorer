@@ -135,9 +135,7 @@
       /* hub: fairing ring under the blades (flow path), the disc with its dovetail rim, and the drum aft to the fan shaft */
       const fl = (L().fanPlatform || []).slice().sort((a, b) => b[0] - a[0]);
       PW.add('fan-hub', G.revolve(G.shellProfile(fl, fl.map(([x, r]) => [x, r - .012])), { seg: 128 }), 'composite', { mat: { color: '#2b2f33' } });
-      disk('fan-hub', .0, -.235, .262, .115, { rim: .05, web: .05, bore: .14, boreH: .03, mat: 'titanium' });
-      PW.add('fan-hub', G.ring(-.235, -.40, .30, .315, { seg: 96 }), 'titanium');            // aft drum to the FDGS output
-      PW.add('fan-hub', G.frustum(-.38, -.42, .31, .16, .02, { seg: 96 }), 'titanium');      // cone down to the fan shaft
+      disk('fan-hub', .0, -.235, .262, .17, { rim: .05, web: .05, bore: .14, boreH: .03, mat: 'titanium' });   // its bore clears the No. 1 bearing support's neck; the gearbox shaft bolts to its front
       PW.add('fan-hub', G.boltCircle(PW.partMat('fan-hub', 'steel'), .004, .245, 36, .004), null);   // trim balance weight flange holes
     }
 
@@ -238,6 +236,12 @@
           sl.position.copy(G.onRing(xg, rg, a + (k - 3) * .022)); sl.rotation.x = a + (k - 3) * .022; sl.rotateZ(.35); PW.add('fan-exit-liner', sl, 'darkBox', { solid: true }); } }
       /* the core casing behind the splitter, to the LPC */
       wall('fic', 'coreCase', xs + .005, -.50, .012, 'nickel', { n: 12 });
+      /* the inner wall of the core inlet from behind the fan to the struts (static; p.57 colours it as fixed structure), and the FIC's
+         inner hub that the struts root in: the No. 1 and No. 1.5 bearing support bolts to its forward flange, the FDGS flex support to its
+         aft flange (p.62-65) */
+      wall('fic', 'coreHub', -.24, -.47, -.008, 'titanium', { n: 12 });
+      PW.add('fic', G.ring(-.382, -.553, .262, .285, { seg: 128 }), 'titanium');
+      PW.add('fic', G.ring(-.382, -.392, .245, .295, { seg: 128 }), 'titanium'); PW.add('fic', G.ring(-.545, -.553, .24, .285, { seg: 128 }), 'titanium');
       /* core inlet struts and the second strut row (p.53) */
       for (const re of ['FIC core-inlet strut', 'FIC strut']) { const r = R(re); if (r) statorRow('fic', Object.assign({}, r, { x_le: r.x_le + .004, x_te: r.x_te - .012 }), { count: 12, gHub: 0, gTip: 0, camHub: 0, camTip: 0, tHub: .16, tTip: .16, mat: 'titanium', bands: false }); }
     }
@@ -364,25 +368,67 @@
   function buildFDGS(SP) {
     PW.part('fdgs', { label: 'Fan drive gear system (FDGS)', explode: [.95, -.0, 0], src: 'p.62-65; TTM ch. 72',
       info: 'Star gearbox that lets the fan turn at about a third of LP spool speed (3.06:1). The sun gear on the LP shaft drives five star gears on a fixed carrier; the stars drive the ring gear, which turns the fan the opposite way to the LP spool.\n\nThe gears run on journal bearings fed by the main oil system, with an auxiliary oil supply that keeps them lubricated while windmilling and under negative g. The FDGS is not a line-replaceable item.' });
-    const xc = -.37, w = .10;                                                  // gear face centre and width (p.53 FDGS block x 10-19 in aft of the fan LE)
+    /* The stack, forward to aft, as p.63 and p.65 draw it: the No. 1 and No. 1.5 bearing support (a cone bolted to the FIC's forward hub,
+       carrying both bearings), the gearbox shaft running through it from the fan hub to its dished aft disc, the gear set (sun, five
+       stars on journal bearings in the carrier, the two ring gear halves bolted to the gearbox shaft's disc), the oil manifold, the
+       torque frame, the flex support bolted to the FIC, and the FDG coupling back to the LPC. Placed inside the FIC hub, the rotating
+       block about x -0.34 to -0.49 as p.57 colours it; the gear set sits just aft of the No. 1.5 bearing (until 2026-10-08 it was
+       5 cm further forward, through that bearing) */
+    const xc = -.462, w = .076;                                                // gear face centre and width
     const gear = (pid, rPitch, nT, inward, mat, x) => { const g = herringbone(rPitch, nT, w, inward); g.translate(x || xc, 0, 0); return PW.add(pid, g, mat || 'gearSteel'); };
-    PW.part('fdgs-sun', { parent: 'fdgs', label: 'Sun gear (LP input)', attach: SP.n1, src: 'p.63', info: 'Input gear splined to the LP shaft through a flexible coupling. It turns with N1.' });
+    PW.part('fdgs-support', { parent: 'fdgs', label: 'No. 1 and No. 1.5 bearing support', src: 'p.62-65, p.112',
+      info: 'The forward and static part of the FDGS: a hollow cone bolted by its aft flange to the FIC\'s forward hub. Its neck reaches forward into the fan hub and carries the No. 1 bearing; an inner web carries the No. 1.5 bearing. Both are tapered roller bearings on the gearbox shaft, supporting the fan rotor and the FDGS. It receives oil from the FDGS oil manifold and in turn lubricates the gears and bearings, and it houses the fan-driven oil pump that keeps the journal bearings fed while windmilling (p.218-221). The fan speed probe is mounted on it at 1 o\'clock (p.112).' });
+    PW.add('fdgs-support', G.ring(-.11, -.19, .131, .146, { seg: 64 }), 'castAl');                                               // neck round the No. 1 bearing
+    PW.add('fdgs-support', G.frustum(-.19, -.37, .153, .265, .007, { seg: 96 }), 'castAl');                                      // the cone
+    PW.add('fdgs-support', G.ring(-.37, -.382, .235, .295, { seg: 96 }), 'castAl');                                              // aft flange to the FIC
+    PW.add('fdgs-support', G.boltCircle(PW.partMat('fdgs-support', 'steel'), -.367, .275, 36, .0045), null);
+    PW.add('fdgs-support', G.ring(-.326, -.334, .146, .238, { seg: 96 }), 'castAl'); PW.add('fdgs-support', G.ring(-.326, -.40, .131, .146, { seg: 64 }), 'castAl');   // inner web and the No. 1.5 bearing housing
+    for (let i = 0; i < 10; i++) { const a = (i + .5) / 10 * TAU, m = new THREE.Mesh(G.roundedBox(.05, .014, .03, .005));          // cast bosses on the cone (p.63)
+      const xx = -.25 - (i % 2) * .05; m.position.copy(G.onRing(xx, .153 + .112 * ((-.19 - xx) / .18) + .004, a)); m.rotation.x = a; m.rotation.z = -.55; PW.add('fdgs-support', m, 'castAl', { solid: true }); }
+    PW.part('fdgs-shaft', { parent: 'fdgs', label: 'Gearbox shaft', attach: SP.fan, src: 'p.62-65, p.108',
+      info: 'The FDGS output shaft: the ring gear halves turn it through its large dished aft disc, and its forward end is bolted and splined to the fan hub. It runs on the No. 1 and No. 1.5 bearings at fan speed, opposite to the LP spool. The toothed front shaft gear on it, between the bearings, is what the fan speed probe reads.' });
+    PW.add('fdgs-shaft', G.ring(-.032, -.404, .09, .105, { seg: 64 }), 'shaft');                                                  // the tube
+    PW.add('fdgs-shaft', G.ring(-.03, -.045, .09, .195, { seg: 96 }), 'titanium'); PW.add('fdgs-shaft', G.boltCircle(PW.partMat('fdgs-shaft', 'steel'), -.028, .18, 24, .004), null);   // flange to the fan hub
+    PW.add('fdgs-shaft', G.revolve([[-.404, .099], [-.404, .14], [-.407, .20], [-.408, .245], [-.414, .245], [-.413, .20], [-.410, .14], [-.410, .099]], { seg: 128 }), 'titanium');   // the dished aft disc
+    PW.add('fdgs-shaft', G.ring(-.25, -.272, .105, .113, { seg: 64 }), 'gearSteel');                                               // front shaft gear (fan speed target)
+    { const t = new THREE.BoxGeometry(.022, .007, .006); t.translate(-.261, .1165, 0); t.userData.solid = true; PW.add('fdgs-shaft', G.ringInstances(t, PW.partMat('fdgs-shaft', 'gearSteel'), 48), null); }
+    PW.part('fdgs-sun', { parent: 'fdgs', label: 'Sun gear (LP input)', attach: SP.n1, src: 'p.63-65', info: 'Hollow double-helical input gear. The FDG coupling, splined into its bore, turns it with the LP spool (N1), counter-clockwise viewed aft looking forward. It drives the five star gears.' });
     gear('fdgs-sun', .062, 30);
-    PW.add('fdgs-sun', G.ring(xc + .06, xc - .25, .025, .045, { seg: 48 }), 'shaft');
-    PW.part('fdgs-ring', { parent: 'fdgs', label: 'Ring gear (fan output)', attach: SP.fan, src: 'p.63', info: 'Internally toothed ring gear driven by the five star gears. It drives the fan shaft and turns the fan clockwise, opposite to the sun.' });
+    PW.part('fdgs-coupling', { parent: 'fdgs', label: 'FDG coupling', attach: SP.n1, src: 'p.64-65',
+      info: 'Titanium flexible shaft joining the LPC rotor to the sun gear. Its splined forward end goes through the flex support and torque frame into the sun; two convoluted diaphragm sections let it flex, so it carries the LP torque while keeping misalignment loads off the gearbox. Its aft flange bolts to the front of the LPC rotor.' });
+    PW.add('fdgs-coupling', G.ring(-.422, -.50, .022, .0335, { seg: 48 }), 'titanium');                                            // splined into the sun's bore
+    { const o = [[-.50, .044], [-.508, .062], [-.516, .044], [-.524, .062], [-.532, .044]], i = o.slice().reverse().map(([x, r]) => [x, r - .006]);
+      PW.add('fdgs-coupling', G.revolve(o.concat(i), { seg: 64, crease: 60 }), 'titanium'); }                                       // the two diaphragm convolutions
+    PW.add('fdgs-coupling', G.ring(-.532, -.625, .032, .042, { seg: 48 }), 'titanium'); PW.add('fdgs-coupling', G.ring(-.622, -.636, .032, .085, { seg: 64 }), 'titanium');   // neck and aft flange on the LPC rotor
+    PW.add('fdgs-coupling', G.boltCircle(PW.partMat('fdgs-coupling', 'steel'), -.62, .07, 12, .004), null);
+    PW.part('fdgs-ring', { parent: 'fdgs', label: 'Ring gear set halves (fan output)', attach: SP.fan, src: 'p.63-65', info: 'Two ring gear halves with internal helical teeth of opposite hand, together a double-helical ring, bolted to the gearbox shaft\'s aft disc. The five star gears drive it and it turns the fan, clockwise viewed aft looking forward, opposite to the sun.' });
     gear('fdgs-ring', .19, 92, true);
-    PW.add('fdgs-ring', G.revolve([[xc + .055, .19], [xc + .055, .215], [xc + .10, .24], [xc + .14, .30], [xc + .15, .30], [xc + .11, .23], [xc + .06, .205], [xc - .055, .205], [xc - .055, .19]], { seg: 128 }), 'gearSteel');
-    PW.part('fdgs-stars', { parent: 'fdgs', label: 'Star gears (5) and carrier', src: 'p.63-64',
-      info: 'Five star gears on journal bearings in a carrier that does not turn: it is tied to the FIC through the torque frame and a flexible support. Each star turns on its own axis, opposite to the sun.' });
+    PW.add('fdgs-ring', G.revolve([[xc + .048, .196], [xc + .048, .245], [xc + .038, .245], [xc + .038, .215], [xc - .038, .215], [xc - .038, .228], [xc - .043, .228], [xc - .043, .196]], { seg: 128 }), 'gearSteel');
+    PW.add('fdgs-ring', G.ring(xc + .0015, xc - .0015, .214, .222, { seg: 128 }), 'steel');                                        // the joint between the halves
+    PW.add('fdgs-ring', G.boltCircle(PW.partMat('fdgs-ring', 'steel'), xc + .046, .232, 40, .0045), null);
+    PW.part('fdgs-stars', { parent: 'fdgs', label: 'Star gears (5), carrier and journal bearings', src: 'p.63-65',
+      info: 'Five double-helical star gears, each turning on its own journal bearing pin in the carrier. The carrier does not turn: the torque frame holds it, through the flex support, to the FIC. Each star turns on its own fixed axis, opposite to the sun. The journal bearings take pressurised oil from the manifold at the rear of the FDGS; normally through the variable oil reduction valve, and from the fan-driven pump through the journal oil shuttle valve while windmilling and under negative g (p.212-221).' });
     const stars = new THREE.Group(); PW.parts.get('fdgs-stars').obj.add(stars);
     const rs = .064, rc = .062 + rs;
     for (let i = 0; i < 5; i++) { const a = i / 5 * TAU, g = new THREE.Group(); g.position.copy(G.onRing(0, rc, a)); stars.add(g);
       const m = gear('fdgs-stars', rs, 31, false, 'gearSteel', xc); g.add(m); m.position.set(0, 0, 0); m.geometry.translate(0, 0, 0);
-      const pin = PW.add('fdgs-stars', G.ring(xc + .07, xc - .07, .0, .024, { seg: 32 }), 'shaft'); g.add(pin);
-      g.userData.spin = true; }
-    /* carrier: two side plates joined round the stars */
-    for (const dx of [.062, -.062]) PW.add('fdgs-stars', G.ring(xc + dx + .008, xc + dx - .008, .05, .205, { seg: 96 }), 'steel');
-    PW.add('fdgs-stars', G.frustum(xc - .07, xc - .17, .205, .30, .01, { seg: 96 }), 'steel');           // torque frame to the FIC
+      g.userData.spin = true;
+      PW.add('fdgs-stars', G.ring(xc + .045, xc - .045, .0, .026, { seg: 32 }), 'shaft').position.copy(G.onRing(0, rc, a)); }       // journal bearing pin, fixed in the carrier
+    /* carrier: two side plates joined by posts between the stars */
+    for (const dx of [.042, -.041]) PW.add('fdgs-stars', G.ring(xc + dx + .003, xc + dx - .003, .05, .18, { seg: 96 }), 'steel');
+    for (let i = 0; i < 5; i++) { const a = (i + .5) / 5 * TAU; PW.add('fdgs-stars', G.rod(G.onRing(xc + .04, .165, a), G.onRing(xc - .04, .165, a), .014), 'steel'); }
+    /* behind the carrier: the oil manifold (an annular plate, open where the torque frame's arms pass), the torque frame (a hub with five
+       arms reaching forward between the stars to the carrier) and the flex support (a thin dished diaphragm out to the FIC hub) */
+    PW.part('fdgs-frame', { parent: 'fdgs', label: 'Oil manifold, torque frame and flex support', src: 'p.62-65',
+      info: 'Static parts at the rear of the FDGS. The oil manifold feeds the bearing support, which lubricates the gears and bearings. The torque frame links the carrier to the flex support and reacts the gear torque. The flex support, a thin dished diaphragm bolted to the FIC, holds the gearbox in line with the FDG coupling while letting it move a little under load.' });
+    for (let i = 0; i < 5; i++) { const a0 = (i + .5) / 5 * TAU + deg(8), al = TAU / 5 - deg(16);
+      PW.add('fdgs-frame', G.revolve([[-.508, .055], [-.515, .055], [-.515, .19], [-.508, .19]], { seg: 16, thetaStart: a0, thetaLength: al }), 'castAl'); }
+    PW.add('fdgs-frame', G.ring(-.518, -.533, .07, .098, { seg: 64 }), 'steel');                                                   // torque frame hub
+    for (let i = 0; i < 5; i++) { const a = (i + .5) / 5 * TAU;
+      PW.add('fdgs-frame', G.rod(G.onRing(-.525, .098, a), G.onRing(-.506, .165, a), .011), 'steel');
+      const e = new THREE.Mesh(G.can(.016, .012)); e.position.copy(G.onRing(-.505, .165, a)); PW.add('fdgs-frame', e, 'steel', { solid: true }); }   // arm and its eye at the carrier
+    PW.add('fdgs-frame', G.revolve([[-.531, .098], [-.535, .098], [-.545, .24], [-.541, .24]], { seg: 128 }), 'steel');               // flex support diaphragm
+    PW.add('fdgs-frame', G.ring(-.539, -.545, .228, .258, { seg: 96 }), 'steel'); PW.add('fdgs-frame', G.boltCircle(PW.partMat('fdgs-frame', 'steel'), -.539, .245, 30, .004), null);
     /* the stars turn on their axes: opposite to the sun, at sun speed x (sun teeth / star teeth) */
     const sun = PW.spools.n1;
     PW.anim.push(dt => { const w = (PW.speed || 0) * sun.vis * sun.dir * (30 / 31); stars.children.forEach(g => { g.rotation.x -= w * dt; }); });
@@ -500,7 +546,7 @@
   function buildShafts(SP) {
     PW.part('shafts', { label: 'Shafts', src: 'p.53; TTM ch. 72', info: 'The LP shaft runs inside the hollow N2 rotor from the LPT to the FDGS sun gear. The N2 rotor\'s front and rear stub shafts carry it on the No. 3 and No. 4 bearings.' });
     PW.part('lp-shaft', { parent: 'shafts', label: 'LP (N1) shaft', attach: SP.n1, src: 'p.53', info: 'Hollow shaft joining the LPT to the LPC and, through a flexible coupling, to the FDGS sun gear. A shaft shear is detected by the EEC and shuts the engine down through the overspeed solenoid.' });
-    PW.add('lp-shaft', G.ring(-.40, -2.68, .024, .032, { seg: 48 }), 'shaft');
+    PW.add('lp-shaft', G.ring(-.64, -2.68, .024, .032, { seg: 48 }), 'shaft');                  // from the LPC rotor aft; forward of it the FDG coupling takes the drive to the sun gear
     PW.part('hp-shaft', { parent: 'shafts', label: 'N2 rotor stub shafts', attach: SP.n2, src: 'p.53', info: 'Front and rear stub shafts of the N2 rotor. The front one drives the towershaft bevel gear to the angle gearbox.' });
     PW.add('hp-shaft', G.ring(-1.08, -1.20, .040, .046, { seg: 48 }), 'shaft');
     PW.add('hp-shaft', G.ring(-2.02, -2.20, .040, .046, { seg: 48 }), 'shaft');

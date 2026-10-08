@@ -1018,6 +1018,24 @@
         for (const s of [-1, 1]) Kt.connector('n1-probe', f, [s * .014, .02, .025], 'z', .0085, { lead: 'z', boot: true });
         Kt.plate('n1-probe', f, [0, .0322, .0], 'y', 'z', .04, .018);
         Kt.cyl('n1-probe', f, [0, -.012, 0], 'y', .0095, .024, 'steel'); Kt.cyl('n1-probe', f, [0, -.1, 0], 'y', .0055, .16, 'steel'); Kt.cyl('n1-probe', f, [0, -.185, 0], 'y', .0045, .012, 'steel'); }
+      /* p.108-113: the fan speed (Nf) probe, on the No. 1 and No. 1.5 bearing support housing at 1 o'clock, its tip over the toothed front
+         shaft gear on the FDGS gearbox shaft. Its semi-rigid lead (p.109, p.113) runs aft over the support's flange and the FIC hub, out
+         through a core inlet strut, aft between the LPC case and the fan exit liner, over the 2.5 bleed valve, to a bulkhead receptacle on
+         the CIC cone at 1:30, where a branch of WC08 takes the signal on to the EEC from the core compartment side. (p.113's top view draws
+         the probe nearer 11:30; the text says 1 o'clock, which is followed here) */
+      PW.part('nf-probe', { parent: 'sensors', label: 'Fan speed (Nf) probe', src: 'p.108-113, p.134',
+        info: 'Reads fan speed from the toothed front shaft gear of the FDGS gearbox shaft, inside the No. 1 bearing support housing at 1 o\'clock. One signal goes to both EEC channels. Nf is not displayed: the EEC uses it to work out N1 if both N1 signals are lost, and the PHMU uses it, with the forward vibration sensor, for fan vibration and the fan trim balance solutions.\n\nIt is deep inside the front of the core, so it is reached only with the fan and FDGS area opened up. Its semi-rigid lead runs aft through a core inlet strut and along the LPC case to a bulkhead receptacle on the compressor intermediate case, where the core harness WC08 picks it up.' });
+      { const xp = -.26, rcn = .153 + .112 * ((-.19 - xp) / .18), f = Kt.frame('nf-probe', xp, 1.0, rcn);                       // on the support cone's outer surface
+        Kt.cyl('nf-probe', f, [0, -.035, 0], 'y', .0085, .07, 'steel');                                                            // probe body, tip 6 mm off the gear teeth
+        Kt.cyl('nf-probe', f, [0, .003, 0], 'y', .019, .006, 'steel'); Kt.bolts('nf-probe', f, [0, .007, 0], 'y', .014, 2, .003);   // mounting flange
+        Kt.cyl('nf-probe', f, [0, .018, 0], 'y', .012, .024, 'steel');                                                             // head
+        const hr = 1.3, fr = Kt.frame('nf-probe', -1.0, hr, .455, { rz: .88 }), R = FLa(-1.0, hr, .455, .88);                   // bulkhead receptacle on the CIC cone, beside the thrust link lug
+        Kt.cyl('nf-probe', fr, [0, -.008, 0], 'y', .011, .05, 'steel'); Kt.box('nf-probe', fr, [0, .006, 0], [.034, .004, .034], 'steel', { round: .004 });
+        Kt.connector('nf-probe', fr, [0, -.03, 0], '-y', .008, { lead: '-y' }); Kt.connector('nf-probe', fr, [0, .02, 0], 'y', .008, { lead: '-x' });
+        line('nf-probe', [P(xp, 1.0, rcn + .03), P(xp - .006, 1.0, rcn + .045), P(-.29, 1.04, .262), P(-.33, 1.1, .285), P(-.37, 1.0, .305), P(-.40, 1.0, .309), P(-.44, 1.0, .293),
+          P(-.48, 1.0, .291), P(-.50, 1.0, .33), P(-.505, 1.0, .40), P(-.512, 1.05, .44), P(-.56, 1.15, .438), P(-.65, 1.25, .435), P(-.78, 1.28, .438), P(-.86, 1.29, .462), P(-.90, hr, .475),
+          P(-.93, hr, .47), R(0, -.075, 0), R(0, -.0596, 0)], .004, 'cable', { clamps: 4, ends: false, mat: 'steel' });          // the semi-rigid lead: wires in a steel tube
+        line('harnesses', [R(-.0144, .0352, 0), R(-.035, .036, 0), P(-1.07, 1.27, .43), P(-1.09, 1.22, .40)], .005, 'harness', { clamps: 0, ends: false }); }   // into the P2.5/T2.5 probe's branch of WC08
       /* vibration sensors (p.138-141): forward, an accelerometer on a three-bolt bracket on the intermediate case at 9 o'clock, its lead
          down the cone into WC08; aft, a block sensor on the LPT case at 3 o'clock, behind the clearance control rings, into WC05 */
       PW.part('vib-sensors', { parent: 'sensors', label: 'Vibration sensors (2)', src: 'p.134-141',
@@ -1243,7 +1261,7 @@
          starter, 6 DR41 FOM, 7 DR71 oil tank, 8 DR51 hydraulic pump; tube 1 taken as forward). Brian's photos from below, reverser doors
          open, show the plate as the white disc of tube ends under the core. The bundle drops between the reverser doors' latch beams,
          which leave a 50 mm gap at 6 o'clock, so it is packed four tubes across there and the plate hangs just below them */
-      const rP = 1.15, map = [[.012, .01], [.03, 0], [.012, -.01], [-.028, .009], [-.008, .015], [-.008, 0], [-.008, -.015], [-.028, -.009]];   // by run: LPC, 2.5, HPC, pump, FOM, starter, VFG, oil tank
+      const rP = 1.155, map = [[.012, .01], [.03, 0], [.012, -.01], [-.028, .009], [-.008, .015], [-.008, 0], [-.008, -.015], [-.028, -.009]];   // by run: LPC, 2.5, HPC, pump, FOM, starter, VFG, oil tank
       const xB = xm2 - .02, inB = (i, r, k) => { const [a, t] = map[i]; return P(xB + a * k, 6 + t * k / r / (Math.PI / 6), r); };   // aft of the reverser latch at x -1.40
       runs.forEach((pts, i) => { let lead = pts;
         /* the three actuator drains stay low until x -1.40, under W04 and clear of ignition cable B, then rise into the collector */
