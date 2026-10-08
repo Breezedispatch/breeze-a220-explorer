@@ -377,12 +377,22 @@
     const xc = -.462, w = .076;                                                // gear face centre and width
     const gear = (pid, rPitch, nT, inward, mat, x) => { const g = herringbone(rPitch, nT, w, inward); g.translate(x || xc, 0, 0); return PW.add(pid, g, mat || 'gearSteel'); };
     PW.part('fdgs-support', { parent: 'fdgs', label: 'No. 1 and No. 1.5 bearing support', src: 'p.62-65, p.112',
-      info: 'The forward and static part of the FDGS: a hollow cone bolted by its aft flange to the FIC\'s forward hub. Its neck reaches forward into the fan hub and carries the No. 1 bearing; an inner web carries the No. 1.5 bearing. Both are tapered roller bearings on the gearbox shaft, supporting the fan rotor and the FDGS. It receives oil from the FDGS oil manifold and in turn lubricates the gears and bearings, and it houses the fan-driven oil pump that keeps the journal bearings fed while windmilling (p.218-221). The fan speed probe is mounted on it at 1 o\'clock (p.112).' });
+      info: 'The forward and static part of the FDGS: a hollow cone bolted by its aft flange to the FIC\'s forward hub. Its neck reaches forward into the fan hub and carries the No. 1 bearing; an inner web carries the No. 1.5 bearing. Both are tapered roller bearings on the gearbox shaft, supporting the fan rotor and the FDGS. It receives oil from the FDGS oil manifold and in turn lubricates the gears and bearings. The fan speed probe is mounted on it at 1 o\'clock (p.112).\n\nOn its aft face is the dual-stage fan oil pump, turned at fan speed by teeth on the gearbox shaft through an idler at 6:30; its pump gear is at 5:20 (p.238-239). It draws from the auxiliary reservoir, the crescent from 12 o\'clock round the right side, and from the front compartment sump. Normally it adds scavenge, returning to the tank through the journal oil shuttle valve; while windmilling or under negative g the valve sends its output to the FDGS journal bearings, and the auxiliary oil pressure sensor watches it. A gutter collects oil thrown off the FDGS into a secondary sump that feeds the journal bearings under negative g (p.212-221). The fan turns the pump whenever it turns, but turning the fan by hand for maintenance does not affect the oil system.' });
     PW.add('fdgs-support', G.ring(-.11, -.19, .131, .146, { seg: 64 }), 'castAl');                                               // neck round the No. 1 bearing
     PW.add('fdgs-support', G.frustum(-.19, -.37, .153, .265, .007, { seg: 96 }), 'castAl');                                      // the cone
     PW.add('fdgs-support', G.ring(-.37, -.382, .235, .295, { seg: 96 }), 'castAl');                                              // aft flange to the FIC
     PW.add('fdgs-support', G.boltCircle(PW.partMat('fdgs-support', 'steel'), -.367, .275, 36, .0045), null);
-    PW.add('fdgs-support', G.ring(-.326, -.334, .146, .238, { seg: 96 }), 'castAl'); PW.add('fdgs-support', G.ring(-.326, -.40, .131, .146, { seg: 64 }), 'castAl');   // inner web and the No. 1.5 bearing housing
+    PW.add('fdgs-support', G.ring(-.326, -.334, .146, .238, { seg: 96 }), 'castAl'); PW.add('fdgs-support', G.ring(-.356, -.40, .131, .146, { seg: 64 }), 'castAl');   // inner web and the No. 1.5 bearing housing
+    /* p.238-239 (viewed aft looking forward): behind the web, external teeth on the gearbox shaft drive an idler gear at 6:30, which
+       turns the fan oil pump's gear at 5:20 and a second gear at 7:45 (the pump is dual-stage); the auxiliary reservoir the pump draws
+       from is the crescent from 12 o'clock round the right side to about 4:40 */
+    const fop = new THREE.Group(); PW.parts.get('fdgs-support').obj.add(fop);
+    const spur = (rp, nT, a, rc) => { const g = new THREE.Group(); g.position.copy(G.onRing(0, rc, a)); fop.add(g); const m = herringbone(rp, nT, .014, false); m.translate(-.345, 0, 0);
+      g.add(PW.add('fdgs-support', m, 'gearSteel')); PW.add('fdgs-support', G.ring(-.336, -.354, 0, .012, { seg: 24 }), 'shaft').position.copy(g.position); return g; };
+    const idler = spur(.059, 34, deg(195), .177), pumpG = spur(.048, 28, deg(158.8), .165), g745 = spur(.048, 28, deg(231.2), .165);
+    for (const g of [pumpG, g745]) for (let k = 0; k < 6; k++) { const h = new THREE.Mesh(G.can(.006, .016)); h.position.copy(G.onRing(-.345, .024, k / 6 * TAU)); h.position.add(g.position); PW.add('fdgs-support', h, 'darkBox', { solid: true }); }   // the pump gear's six holes
+    PW.add('fdgs-support', G.revolve([[-.336, .147], [-.368, .147], [-.368, .232], [-.336, .232]], { seg: 40, thetaStart: 0, thetaLength: deg(140) }), 'castAl', { mat: { color: '#5b6066' } });   // auxiliary reservoir
+    { const fan = PW.spools.fan; PW.anim.push(dt => { const w = (PW.speed || 0) * fan.vis * fan.dir; idler.rotation.x -= w * 2 * dt; pumpG.rotation.x += w * 2.46 * dt; g745.rotation.x += w * 2.46 * dt; }); }
     for (let i = 0; i < 10; i++) { const a = (i + .5) / 10 * TAU, m = new THREE.Mesh(G.roundedBox(.05, .014, .03, .005));          // cast bosses on the cone (p.63)
       const xx = -.25 - (i % 2) * .05; m.position.copy(G.onRing(xx, .153 + .112 * ((-.19 - xx) / .18) + .004, a)); m.rotation.x = a; m.rotation.z = -.55; PW.add('fdgs-support', m, 'castAl', { solid: true }); }
     PW.part('fdgs-shaft', { parent: 'fdgs', label: 'Gearbox shaft', attach: SP.fan, src: 'p.62-65, p.108',
@@ -392,6 +402,7 @@
     PW.add('fdgs-shaft', G.revolve([[-.404, .099], [-.404, .14], [-.407, .20], [-.408, .245], [-.414, .245], [-.413, .20], [-.410, .14], [-.410, .099]], { seg: 128 }), 'titanium');   // the dished aft disc
     PW.add('fdgs-shaft', G.ring(-.25, -.272, .105, .113, { seg: 64 }), 'gearSteel');                                               // front shaft gear (fan speed target)
     { const t = new THREE.BoxGeometry(.022, .007, .006); t.translate(-.261, .1165, 0); t.userData.solid = true; PW.add('fdgs-shaft', G.ringInstances(t, PW.partMat('fdgs-shaft', 'gearSteel'), 48), null); }
+    { const m = herringbone(.118, 68, .014, false); m.translate(-.345, 0, 0); PW.add('fdgs-shaft', m, 'gearSteel'); PW.add('fdgs-shaft', G.ring(-.338, -.352, .105, .114, { seg: 64 }), 'gearSteel'); }   // the fan oil pump drive gear
     PW.part('fdgs-sun', { parent: 'fdgs', label: 'Sun gear (LP input)', attach: SP.n1, src: 'p.63-65', info: 'Hollow double-helical input gear. The FDG coupling, splined into its bore, turns it with the LP spool (N1), counter-clockwise viewed aft looking forward. It drives the five star gears.' });
     gear('fdgs-sun', .062, 30);
     PW.part('fdgs-coupling', { parent: 'fdgs', label: 'FDG coupling', attach: SP.n1, src: 'p.64-65',
@@ -420,10 +431,11 @@
     /* behind the carrier: the oil manifold (an annular plate, open where the torque frame's arms pass), the torque frame (a hub with five
        arms reaching forward between the stars to the carrier) and the flex support (a thin dished diaphragm out to the FIC hub) */
     PW.part('fdgs-frame', { parent: 'fdgs', label: 'Oil manifold, torque frame and flex support', src: 'p.62-65',
-      info: 'Static parts at the rear of the FDGS. The oil manifold feeds the bearing support, which lubricates the gears and bearings. The torque frame links the carrier to the flex support and reacts the gear torque. The flex support, a thin dished diaphragm bolted to the FIC, holds the gearbox in line with the FDG coupling while letting it move a little under load.' });
+      info: 'Static parts at the rear of the FDGS. The oil manifold feeds the bearing support, which lubricates the gears and bearings, and the journal bearings through the journal bearing oil filter on it at 6 o\'clock (p.218-219). The torque frame links the carrier to the flex support and reacts the gear torque. The flex support, a thin dished diaphragm bolted to the FIC, holds the gearbox in line with the FDG coupling while letting it move a little under load.' });
     for (let i = 0; i < 5; i++) { const a0 = (i + .5) / 5 * TAU + deg(8), al = TAU / 5 - deg(16);
       PW.add('fdgs-frame', G.revolve([[-.508, .055], [-.515, .055], [-.515, .19], [-.508, .19]], { seg: 16, thetaStart: a0, thetaLength: al }), 'castAl'); }
     PW.add('fdgs-frame', G.ring(-.518, -.533, .07, .098, { seg: 64 }), 'steel');                                                   // torque frame hub
+    { const f = PW.kit.frame('fdgs-frame', -.525, 6, .2); PW.kit.cyl('fdgs-frame', f, [0, 0, 0], 'x', .014, .02, 'castAl'); PW.kit.hex('fdgs-frame', f, [-.013, 0, 0], 'x', .009, .006, 'steel'); }   // journal bearing oil filter on the manifold (p.219)
     for (let i = 0; i < 5; i++) { const a = (i + .5) / 5 * TAU;
       PW.add('fdgs-frame', G.rod(G.onRing(-.525, .098, a), G.onRing(-.506, .165, a), .011), 'steel');
       const e = new THREE.Mesh(G.can(.016, .012)); e.position.copy(G.onRing(-.505, .165, a)); PW.add('fdgs-frame', e, 'steel', { solid: true }); }   // arm and its eye at the carrier

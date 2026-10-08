@@ -204,7 +204,11 @@
       const dn = [0, .31, -.95]; for (const [x, k] of [[-.05, 'plug'], [-.075, 'plug'], [-.1, 'chip']]) { const p = Kt.at([x, 0, 0], Kt.dir(dn), .1); if (k === 'chip') Kt.chip('ats', f, p, dn, .009); else Kt.plug('ats', f, p, dn, .008); }
       /* speed sensor on top with its lead, and the halo cooling air tube */
       const upv = [0, -.31, .95], sp = Kt.at([-.06, 0, 0], Kt.dir(upv), .1); Kt.cyl('ats', f, sp, upv, .011, .03, 'steel'); Kt.connector('ats', f, Kt.at(sp, Kt.dir(upv), .015), upv, .008, { lead: '-x' });
-      Kt.prof('ats', f, [-.03, 0, 0], 'x', (() => { const o = []; for (let i = 0; i <= 12; i++) { const a = i / 12 * TAU; o.push([.006 * Math.cos(a), .108 + .006 * Math.sin(a)]); } return o; })(), 'tube', { seg: 48 });
+      Kt.prof('ats', f, [-.03, 0, 0], 'x', (() => { const o = []; for (let i = 0; i <= 12; i++) { const a = i / 12 * TAU; o.push([.009 * Math.cos(a), .108 + .009 * Math.sin(a)]); } return o; })(), 'tube', { seg: 48 });
+      /* p.300-301, TTM p.879: the halo cooling air supply tube takes fan air from the inlet plenum of the air/oil cooler down to the ring
+         round the starter's forward flange, held by a P-clamp on a lug on the gearbox housing */
+      line('ats', [P(-1.595, 9.13, .472), P(-1.60, 8.97, .487), P(-1.62, 8.8, .497), P(-1.645, 8.62, .522), P(-1.672, 8.48, .52), P(ax - .03, ah, ar + .117)], .011, 'tube', { clamps: 1 });   // over the starter pad's flange
+      { const g = Kt.frame('ats', -1.62, 8.8, .452); Kt.box('ats', g, [0, .018, 0], [.02, .036, .03], 'castAl', { round: .003 }); }   // its clamp lug on the gearbox
       /* starter air valve on the duct coming down from the pylon (left side) */
       acc('sav', 'Starter air valve (SAV)', 'Pneumatically operated butterfly valve in the starter duct, spring-loaded closed, with a regulator that holds 30 psi downstream. The EEC opens it through a dual-coil torque motor and confirms it open from starter speed and N2. It sits inside a cooling shroud fed by a tube from the air/oil cooler; its line-replaceable filter is under the cover on top.\n\nA 3/8 in square-drive manual override can be reached through an access hole in the left thrust reverser door. The 2017 manual carries a warning that a manual override start is not an approved procedure, because of the motor-to-start logic that prevents starting with a bowed rotor: follow the current AMM and MEL.', 'p.290-299; p.298 warning');
       /* p.297: the starter duct branches down from the precooler's outlet tee (the starter takes cooled bleed, TTM p.579), comes down the
@@ -212,14 +216,22 @@
          the HPT, over the turbine intermediate case: further aft the gap between the LPT case and the IFS is too small for it. It drops
          straight down under the tee and turns left low, under the precooler's strut and the left thrust link */
       const sv = P(-2.07, 9.1, .45), st = P(ax - .29, ah, ar);                                                        // into the starter's inlet cone
-      line('sav', [V(-2.14, .685, 0), V(-2.125, .60, 0), V(-2.10, .50, .005), V(-2.09, .445, -.01), P(-2.088, 11.7, .42), P(-2.083, 11.2, .43), P(-2.077, 10.5, .435), P(-2.07, 9.7, .445), sv], .045, 'duct', { clamps: 2 }); line('sav', [sv, P(-2.03, 8.75, .42), st], .045, 'duct', { clamps: 1 });
+      line('sav', [V(-2.14, .685, 0), V(-2.125, .60, 0), V(-2.10, .50, .005), V(-2.09, .445, -.01), P(-2.088, 11.7, .42), P(-2.083, 11.2, .43), P(-2.077, 10.5, .435), P(-2.07, 9.7, .445), sv], .045, 'duct', { clamps: 2 });
+      const lowDuct = line('sav', [sv, P(-2.03, 8.75, .42), st], .045, 'duct', { clamps: 1 });
       /* p.299: butterfly body in the duct, actuator and regulator on its side, filter cover on top, the override access funnel, the
          connector; the whole valve sits in a quilted cooling shroud fed by its cooling tube */
       { const g = Kt.frame('sav', -2.07, 9.1, .45);
         Kt.cyl('sav', g, [0, 0, 0], 'z', .052, .075, 'castAl', { edge: .006 }); for (const s of [-1, 1]) Kt.vband('sav', g, [0, 0, s * .042], 'z', .046, { phase: 1.5 });
         Kt.box('sav', g, [0, .05, 0], [.12, .085, .09], 'quilt', { round: .03 });                                           // cooling shroud
         Kt.cyl('sav', g, [0, .1, .0], 'y', .022, .03, 'castAl'); Kt.cone('sav', g, [-.045, .1, .02], 'y', .02, .008, .025, 'castAl');   // filter cover, override funnel
-        Kt.connector('sav', g, [.0, .06, -.05], '-z', .01, { lead: 'y' }); Kt.fitting('sav', g, [.04, .06, .045], 'z', .007); }   // torque motor connector on the shroud's lower side, clear of the IFS fire element
+        Kt.connector('sav', g, [.0, .06, -.05], '-z', .01, { lead: 'y' }); Kt.fitting('sav', g, [.04, .06, .045], 'z', .007);    // torque motor connector on the shroud's lower side, clear of the IFS fire element
+        /* p.299: the pneumatic control line from its fitting beside the connector, down the duct to a B-nut boss on the lower duct
+           toward the starter's inlet elbow (the regulator's downstream sense; the manual names the line, not what it senses) */
+        Kt.fitting('sav', g, [.034, .052, -.048], '-z', .006);
+        const dp = lowDuct.getPointAt(.62), da = Math.atan2(dp.z, dp.y), fb = Kt.frame('sav', dp.x, da / (Math.PI / 6), Math.hypot(dp.y, dp.z) + .044);
+        Kt.cyl('sav', fb, [0, .002, 0], 'y', .008, .008, 'castAl'); Kt.fitting('sav', fb, [0, .008, 0], 'y', .006);
+        const S = FLa(-2.07, 9.1, .45, 0), B = FLa(dp.x, da / (Math.PI / 6), Math.hypot(dp.y, dp.z) + .044, 0);
+        line('sav', [S(.034, .052, -.0567), S(.034, .05, -.075), P(-2.035, 8.8, .5), P(-2.015, 8.7, .49), B(.0, .04, 0), B(0, .0167, 0)], .004, 'tube', { clamps: 1 }); }
       line('sav', [P(-1.95, 9.8, .45), P(-1.975, 9.7, .455), P(-2.0, 9.55, .47), P(-2.022, 9.43, .503), P(-2.03, 9.335, .513)], .006, 'tube', { clamps: 1 }); }   // cooling tube from the aft face of the air/oil cooler
     acc('pmag', 'Permanent magnet alternator/generator (PMAG)', 'Oil-cooled alternator on the MGB aft face at 7 o\'clock. The stator and its windings are held to the gearbox by captive bolts; the rotor stays on the gearbox shaft when the stator is removed. It has a power winding for each EEC channel, dual N2 speed windings, and a separate generator winding that powers the aircraft fly-by-wire controller.\n\nAbove 45 percent N2 it gives each EEC channel 28 to 34 V. If one channel fails, that EEC channel moves to aircraft 28 V DC and a maintenance message is sent; control is unaffected. Below 45 percent N2, or with both channels failed, the EEC runs on aircraft 28 V DC: channel A from DC ESS BUS 3, channel B from DC ESS BUS 2 on this (right) engine and DC ESS BUS 1 on the left.', 'p.96-101, p.112, p.69');
     { const f = Kt.frame('pmag', mx1, 7.15, .40);
@@ -249,6 +261,7 @@
       Kt.box('ocm', f, [-.06, 0, 0], [.12, .13, .17], 'castAl', { round: .015 });
       /* main oil filter bore along y, its scalloped bolted cover, and the quilted thermal blanket cap over it (p.235; the dome in the photos) */
       Kt.cyl('ocm', f, [-.06, .07, 0], 'y', .072, .02, 'castAl'); Kt.bolts('ocm', f, [-.06, .081, 0], 'y', .078, 10, .005);
+      Kt.plug('ocm', f, [-.112, .066, .052], 'y', .007);                                                                      // lubrication trim orifice, at the lower left of the filter cover (p.229)
       Kt.prof('ocm', f, [-.06, .08, 0], 'y', [[.045, 0], [.045, .05], [.035, .07], [.02, .08], [0, .082], [0, 0]], 'quilt', { seg: 40 });
       /* p.229, read as a view from aft: the active oil damper valve on the inboard side with its connector at the aft end, the filter
          differential pressure sensor and the oil debris monitor (a square cover on four bolts round a central connector) on the aft
