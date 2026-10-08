@@ -675,16 +675,29 @@
       for (const h of [.9, 5.1, 6.9, 11.1]) { pad(xt, h, rt, -.72, .024); pad(-2.224, h, .49, 0, .02);
         line('tic-cooling', [P(xt + .006, h, rt + .01), P(-2.166, h, .495), P(-2.19, h, .513), P(-2.214, h, .51), P(-2.224, h, .499)], .007, 'tube', { clamps: 0, ends: false }); } }
     PW.part('cai', { parent: 'air', label: 'Cowl anti-ice duct and valves', src: 'p.10-11; TTM ch. 30; photos',
-      info: 'HPC 6th-stage bleed for the inlet lip. It passes two cowl anti-ice valves in series (two for redundancy), controlled and monitored by the EEC from the L and R COWL switches (OFF, AUTO, ON), crosses the fan duct in the lower bifurcation and runs forward along the bottom right of the fan case into the inlet at 5 o\'clock, where its access panel is. The air leaves through the exhaust louvres at the bottom of the inlet. The valves also open during the start to help the HPC bleed valve unload the compressor.\n\nThe black hose with orange fittings along the fan case in the photos.' });
+      info: 'HPC 6th-stage bleed for the inlet lip. It passes two cowl anti-ice valves in series (two for redundancy) on a short riser right above its 6th-stage port on the right of the HPC (TTM 30 fig. 4), each controlled and monitored by the EEC from the L and R COWL switches (OFF, AUTO, ON), crosses the fan duct in the lower bifurcation and runs forward along the bottom right of the fan case into the inlet at 5 o\'clock, where its access panel is. The air leaves through the exhaust louvres at the bottom of the inlet. The valves also open during the start to help the HPC bleed valve unload the compressor.\n\nThe black hose with orange fittings along the fan case in the photos.' });
     { /* 6th-stage port on the right of the HPC, the two valves on the right of the core, down into the lower bifurcation at 6 o'clock,
          forward under the reverser to the fan case and along it at 5 o'clock */
       /* it passes over the hydraulic pump hoses and the actuator drain lines where they cross under it on the right of the core, and
          through the bifurcation panel low and in the middle, under the W04 harness and igniter cable A */
-      const pts = [P(-1.53, 3.3, .265), P(-1.50, 3.4, .34), P(-1.42, 3.55, .44), P(-1.36, 3.9, .49), P(-1.38, 4.6, .508), P(-1.32, 5.3, .505), P(-1.22, 5.6, .497), P(-1.15, 5.85, .485), P(-1.11, 5.98, .52), P(-1.10, 6.0, .60),
+      const pts = [P(-1.53, 3.4, .262), P(-1.53, 3.4, .30), P(-1.53, 3.4, .36), P(-1.53, 3.4, .44), P(-1.515, 3.44, .478), P(-1.47, 3.5, .49), P(-1.40, 3.63, .492), P(-1.36, 3.9, .49), P(-1.38, 4.6, .508), P(-1.32, 5.3, .505), P(-1.22, 5.6, .497), P(-1.15, 5.85, .485), P(-1.11, 5.98, .52), P(-1.10, 6.0, .60),
         P(-1.08, 6.0, .76), P(-1.05, 6.0, .90), P(-1.03, 6.0, .975), P(-.985, 6.0, .995), P(-.93, 5.96, 1.0), P(-.88, 5.86, 1.008), P(-.833, 5.7, 1.04), P(-.78, 5.52, 1.055), P(-.62, 5.1, 1.035), P(-.55, 5.0, 1.03), P(.20, 5.0, 1.0), P(.34, 5.0, 1.03)];
       const c = line('cai', pts, .03, 'black', { clamps: 6 });
       PW.add('cai', G.alongCurve(c, [tAt(c, -.985)], () => new THREE.CylinderGeometry(.036, .036, .07, 20)), 'rubber', { mat: { color: '#9cc6e8' } }).userData.isLine = true;   // light blue sleeve where it passes the bifurcation panel (photo)
-      PW.add('cai', G.alongCurve(c, [.085, .16], () => new THREE.CylinderGeometry(.045, .045, .085, 20)), 'steel');                         // the two cowl anti-ice valves, in series
+      /* TTM 30 fig. 4: the two valves in series right at the HPC 6th-stage port, on the straight riser above it. Each is a butterfly valve
+         between bolted flanges, its actuator on the side with a position indicator, and a solenoid with the EEC connector; their leads run
+         forward along the right of the core into WC08 */
+      { const pb = Kt.frame('cai', -1.53, 3.4, .247); Kt.box('cai', pb, [0, .006, 0], [.07, .012, .07], 'castAl', { round: .006 }); Kt.bolts('cai', pb, [0, .013, 0], 'y', .03, 4, .004, { phase: Math.PI / 4 }); }   // 6th-stage port boss
+      for (const [i, rc] of [[1, .318], [2, .408]]) { const f = Kt.frame('cai', -1.53, 3.4, rc);
+        Kt.cyl('cai', f, [0, 0, 0], 'y', .041, .05, 'castAl', { edge: .004 });                                                  // valve body
+        for (const s of [-1, 1]) Kt.flange('cai', f, [0, s * .029, 0], s > 0 ? 'y' : '-y', .03, .05, .007, 8, 'castAl');
+        Kt.cyl('cai', f, [0, 0, .045], 'z', .012, .02, 'castAl');                                                               // shaft boss
+        Kt.cyl('cai', f, [0, 0, .072], 'z', .024, .036, 'castAl', { edge: .004 });                                               // actuator
+        Kt.cyl('cai', f, [0, 0, .0915], 'z', .019, .003, 'plateAl'); Kt.box('cai', f, [.004, 0, .0935], [.022, .003, .0015], 'capBlack', { round: .0008, rot: [0, 0, i * .8] });   // position indicator
+        Kt.box('cai', f, [.03, 0, .07], [.026, .03, .03], 'darkBox', { round: .004 });                                          // solenoid
+        Kt.connector('cai', f, [.045, 0, .07], 'x', .008, { lead: 'y' }); }
+      line('cai', [P(-1.4698, 3.7957, .3397), P(-1.45, 3.79, .345), P(-1.35, 3.65, .345), P(-1.25, 3.6, .343), P(-1.15, 3.55, .341), P(-1.118, 3.55, .34)], .006, 'harness', { clamps: 2, ends: false });   // valve 1 into WC08
+      line('cai', [P(-1.4698, 3.7138, .4282), P(-1.45, 3.71, .43), P(-1.40, 3.69, .40), P(-1.36, 3.665, .36), P(-1.35, 3.65, .346)], .005, 'harness', { clamps: 0, ends: false });   // valve 2 into valve 1's lead
       for (const p of [P(-.62, 5.1, 1.035), P(.20, 5.0, 1.0)]) { const m = new THREE.Mesh(G.can(.042, .09)); m.position.copy(p); PW.add('cai', m, 'clampOrange', { solid: true }); } }
 
     /* ============================== ELECTRICAL AND CONTROL ============================== */
