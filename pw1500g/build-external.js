@@ -405,12 +405,12 @@
     PW.part('fuel', { label: 'Fuel system lines', explode: [0, 0, -.45], src: 'p.162-183; TTM ch. 73',
       info: 'Fuel comes down from the pylon to the IFPC on the MGB. Its boost pump sends the fuel through the fuel/oil manifold to the fuel/oil heat exchanger and back, then through the filter to the high-pressure pump. Metered fuel passes the flow meter and leaves the manifold in two tubes for the primary and secondary manifolds round the combustor, which feed the 16 nozzles: 10 duplex and 6 simplex (secondary only), in a pattern of 4 duplex, 4 simplex, 6 duplex, 2 simplex. Every nozzle has check valves that keep the manifolds full after shutdown.\n\nServo fuel from the high-pressure pump drives the vane and bleed actuators and returns upstream of the filter. The IFPC\'s motive flow pump sends fuel back up a small tube beside the supply to the aircraft: it drives the engine feed ejector pump in the collector tank, which normally feeds the engine. If an ejector pump fails, both AC boost pumps run instead (TTM 28-00).' });
     /* the supply crosses under the left thrust link close to its CIC end, where it is lowest; the FOHX boost lines cross over it */
-    line('fuel', [P(-1.03, 11.8, 1.06), P(-1.035, 11.8, .90), P(-1.04, 11.79, .70), P(-1.042, 11.74, .50), P(-1.045, 11.55, .455), P(-1.048, 11.2, .455), P(-1.06, 10.75, .43), P(-1.07, 10.43, .40), P(-1.10, 10.05, .455),
+    line('fuel', [P(-1.03, 11.8, 1.06), P(-1.035, 11.8, .90), P(-1.04, 11.79, .70), P(-1.042, 11.74, .50), P(-1.045, 11.55, .455), P(-1.048, 11.2, .455), P(-1.06, 10.75, .43), P(-1.078, 10.43, .397), P(-1.10, 10.05, .452),
       P(-1.16, 9.4, .47), P(-1.25, 8.75, .49), P(-1.262, 8.58, .44), P(-1.267, 8.505, .416)], .02, 'hose', { clamps: 4 });   // supply from the pylon, beside the precooler duct, into the IFPC's boost pump inlet
     /* motive flow (TTM 73-00 fig. 2): from the port beside the IFPC's fuel inlet back up to the pylon, following the supply aft of it:
        under the left thrust link with it, between it and the fuel/oil cooler, over the FOC manifold and up the upper bifurcation */
     line('fuel', [P(-1.358, 8.467, .3995), P(-1.358, 8.576, .405), P(-1.345, 8.66, .43), P(-1.315, 8.76, .465), P(-1.27, 8.9, .50), P(-1.22, 9.3, .495), P(-1.19, 9.6, .478), P(-1.16, 9.95, .458),
-      P(-1.138, 10.15, .445), P(-1.105, 10.45, .41), P(-1.095, 10.75, .43), P(-1.088, 11.2, .462), P(-1.10, 11.45, .493), P(-1.11, 11.6, .496), P(-1.114, 11.69, .499), P(-1.117, 11.735, .53),
+      P(-1.138, 10.15, .445), P(-1.112, 10.45, .41), P(-1.10, 10.6, .42), P(-1.095, 10.75, .43), P(-1.088, 11.2, .462), P(-1.10, 11.45, .493), P(-1.11, 11.6, .496), P(-1.114, 11.69, .499), P(-1.117, 11.735, .53),
       P(-1.118, 11.755, .60), P(-1.118, 11.755, .80), P(-1.118, 11.755, 1.04)], .005, 'tube', { clamps: 4 });
     for (const [o, r1] of [[0, 0], [.12, .03]]) {                                                                                               // boost fuel to and from the FOHX
       line('fuel', [P(-1.12 - o * .25, 11.55 + o, .43), P(-1.115 - o * .25, 11.2, .475), P(-1.125 - o * .25, 10.8, .49), P(-1.13 - o * .25, 10.45, .497 + o * .025), P(-1.16 - o * .28, 10.1 + o * .6, .49), P(-1.25, 9.9 + o * .8, .49 + r1 * .5),
@@ -947,7 +947,7 @@
          the right of B all the way, so they never cross; both ride over the W03 harness where they cross it ahead of the panel */
       for (const [h0, dh, hp] of [[7.952, -.03, 4.05], [8.048, .03, 5.0]]) {
         const k = dh > 0 ? .03 : 0, da = dh < 0 ? dh * 1.6 : dh, run = [P(-.673, h0, 1.0403), P(-.70 - k, h0 - .05, 1.04), P(-.735 - k, 7.6 + dh, 1.045), P(-.765 - k, 7.0 + dh, 1.07), P(-.82 - k * .5, 6.4 + dh * 1.5, 1.10), P(-.88, 6.15 + dh * 2.5, 1.10), P(-.94, 6.0 + 3 * dh, 1.09), P(-.985, 6.0 + 3 * dh, 1.06),
-          P(-1.05, 6.0 + 3 * dh, 1.03), P(-1.11, 6.0 + 3 * dh, .99), P(-1.15, 6.0 + 2.5 * dh, .86), P(-1.18, 6.0 + 2 * dh, .72), P(-1.21, 5.97 + da, .58), P(-1.30, 5.9 + da, .52), P(-1.50, 5.85 + da, .525), P(-1.75, 5.78 + dh * 1.5, .53)];
+          P(-1.05, 6.0 + 3 * dh, 1.03), P(-1.11, 6.0 + 3 * dh, .99), P(-1.15, 6.0 + 2.5 * dh, .86), P(-1.18, 6.0 + 2 * dh, .72), P(-1.21, 5.97 + da, .58), P(-1.30, 5.875 + da, .52), P(-1.50, 5.825 + da, .525), P(-1.75, 5.78 + dh * 1.5, .53)];
         /* A turns up behind the oil control module high under the IFS, over the No. 4 and No. 5/6 scavenge tubes */
         const tail = hp < 4.5 ? [P(-1.812, 5.45, .532), P(-1.82, 5.2, .528), P(-1.822, 4.9, .515), P(-1.82, 4.7, .50), P(-1.815, 4.5, .49), P(-1.79, 4.3, .45), P(-1.80, 4.15, .40), P(-1.81, 4.06, .37), P(-1.81, hp, .347)]
           : [P(-1.835, 5.45, .47), P(-1.835, 5.15, .42), P(-1.82, 5.03, .385), P(-1.81, hp, .347)];   // B keeps aft of the OCM's sensor harness
@@ -1204,7 +1204,9 @@
       const rP = 1.15, map = [[.012, .01], [.03, 0], [.012, -.01], [-.028, .009], [-.008, .015], [-.008, 0], [-.008, -.015], [-.028, -.009]];   // by run: LPC, 2.5, HPC, pump, FOM, starter, VFG, oil tank
       const xB = xm2 - .02, inB = (i, r, k) => { const [a, t] = map[i]; return P(xB + a * k, 6 + t * k / r / (Math.PI / 6), r); };   // aft of the reverser latch at x -1.40
       runs.forEach((pts, i) => { let lead = pts;
-        if (i <= 5) { const h = lanes[i], q = pts[pts.length - 1]; pts[pts.length - 1] = P(q.x, h, Math.hypot(q.y, q.z)); lead = pts.concat([P(xm2 + .03, h, .56), P(xm2 + .01, h, .604)]); }
+        /* the three actuator drains stay low until x -1.40, under W04 and clear of ignition cable B, then rise into the collector */
+        if (i <= 5) { const h = lanes[i], q = pts[pts.length - 1]; pts[pts.length - 1] = P(q.x, h, Math.hypot(q.y, q.z));
+          lead = pts.concat(q.x > -1.38 ? [P(-1.40, h, .503)] : [], [P(xm2 + .03, h, .56), P(xm2 + .01, h, .604)]); }
         line('drain-mast', lead.concat([inB(i, .66, .6), inB(i, .80, .9), inB(i, .95, 1), inB(i, rP - .03, 1), inB(i, rP - .006, 1)]), .004, 'tube', { clamps: 0, ends: false }); });
       for (const r of [.76, .935]) box('drain-mast', xB - .002, 6, r, .08, .02, .06, 'steel');                                     // clamp blocks round the bundle
       { const g = Kt.frame('drain-mast', xB, 6, rP);                                                                               // the end plate, facing down
