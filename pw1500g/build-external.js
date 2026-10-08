@@ -376,6 +376,25 @@
       line('oil-rear', [Ls(.04, -.02, .0845), Ls(.04, -.019, .118), P(-1.45, 5.47, .435), P(-1.462, 5.475, .49), P(-1.50, 5.475, .513), P(-1.60, 5.475, .516), P(-1.70, 5.475, .516),
         P(-1.77, 5.478, .51), P(-1.808, 5.49, .505), P(-1.835, 5.5, .503), P(-1.88, 5.52, .498), P(-1.94, 5.55, .495), P(-2.0, 5.64, .492), P(-2.06, 5.8, .488), P(-2.11, 5.94, .49),
         P(-2.16, 6.03, .497), P(-2.20, 6.05, .507), P(-2.25, 6.05, .515), P(-2.32, 6.05, .512), P(-2.39, 6.05, .504), P(-2.45, 6.07, .488)].concat(n5s), .007, 'tube', { clamps: 5 }); }
+    /* p.214-219: the front bearing compartment (FDGS, No. 1, 1.5 and 2) and No. 3 are served by tubes running forward under the HPC
+       from the gearbox's front face to bosses on the CIC cone; passages through the case and its struts carry the oil on in. The
+       manual gives the circuit, not the routes: here six tubes side by side at r 0.318, 6:09 to 6:42, under the core harnesses and over
+       the HPC vane levers. The auxiliary oil pressure sensor sits on the fan oil pump's return tube */
+    PW.part('oil-front', { parent: 'oil', label: 'Front compartment and No. 3 oil tubes, aux oil pressure sensor', src: 'p.212-221, p.230, p.240',
+      info: 'Six tubes run forward under the HPC from the gearbox\'s front face to the compressor intermediate case, where passages through its struts carry the oil to the front bearing compartment (the fan drive gear system and the No. 1, 1.5 and 2 bearings) and the No. 3 bearing. From the 6 o\'clock side: the front compartment\'s scavenge to its pump stage (chip collector FBC), the main oil to the bearings and gear teeth, the journal bearing supply from the VORV/JOSV, the fan oil pump\'s return to the JOSV, the No. 3 supply (with the active oil damper valve\'s flow), and the No. 3 scavenge (chip collector BC3). Last-chance strainers in the supply lines guard the bearing oil jets.\n\nThe fan drive gear system has its own fan-driven oil pump: if main oil pressure falls (windmilling, negative g), the journal oil shuttle valve switches the journal bearings to it. The auxiliary oil pressure sensor on its return tube proves the pump and the shuttle valve work on every flight; a pump or JOSV failure shows at the next engine start, and a failed sensor gives the AUX OIL PRESS MON INOP info message (p.218, 240). The PHMU monitors it.\n\nThe manual gives the circuit; the tube routes here are inferred.' });
+    { const rb = .318, xb = -.95 - (.515 - rb) * .83, m0 = GB.mainGearboxBody.x_from;
+      const tubes = [[6.15, .007], [6.26, .006], [6.37, .006], [6.48, .006], [6.59, .005], [6.70, .006]];             // [clock, tube radius], as listed in the info
+      tubes.forEach(([h, tr]) => { const s = tr + .001;
+        const fc = Kt.frame('oil-front', xb, h, rb); Kt.cyl('oil-front', fc, [.007, 0, 0], 'x', s * 1.6, .046, 'nickel', { edge: .003 }); Kt.fitting('oil-front', fc, [-.016, 0, 0], '-x', s);
+        const fm = Kt.frame('oil-front', m0 + .005, h, rb); Kt.cyl('oil-front', fm, [.002, 0, 0], 'x', s * 1.6, .014, 'castTan', { edge: .002 }); Kt.fitting('oil-front', fm, [.008, 0, 0], 'x', s);
+        line('oil-front', [P(m0 + .013 + s * 1.45, h, rb), P(-1.42, h, rb), P(-1.30, h, rb), P(-1.20, h, rb), P(xb - .016 - s * 1.45, h, rb)], tr, 'tube', { clamps: 0 }); });
+      /* multi-tube clamp blocks holding the six together */
+      for (const xx of [-1.21, -1.36]) { const f = Kt.frame('oil-front', xx, 6.425, rb); Kt.box('oil-front', f, [0, 0, 0], [.018, .022, .2], 'clampOrange', { round: .006 }); }
+      /* the auxiliary oil pressure sensor on a tee in the fan oil pump's return, its lead into the core harness junction below the gearbox */
+      const fa = Kt.frame('oil-front', -1.30, 6.48, rb), La = FLa(-1.30, 6.48, rb);
+      Kt.cyl('oil-front', fa, [0, 0, 0], 'x', .0095, .03, 'steel', { edge: .002 }); Kt.cyl('oil-front', fa, [0, .018, 0], 'y', .008, .024, 'steel');
+      Kt.hex('oil-front', fa, [0, .03, 0], 'y', .0095, .006, 'steel'); Kt.connector('oil-front', fa, [0, .034, 0], 'y', .006, { lead: '-x' });
+      line('oil-front', [La(-.0108, .034 + .0114, 0), P(-1.33, 6.6, .37), P(-1.345, 6.8, .405), P(-1.35, 6.9, .42)], .004, 'harness', { clamps: 0, ends: false }); }
     /* thermal management (p.212-217, 232-233): three heat exchangers on the upper left of the core. The EEC's bypass valve splits the
        cooled oil between the fuel/oil and air/oil coolers on fuel temperature, normally about 75 / 25 */
     /* p.233, measured against the HPC vane lever rows: FOHX x -1.05 to -1.41 with its bypass valve at the forward end, VFGOOHX -1.43 to
@@ -1129,6 +1148,23 @@
         line('pdos', [P(-.6416, 2.242, 1.0), P(-.665, 2.26, 1.005), P(-.69, 2.5, 1.008), P(-.705, 2.9, 1.008)].concat(ring, [P(-.73, 8.6, 1.008), P(-.765, 8.85, 1.006), P(-.80, 9.0, 1.0)]), .005, 'black', { clamps: 6 }); } }
     /* the door locking actuators, on the fan case at 3 and 9 o'clock (p.36; at 4 and 8 until 2026-10-08) */
     for (const h of [3, 9]) line('pdos', [P(-.80, h, 1.0), P(-1.0, h, 1.05)], .022, 'tube', { clamps: 0 });
+    /* p.32-37: one door switch per door on the aft fan case (p.36: 4 and 8 o'clock; the left one sits at 7:42, below the ignition
+       exciter, which fills 8 o'clock), a guarded push switch in a small housing on a bracket. Their leads go to the powerpack's harness:
+       the right one up the case, the left one round the bottom of the case just ahead of the mount ring, under the cowl anti-ice duct
+       and W03/W04 */
+    { const ports = [];
+      for (const h of [4.0, 7.7]) { const f = Kt.frame('pdos', -.62, h, .964), L = FLa(-.62, h, .964);
+        Kt.box('pdos', f, [0, .004, 0], [.07, .008, .06], 'lime', { round: .003 });                                             // bracket on the case
+        Kt.box('pdos', f, [0, .026, 0], [.05, .036, .045], 'accGrey', { round: .006 });                                         // switch housing
+        Kt.cyl('pdos', f, [.006, .047, 0], 'y', .009, .008, 'darkBox', { edge: .002 });                                         // push button
+        for (const s of [-1, 1]) Kt.box('pdos', f, [.006, .052, s * .013], [.024, .016, .003], 'steel', { round: .001 });      // its guard
+        Kt.plate('pdos', f, [-.0145, .0441, 0], 'y', 'x', .03, .015, 'T/R DOOR');
+        Kt.connector('pdos', f, [0, .026, -.0225], '-z', .007, { lead: '-x' });                                                 // on the side toward 6 o'clock or up the case
+        ports.push(L(-.0126, .026, -.0225 - .0133)); }
+      line('pdos', [ports[0], P(-.645, 3.85, .99), P(-.648, 3.6, .99), P(-.648, 3.2, .992), P(-.645, 2.85, .995), P(-.62, 2.64, 1.0), P(-.52, 2.57, 1.0), P(-.45, 2.47, 1.0),
+        P(-.425, 2.2, 1.01), P(-.43, 2.07, 1.025)], .004, 'harness', { clamps: 3, ends: false });                                 // right switch, up to the powerpack's run
+      const ring = []; for (let h = 7.4; h > 4.2; h -= .4) ring.push(P(-.645, h, .985));
+      line('pdos', [ports[1], P(-.645, 7.55, .985)].concat(ring, [P(-.646, 4.05, .988), P(-.647, 3.9, .99)]), .004, 'harness', { clamps: 5, ends: false }); }   // left switch, round the bottom into the right one's lead
 
     /* ============================== FIRE PROTECTION ============================== */
     PW.part('fire', { label: 'Fire detection and extinguishing', explode: [0, .15, -.2], src: 'TTM ch. 26 (p.262-269)',

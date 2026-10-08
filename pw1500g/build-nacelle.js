@@ -129,7 +129,7 @@
 
     /* ============================== THRUST REVERSER DOORS ============================== */
     PW.part('thrust-reverser', { parent: 'nacelle', label: 'Thrust reverser doors', src: 'p.18-43, p.324-379; TTM ch. 78',
-      info: 'Two C-duct doors, left and right, hinged at the pylon hinge beam and latched together at the bottom. Each carries its translating sleeve, eight carbon fibre cascade boxes, five blocker doors, two hydraulic actuators on the torque box at its forward end, and its half of the inner fixed structure (IFS) that encloses the core.\n\nThe actuation is electrically controlled and hydraulically worked (from hydraulic system No. 1 on the left engine). The EEC opens the isolation control unit (ICU) in the aft pylon and the directional control unit (DCU) in the forward pylon; the CDCs open the track lock valves. In reverse the sleeves move aft to uncover the cascades and the blocker doors swing into the fan duct, turning the fan air forward; the core stream is not reversed. A white REV icon shows in transit, green when deployed, amber for a fault.\n\nFor dispatch with a reverser inoperative, and for safety during maintenance, the manual inhibit lever on the ICU isolates the system and is locked by the inhibit pin stored on the ICU.' });
+      info: 'Two C-duct doors, left and right, hinged at the pylon hinge beam and latched together at the bottom. Each carries its translating sleeve, eight carbon fibre cascade boxes, five blocker doors, two hydraulic actuators on the torque box at its forward end, and its half of the inner fixed structure (IFS) that encloses the core.\n\nThe actuation is electrically controlled and hydraulically worked (from hydraulic system No. 1 on the left engine). The EEC opens the isolation control unit (ICU) in the aft pylon and the directional control unit (DCU) in the forward pylon; the CDCs open the track lock valves. In reverse the sleeves move aft to uncover the cascades and the blocker doors swing into the fan duct, turning the fan air forward; the core stream is not reversed. A white REV icon shows in transit, green when deployed, amber for a fault.\n\nFor dispatch with a reverser inoperative, and for safety during maintenance, the manual inhibit lever on the ICU isolates the system and is locked by the inhibit pin stored on the ICU. For dispatch, a lockout pin from the latch access bay then pins each sleeve to its latch beam (p.372-375).' });
     const yhT = 1.0;
     /* the IFS outer line (inner wall of the fan duct) and the duct's outer wall (inside the T/R door) */
     const bi = D.GEN.lines.bypassInner, xI0 = bi[bi.length - 1][0], rI0 = bi[bi.length - 1][1];
@@ -163,7 +163,7 @@
       /* translating sleeve (ZS 772 to 794): its own group so it can slide aft; blocker doors in its inner wall */
       const sid = `${pid}-sleeve`;
       PW.part(sid, { parent: pid, label: `${side === 'left' ? 'Left' : 'Right'} translating sleeve`, attach: hinge, src: 'p.18-19, p.332-337; TTM ch. 78',
-        info: 'The outer aft cowl of the door. Two hydraulic actuators move it aft to uncover the cascades: the locking feedback actuator in the upper section, whose LVDT reports its position, and the locking actuator in the lower section, kept in step by a flexible drive shaft. A track lock unit on the latch beam holds it stowed. Its inner wall carries five composite blocker doors that the drag links pull into the fan duct as it moves aft; the upper and lower blocker doors are unique to their positions.' });
+        info: 'The outer aft cowl of the door. Two hydraulic actuators move it aft to uncover the cascades: the locking feedback actuator in the upper section, whose LVDT reports its position, and the locking actuator in the lower section, kept in step by a flexible drive shaft. A track lock unit on the latch beam holds it stowed. Its inner wall carries five composite blocker doors that the drag links pull into the fan duct as it moves aft; the upper and lower blocker doors are unique to their positions. A small blanking plate on its lower edge near the front covers the hole for the reverser lockout pin.' });
       const sl = PW.parts.get(sid).obj; S.sleeves.push(sl);
       const so = []; for (let i = 0; i <= 10; i++) { const xx = xSF + (xTE - xSF) * i / 10; so.push([xx, rOut(xx)]); }
       const si = so.map(([xx, r]) => [xx, Math.min(r - .015, rDuct(xx) + .055 * (1 - Math.pow((xx - xSF) / (xTE - xSF), 1.6)))]);
@@ -174,6 +174,11 @@
         piv.position.copy(G.onRing(xp, rDuct(xp) + .005, a)); piv.rotation.x = a; piv.userData.a = a; sl.add(piv);
         const bd = new THREE.Mesh(G.roundedBox(.34, .018, .26, .01)); bd.position.set(-.17, 0, 0); bd.userData.pid = sid; piv.add(bd); PW.add(sid, bd, 'cowlWhite', { solid: true, into: piv });
         S.blockers.push(piv); }
+      /* p.374-375: the lockout pin hole in the sleeve's lower edge near its forward end, covered by a blanking plate unless the reverser
+         is locked out; the pin then goes down through it into the lug on the latch beam */
+      { const fb = PW.kit.frame(sid, xSF - .04, sg > 0 ? 5.955 : 6.045, rOut(xSF - .04));
+        PW.kit.box(sid, fb, [0, .0008, 0], [.036, .0016, .024], 'greyPrimer', { round: .008 });
+        for (const s of [-1, 1]) PW.kit.hex(sid, fb, [s * .011, .0021, 0], 'y', .0024, .0012, 'steel'); }
       /* the IFS half: white composite wall facing the fan stream, quilted stainless blanket facing the core, bare metal aft core cowl */
       const iid = `${pid}-ifs`;
       PW.part(iid, { parent: pid, label: `${side === 'left' ? 'Left' : 'Right'} inner fixed structure (IFS)`, attach: hinge, src: 'p.18-23; photos',
@@ -211,8 +216,8 @@
          bifurcation latch system between the IFS halves, the bumpers on the IFS edges, and the closure assist stowed in the bay */
       { const Kt = PW.kit, lb = `${pid}-latch-beam`, aB = sg > 0 ? t0 + tl : t0, hB = aB / (Math.PI / 6), hI = (sg > 0 ? it0 + itl : it0) / (Math.PI / 6);
         PW.part(lb, { parent: pid, attach: hinge, label: sg > 0 ? 'Right latch beam: latch keepers, BLS receiver, bumpers' : 'Left latch beam: latches, BLS handle, closure assist, bumpers', src: 'p.24-31',
-          info: sg > 0 ? 'The bottom edge of the right door: the keepers for latches 1 to 5, the receiver for the bifurcation latch pin on the IFS edge, and the upper and lower bumpers that align the IFS halves as the doors close. The upper bumper has a compression strut for the wider gap at the top.'
-            : 'The bottom edge of the left door. Latches 1 to 5 hook onto the right door: open them 5, 4, 3, 2, 1 and close them 1 to 5, using the closure assist assembly to pull the doors together first. Latches 2 and 3 are inside the bay behind the latch access door.\n\nThe bifurcation latch system (BLS) pins the two IFS halves together at the bottom to limit IFS deflection if an air duct bursts. Its handle is painted red and is worked through the latch access door; if it is not locked, the latch access door cannot be closed. Open the BLS before the latches and close it last.' });
+          info: sg > 0 ? 'The bottom edge of the right door: the keepers for latches 1 to 5, the receiver for the bifurcation latch pin on the IFS edge, the upper and lower bumpers that align the IFS halves as the doors close, and the lug for the reverser lockout pin under the sleeve\'s forward end. The upper bumper has a compression strut for the wider gap at the top.'
+            : 'The bottom edge of the left door. Latches 1 to 5 hook onto the right door: open them 5, 4, 3, 2, 1 and close them 1 to 5, using the closure assist assembly to pull the doors together first. Latches 2 and 3 are inside the bay behind the latch access door.\n\nThe bifurcation latch system (BLS) pins the two IFS halves together at the bottom to limit IFS deflection if an air duct bursts. Its handle is painted red and is worked through the latch access door; if it is not locked, the latch access door cannot be closed. Open the BLS before the latches and close it last.\n\nThe two reverser lockout pins are stowed in sockets in the same bay. To lock the reversers out for MEL dispatch, first pin the ICU\'s inhibit lever, then fit a pin down through each sleeve\'s lower edge into the lug on its latch beam, and stow the sleeves\' blanking plates here in their place (p.372-375). For maintenance alone the ICU inhibit is enough.' });
         /* the web, 1.6 deg in from the door's bottom edge, from just aft of the bifurcation pass-through panel to the sleeve; the drain
            mast passes down between the two webs */
         const aW = aB - sg * deg(.6), hW = aW / (Math.PI / 6), web = new THREE.Shape(), xa = -1.10, xb = xSF, n = 8, pts = [];
@@ -243,6 +248,14 @@
         if (sg < 0) { const fc = Kt.frame(lb, -1.34, hB + .08, rOut(-1.34) - .09);
           Kt.cyl(lb, fc, [0, 0, 0], 'x', .009, .16, 'steel', { edge: .002 }); for (const s of [-1, 1]) Kt.hex(lb, fc, [s * .088, 0, 0], 'x', .011, .016, 'steel');
           Kt.box(lb, fc, [.11, .006, 0], [.03, .012, .008], 'steel', { round: .003 }); }
+        /* p.372-375: reverser lockout, for MEL dispatch or maintenance. With the ICU's inhibit lever pinned, a lockout pin goes down
+           through the stowed sleeve's lower edge into this lug, so the sleeve cannot deploy. The two pins live in sockets in the bay at
+           the latch access panel; when they are fitted, the sleeves' blanking plates are stowed there instead */
+        { const fu = Kt.frame(lb, xSF - .04, hW, rOut(xSF - .04) - .03);
+          Kt.box(lb, fu, [0, 0, 0], [.03, .024, .028], 'steel', { round: .004 }); Kt.cyl(lb, fu, [0, .0125, 0], 'y', .0055, .002, 'darkBox'); }
+        if (sg < 0) for (const dx of [0, .032]) { const fp = Kt.frame(lb, -1.45 - dx, hB + .07, rOut(-1.46) - .06);
+          Kt.box(lb, fp, [0, .005, 0], [.024, .01, .024], 'steel', { round: .003 });                                                 // stowage socket
+          Kt.cyl(lb, fp, [0, .03, 0], 'y', .0045, .042, 'steel'); Kt.box(lb, fp, [0, .053, .007], [.014, .004, .03], 'steel', { round: .006 }); }   // the pin and its teardrop head
         }
       /* the latch access door on the bottom of the left door, ahead of the drain mast (p.31) */
       if (sg < 0) { PW.part('tr-latch-access-door', { parent: pid, attach: hinge, label: 'Latch access door', src: 'p.24, p.30-31, p.50',
