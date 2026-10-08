@@ -327,6 +327,20 @@
     for (const [dr, nm] of [[.0, 'primary'], [.022, 'secondary']]) {
       const xr = -1.725 + dr * .4, rr = .305 + dr; PW.add('fuel', G.revolve([[xr + .008, rr - .008], [xr - .008, rr - .008], [xr - .008, rr + .008], [xr + .008, rr + .008]], { seg: 96 }), 'steel');
       for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + TAU / 32; PW.add('fuel', G.rod(G.onRing(xr, rr, a), G.onRing(-1.761, .284, a), .004), 'steel'); } }
+    /* p.167: servo fuel from the IFPC's servo pressure regulator to the four fuel-powered actuators (turbine ACC air valve, HPC and LPC
+       vane actuators, 2.5 bleed valve) and back to the fuel/oil manifold ahead of the filter. The supply and return run as a pair round
+       the right of the core just aft of WC08 and the CIC fire seal, under the actuators, with a branch up to each one's ports, then aft
+       to the ACC valve */
+    { const arcP = (x, r, h0, h1, n) => Array.from({ length: n + 1 }, (_, i) => P(x, h0 + (h1 - h0) * i / n, r));
+      line('fuel', [P(-1.258, 7.68, .448), P(-1.255, 7.5, .44), P(-1.24, 7.25, .435), P(-1.19, 7.0, .42), P(-1.168, 6.8, .395), P(-1.165, 6.6, .385)].concat(arcP(-1.165, .385, 6.45, 1.85, 16),
+        [P(-1.25, 1.68, .395), P(-1.42, 1.45, .405), P(-1.48, 1.25, .42), P(-1.53, 1.12, .44), P(-1.57, 1.10, .455), P(-1.585, 1.13, .465), P(-1.594, 1.157, .47)]), .006, 'tube', { clamps: 6, ends: false });   // supply
+      line('fuel', [P(-1.458, 7.9, .485), P(-1.458, 7.84, .503), P(-1.458, 7.5, .505), P(-1.455, 7.15, .503), P(-1.44, 7.0, .50), P(-1.35, 6.98, .50), P(-1.25, 6.98, .495), P(-1.20, 6.93, .46), P(-1.185, 6.75, .43), P(-1.18, 6.55, .405)].concat(arcP(-1.18, .40, 6.45, 1.9, 16),
+        [P(-1.27, 1.72, .41), P(-1.43, 1.52, .42), P(-1.48, 1.38, .465), P(-1.53, 1.29, .50), P(-1.575, 1.258, .485), P(-1.587, 1.258, .475), P(-1.594, 1.258, .47)]), .006, 'tube', { clamps: 6, ends: false });   // return, leaving the manifold aft of the fuel filter
+      for (const pts of [
+        [P(-1.165, 2.62, .385), P(-1.16, 2.6, .43), P(-1.148, 2.64, .465), P(-1.145, 2.69, .471)], [P(-1.18, 2.58, .40), P(-1.183, 2.57, .44), P(-1.185, 2.64, .467), P(-1.185, 2.69, .471)],   // 2.5 bleed valve actuator
+        [P(-1.165, 5.40, .385), P(-1.16, 5.42, .43), P(-1.148, 5.36, .465), P(-1.145, 5.31, .469)], [P(-1.18, 5.44, .40), P(-1.183, 5.45, .44), P(-1.185, 5.36, .466), P(-1.185, 5.31, .469)],   // LPC vane actuator
+        [P(-1.165, 3.86, .385), P(-1.185, 3.87, .412), P(-1.21, 3.9, .425), P(-1.222, 3.93, .412)], [P(-1.18, 4.14, .40), P(-1.198, 4.13, .425), P(-1.215, 4.1, .43), P(-1.222, 4.07, .412)]])   // HPC vane actuator
+        line('fuel', pts, .005, 'tube', { clamps: 0, ends: false }); }
 
     /* ============================== AIR SYSTEMS ============================== */
     PW.part('air', { label: 'Engine air systems', explode: [0, .4, 0], src: 'p.256-285; TTM ch. 75',
@@ -343,6 +357,7 @@
         PW.add('hpc-sva', G.ringInstances(new THREE.BoxGeometry(.034, .026, .010).translate(-.004, rr - .006, 0), PW.partMat('hpc-sva', 'darkBox'), 44, { x: xx + .006 }), null); });
       const x0 = rows[0] ? (rows[0].x_le + rows[0].x_te) / 2 : -1.15, x3 = rows[3] ? (rows[3].x_le + rows[3].x_te) / 2 : -1.39, xa = (x0 + x3) / 2 - .02;
       can('hpc-sva', xa, 4.0, rCase(xa) + .08, .032, .26, 'steel'); box('hpc-sva', xa, 4.0, rCase(xa) + .125, .2, .04, .08, 'darkBox');    // actuator and its torque motor/LVDT housing
+      { const g = Kt.frame('hpc-sva', xa, 4.0, rCase(xa) + .125); for (const z of [-.015, .015]) Kt.fitting('hpc-sva', g, [.07, .02, z], 'y', .006); }   // servo fuel in and out (p.167)
       box('hpc-sva', x3 - .04, 4.25, rCase(x3) + .05, .05, .09, .035, 'steel'); }                                                           // bellcrank
     PW.part('lpc-sva', { parent: 'air', label: 'LPC stator vane actuator and synchronizing ring', src: 'p.258-261',
       info: 'Fuel-powered actuator at 5 o\'clock on the CIC firewall. Its rod runs forward through the firewall to a bellcrank on the synchronizing ring round the LPC inlet, which turns the LPC inlet guide vanes together. The EEC positions it on N1 through a dual-coil torque motor and servovalve, with a dual-coil LVDT reporting to each channel.\n\nThe manual\'s text has the vanes moving toward closed for start and idle, modulating in transients and open above idle (its table differs for the start case). With no power the actuator drives the vanes open.' });
@@ -350,12 +365,14 @@
       PW.add('lpc-sva', G.revolve([[xx + .007, rr], [xx - .007, rr], [xx - .007, rr + .014], [xx + .007, rr + .014]], { seg: 128 }), 'steel');
       PW.add('lpc-sva', G.ringInstances(new THREE.BoxGeometry(.03, .022, .009).translate(-.004, rr - .005, 0), PW.partMat('lpc-sva', 'darkBox'), 40, { x: xx + .006 }), null);
       can('lpc-sva', -1.12, 5.0, .455, .028, .18, 'steel'); box('lpc-sva', -1.15, 5.15, .468, .08, .04, .05, 'darkBox');
+      { const g = Kt.frame('lpc-sva', -1.15, 5.15, .468); for (const x of [-.035, .005]) Kt.fitting('lpc-sva', g, [x, 0, .025], 'z', .006); }   // servo fuel in and out (p.167), on the side away from the actuator body
       line('lpc-sva', [P(-1.03, 5.0, .455), P(-.95, 5.0, .466), P(-.80, 5.0, .468), P(xx - .02, 5.0, .43)], .007, 'tube', { clamps: 0, ends: false });
       box('lpc-sva', xx - .025, 5.0, .425, .04, .06, .03, 'steel'); }                                                                       // bellcrank on the ring
     PW.part('bleed-25', { parent: 'air', label: '2.5 bleed valve and actuator', src: 'p.264-267',
       info: 'Ring valve round the LPC case just forward of the CIC, at station 2.5. Opened, it dumps LPC exit air into the fan stream, giving the LPC surge margin during starts, low power and transients and throwing out dirt, rain and ice on the ground. Its actuator is horizontal on the right side, on the aft face of the CIC firewall, and works the ring through a bellcrank. It runs on IFPC servo fuel through an integral torque motor.\n\nThe EEC schedules it on N1, biased with altitude and Mach: open for start and idle, modulating in transients, closed at takeoff. It fails open. On a surge the EEC opens it, selects continuous ignition on both igniters and resets the variable vanes.' });
     { PW.add('bleed-25', G.ring(-.895, -.93, .425, .455, { seg: 128 }), 'nickel'); PW.add('bleed-25', G.boltCircle(PW.partMat('bleed-25', 'steel'), -.893, .44, 48, .004), null);
       can('bleed-25', -1.12, 3.0, .455, .03, .18, 'steel'); box('bleed-25', -1.15, 2.85, .47, .08, .04, .05, 'darkBox');                   // actuator with its torque motor
+      { const g = Kt.frame('bleed-25', -1.15, 2.85, .47); for (const x of [-.035, .005]) Kt.fitting('bleed-25', g, [x, 0, -.025], '-z', .006); }   // servo fuel in and out (p.167), on the side away from the actuator body
       line('bleed-25', [P(-1.03, 3.0, .455), P(-.95, 3.0, .462), P(-.86, 3.0, .466)], .007, 'tube', { clamps: 0, ends: false });
       box('bleed-25', -.85, 3.0, .468, .05, .05, .03, 'steel'); }                                                                            // bellcrank ahead of the ring
     PW.part('hpc-bleed-valve', { parent: 'air', label: 'HPC bleed valve and pressure sensor', src: 'p.264-267',
@@ -531,7 +548,7 @@
       Kt.connector('tacc', f, [-.012, .094, .02], 'y', .008, { lead: '-x' });                                                 // its connector, backshell aft, away from the thrust link and the scoop tube
       Kt.cyl('tacc', f, [-.02, .05, -.035], 'x', .012, .06, 'steel'); Kt.cyl('tacc', f, [-.052, .05, -.035], 'x', .008, .006, 'steel');   // LVDT
       Kt.connector('tacc', f, [.015, .05, -.035], 'x', .008, { lead: '-z' });
-      for (const z of [.008, .032]) Kt.fitting('tacc', f, [.037, .052, z], 'x', .006);                                         // servo fuel in and out
+      for (const z of [-.01, .012]) Kt.fitting('tacc', f, [.037, .07, z], 'x', .006);                                          // servo fuel in and out, high enough to clear the inlet flange and elbow
       Kt.plate('tacc', f, [-.01, .056, .0476], 'z', 'y', .04, .025);
       line('tacc', [P(-1.62, 1.6, .545), P(-1.60, 1.62, .51), L(...onIn(.045).toArray()), L(...onIn(.007).toArray())], .036, 'tube', { clamps: 0, ends: false, mat: 'castAl' });   // from the IFS scoop to the inlet ring
       /* outlet: duct to the plenum on the HPT manifold, between the 6th-stage HPT cooling tubes at 0:51 and 1:36 */
