@@ -126,7 +126,7 @@
       Kt.cyl('ifpc', f, [.04, .025, .085], 'z', .022, .05, 'castAl'); Kt.cyl('ifpc', f, [-.04, .04, -.085], '-z', .02, .045, 'castAl');
       Kt.cone('ifpc', f, [.115, .055, -.03], 'x', .012, .03, .05, 'castAl');                                              // fuel metering valve torque motor / LVDT
       Kt.box('ifpc', f, [-.02, .075, -.005], [.07, .02, .05], 'darkBox', { round: .005 });                                // overspeed shutdown solenoid
-      Kt.connector('ifpc', f, [.08, .055, .03], 'x', .012, { lead: 'z' }); Kt.connector('ifpc', f, [-.02, .085, -.005], 'y', .011, { lead: '-x' });
+      Kt.connector('ifpc', f, [.08, .055, .03], 'x', .012, { lead: 'z' }); Kt.connector('ifpc', f, [-.055, .075, -.005], '-x', .009, { lead: '-z' });   // the solenoid's on its aft end, under the IFS
       Kt.fitting('ifpc', f, [.06, -.04, .075], 'z', .018);                                                                // boost pump inlet, from the aircraft
       Kt.fitting('ifpc', f, [-.03, -.05, .075], 'z', .008); Kt.fitting('ifpc', f, [.07, .0, -.075], '-z', .008);               // motive flow out; servo fuel supply to the vane, bleed and clearance control actuators (p.167)
       Kt.plate('ifpc', f, [.03, -.035, .0761], 'z', 'y', .05, .025); }
@@ -360,7 +360,7 @@
       info: 'Two-position poppet valve on top of the HPC at the 6th-stage bleed port. It is spring-loaded open for the start, dumping 6th-stage air into the core compartment, and HPC pressure (station 2.9) closes it; it is fully closed by idle. The cowl anti-ice valves open during the start as well, adding bleed through the anti-ice ducting.\n\nA sense line runs forward over the case to the pressure sensor on the CIC firewall, upper right. The EEC uses it to detect a valve that fails open after the start, putting hot air into the core compartment, or one that stays closed during the start, which can stall the HPC.' });
     { const xb = -1.53, rb = Math.max(rCase(xb), .235);
       can('hpc-bleed-valve', xb, 12, rb + .045, .035, .09, 'steel', { rot: [G.clock(12), 0, Math.PI / 2] }); box('hpc-bleed-valve', xb, 12, rb + .105, .07, .03, .07, 'darkBox');
-      line('hpc-bleed-valve', [P(xb, 12, rb + .12), P(-1.45, 12.15, .335), P(-1.34, 12.35, .33), P(-1.20, 12.7, .345), P(-1.13, 1.2, .37), P(-1.08, 1.75, .40), P(-1.04, 2.05, .435), P(-1.02, 2.12, .45)], .005, 'tube', { clamps: 4 });
+      line('hpc-bleed-valve', [P(xb, 12, rb + .12), P(-1.45, 12.15, .335), P(-1.34, 12.35, .33), P(-1.20, 12.7, .345), P(-1.13, 1.2, .37), P(-1.08, 1.75, .405), P(-1.04, 2.05, .445), P(-1.02, 2.12, .455)], .005, 'tube', { clamps: 4 });
       box('hpc-bleed-valve', -1.005, 2.15, rFire(-1.005) + .02, .05, .04, .045, 'steel'); }                                                    // pressure sensor, clear of the right thrust link's clevis
     /* ---- engine bleed, TTM ch. 36 (p.576-579): 4th-stage air through a check valve, or 8th-stage air through the high-pressure valve,
        joins, passes the bleed monitoring pressure sensor and the pressure-regulating shutoff valve, and enters the precooler; the bleed
@@ -512,8 +512,8 @@
          and the single-channel LVDT to EEC channel A */
       const f = Kt.frame('tacc', -1.64, 1.2, .40);
       Kt.cyl('tacc', f, [0, 0, 0], 'x', .045, .12, 'castAl', { edge: .006 }); for (const s of [-1, 1]) Kt.vband('tacc', f, [s * .066, 0, 0], 'x', .03, { phase: 1.2 });
-      Kt.box('tacc', f, [0, .052, .02], [.07, .04, .05], 'castAl', { round: .006 }); Kt.connector('tacc', f, [0, .074, .02], 'y', .008, { lead: 'x' });
-      Kt.cyl('tacc', f, [-.02, .05, -.035], 'x', .012, .06, 'steel'); Kt.connector('tacc', f, [.015, .05, -.035], 'x', .008, { lead: 'y' });
+      Kt.box('tacc', f, [0, .052, .02], [.07, .04, .05], 'castAl', { round: .006 }); Kt.connector('tacc', f, [0, .074, .02], 'y', .008, { lead: '-x' });   // backshells away from the thrust link and the scoop tube
+      Kt.cyl('tacc', f, [-.02, .05, -.035], 'x', .012, .06, 'steel'); Kt.connector('tacc', f, [.015, .05, -.035], 'x', .008, { lead: '-z' });
       for (const z of [.008, .032]) Kt.fitting('tacc', f, [.037, .052, z], 'x', .006);
       line('tacc', [P(-1.62, 1.5, .55), P(-1.60, 1.4, .50), P(-1.585, 1.27, .44), P(-1.578, 1.2, .40)], .03, 'tube', { clamps: 0, ends: false });   // from the IFS scoop
       line('tacc', [P(-1.702, 1.2, .40), P(-1.78, 1.2, .38), P(-1.85, 1.22, .36), P(-1.89, 1.25, .35)], .03, 'tube', { clamps: 1, ends: false });
@@ -710,6 +710,23 @@
         leg([P(-1.7985, 4.66, .36), P(-1.80, 4.8, .37), P(-1.797, 4.95, .385), T7]);                                           // OFDP sensor
         leg([P(-1.7935, 4.72, .405), P(-1.797, 4.9, .41), T7]); }                                                               // oil debris monitor
       line('harnesses', [P(-1.262, 6.22, .41), P(-1.24, 6.22, .405), P(-1.215, 6.27, .375), P(-1.20, 6.3, .36)], .006, 'harness', { clamps: 0, ends: false });   // hydraulic pump depressurising solenoid, into WC08
+      /* the fuel units on the MGB front face into the left core harness as it passes forward of them: the IFPC's metering valve and
+         overspeed solenoid, the fuel filter delta-P sensor at 7:30 and the flow meter at 9 o'clock (p.105, p.170) */
+      { const leg = (pts, r) => line('harnesses', pts, r || .006, 'harness', { clamps: 0, ends: false }), J8 = P(-1.30, 7.7, .495);
+        leg([P(-1.40, 7.97, .515), P(-1.395, 7.86, .522), P(-1.36, 7.72, .523), P(-1.32, 7.66, .51), J8]);                                              // overspeed shutdown solenoid
+        leg([P(-1.402, 7.50, .509), P(-1.38, 7.52, .508), P(-1.34, 7.58, .505), J8]);                                            // fuel filter delta-P
+        leg([J8, P(-1.25, 7.6, .46), P(-1.21, 7.48, .41), P(-1.19, 7.42, .385)], .008);
+        leg([P(-1.225, 8.25, .498), P(-1.215, 8.36, .495), P(-1.20, 8.4, .45), P(-1.19, 8.3, .40), P(-1.19, 8.22, .378)]);       // fuel metering valve
+        leg([P(-1.378, 9.15, .496), P(-1.35, 9.15, .495), P(-1.30, 9.25, .46), P(-1.26, 9.4, .38), P(-1.25, 9.5, .33)]); }       // fuel flow meter
+      /* buffer air (p.278-283): the valve solenoid into the T3 branch beside it; the pressure sensor, ahead of the CIC fire seal, through
+         a grommet in the seal to WC08 */
+      line('harnesses', [P(-1.31, .85, .344), P(-1.312, .86, .36), P(-1.33, .95, .345), P(-1.35, 1.03, .33)], .005, 'harness', { clamps: 0, ends: false });
+      { const c = line('harnesses', [P(-.8144, 1.9, .4532), P(-.84, 1.9, .462), P(-.87, 1.92, .472), P(-.93, 1.95, .47), P(-.97, 1.97, .44), P(-1.0, 1.99, .418), P(-1.02, 2.0, .443), P(-1.06, 2.0, .40), P(-1.09, 2.0, .365), P(-1.115, 2.0, .34)], .005, 'harness', { clamps: 1, ends: false });
+        PW.add('harnesses', G.alongCurve(c, [tAt(c, -1.01)], () => new THREE.CylinderGeometry(.011, .011, .02, 12)), 'silicone').userData.isLine = true; }
+      /* turbine clearance control valve: the torque motor aft and down the valve's far side, the LVDT down its near side under the
+         right thrust link, both into the T3 branch */
+      line('harnesses', [P(-1.654, 1.28, .49), P(-1.675, 1.3, .488), P(-1.71, 1.4, .46), P(-1.72, 1.45, .40), P(-1.69, 1.4, .345), P(-1.67, 1.2, .31), P(-1.645, 1.06, .298), P(-1.62, 1.02, .295)], .005, 'harness', { clamps: 0, ends: false });
+      line('harnesses', [P(-1.595, .99, .45), P(-1.575, .99, .445), P(-1.555, 1.0, .41), P(-1.545, 1.0, .36), P(-1.54, 1.0, .325), P(-1.53, 1.015, .307)], .005, 'harness', { clamps: 0, ends: false });
       /* WC05 aft over the fuel manifolds, under the right edge of the precooler and over the clearance control manifolds (the precooler
          sits low enough over the combustor that it can no longer run along 12 o'clock) */
       line('harnesses', [P(-1.67, 12.05, .305), P(-1.684, 12.35, .31), P(-1.697, 12.45, .34), P(-1.712, 12.45, .356), P(-1.75, 12.45, .356), P(-1.80, 12.45, .34), P(-1.95, 12.45, .325), P(-2.05, 12.4, .345), P(-2.10, 12.35, .385), P(-2.14, 12.3, .47), P(-2.20, 12.18, .51), P(-2.24, 12.08, .555), P(-2.40, 12.0, .56), P(-2.45, 12.0, .52), P(-2.465, 12.0, .478)], .012, 'harness', { clamps: 4 });
