@@ -207,7 +207,7 @@
       Kt.flange('pmag', f, [-.006, 0, 0], '-x', .03, .062, .01, 6, 'castAl');
       Kt.prof('pmag', f, [0, 0, 0], '-x', [[.012, 0], [.012, .05], [.02, .054], [.11, .054], [.125, .045], [.13, 0]], 'castAl');
       Kt.fins('pmag', f, [-.065, 0, 0], '-x', .052, 10, .005, .003, .08, 'castAl');
-      Kt.connector('pmag', f, [-.13, .02, .0], '-x', .011, { lead: 'y' }); Kt.connector('pmag', f, [-.13, -.02, .0], '-x', .011, { lead: 'y' }); }
+      Kt.connector('pmag', f, [-.13, .02, .0], '-x', .011, { lead: '-z' }); Kt.connector('pmag', f, [-.13, -.02, .0], '-x', .011, { lead: '-z' }); }   // backshells toward 6 o'clock, where their harness runs
     acc('vfg', 'Variable frequency generator (VFG)', 'The engine\'s main AC generator on the MGB aft face: 115/200 V AC, 75 kVA, 380 to 760 Hz, the frequency following N2. Its power feeders bolt to the brass studs of the terminal block under the white cover on its underside. It has its own oil, cooled through the VFG oil/oil heat exchanger and a VFG air/oil cooler.\n\nThe crew can disconnect it from the gearbox with the L or R DISC switch on the electrical panel, which also shows its oil cautions (TTM ch. 24). Reconnection is done on the ground, following the AMM.', 'p.66-69; TTM ch. 24; photos');
     { const vr = .365, f = Kt.frame('vfg', mx1, 6.15, vr);
       Kt.vband('vfg', f, [-.014, 0, 0], '-x', .108, { phase: 2.6 });
@@ -229,11 +229,20 @@
       /* main oil filter bore along y, its scalloped bolted cover, and the quilted thermal blanket cap over it (p.235; the dome in the photos) */
       Kt.cyl('ocm', f, [-.06, .07, 0], 'y', .072, .02, 'castAl'); Kt.bolts('ocm', f, [-.06, .081, 0], 'y', .078, 10, .005);
       Kt.prof('ocm', f, [-.06, .08, 0], 'y', [[.045, 0], [.045, .05], [.035, .07], [.02, .08], [0, .082], [0, 0]], 'quilt', { seg: 40 });
-      Kt.chip('ocm', f, [-.105, .06, .07], [0, .5, .8], .008);                                                               // oil debris monitor
-      Kt.cyl('ocm', f, [-.122, .02, -.04], '-x', .022, .012, 'castAl'); Kt.connector('ocm', f, [-.128, .02, -.04], '-x', .009, { lead: 'y' });   // filter delta-P sensor
-      Kt.cyl('ocm', f, [-.06, -.02, .1], 'z', .025, .07, 'castAl'); Kt.connector('ocm', f, [-.06, -.02, .135], 'z', .009, { lead: '-x' });   // variable oil reduction / journal oil shuttle valve
-      Kt.cyl('ocm', f, [-.06, -.07, -.03], 'y', .02, .03, 'castAl'); Kt.connector('ocm', f, [-.06, -.088, -.03], '-y', .008, { lead: '-x' });  // active oil damper valve
-      Kt.fitting('ocm', f, [-.03, .02, -.09], '-z', .008); Kt.fitting('ocm', f, [-.09, -.03, -.09], '-z', .008);             // pressure and temperature sensors
+      /* p.229, read as a view from aft: the active oil damper valve on the inboard side with its connector at the aft end, the filter
+         differential pressure sensor and the oil debris monitor (a square cover on four bolts round a central connector) on the aft
+         face toward 4 o'clock, the main oil pressure sensor on the 4 o'clock side, the main oil temperature sensor low on the 6 o'clock
+         side and the VORV/JOSV body there too. Each connector's backshell turns toward the harness that serves them, which comes round
+         the aft face to the 6 o'clock side */
+      Kt.box('ocm', f, [-.1215, .005, -.052], [.006, .045, .045], 'castAl', { round: .005 });                                   // oil debris monitor (ODM)
+      for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) Kt.hex('ocm', f, [-.1255, .005 + a * .017, -.052 + b * .017], '-x', .0035, .003, 'steel');
+      Kt.connector('ocm', f, [-.124, .005, -.052], '-x', .008, { lead: 'z' });
+      Kt.cyl('ocm', f, [-.124, -.04, -.06], '-x', .016, .01, 'castAl'); Kt.connector('ocm', f, [-.129, -.04, -.06], '-x', .008, { lead: 'z' });   // oil filter differential pressure (OFDP) sensor
+      Kt.cyl('ocm', f, [-.06, -.02, .1], 'z', .025, .07, 'castAl'); Kt.connector('ocm', f, [-.06, -.02, .135], 'z', .009, { lead: 'x' });   // variable oil reduction / journal oil shuttle valve
+      Kt.cyl('ocm', f, [-.06, -.07, -.03], 'y', .02, .03, 'castAl'); Kt.connector('ocm', f, [-.083, -.07, -.03], '-x', .008, { lead: 'z' });  // active oil damper valve
+      Kt.cyl('ocm', f, [-.035, .025, -.097], '-z', .013, .024, 'steel'); Kt.hex('ocm', f, [-.035, .025, -.087], '-z', .011, .006, 'steel');   // main oil pressure (MOP) sensor
+      Kt.connector('ocm', f, [-.035, .025, -.109], '-z', .008, { lead: '-x' });
+      Kt.cyl('ocm', f, [-.095, .045, .092], [0, .5, .866], .009, .02, 'steel'); Kt.connector('ocm', f, [-.095, .055, .11], [0, .5, .866], .007, { lead: '-x' });   // main oil temperature (MOT) sensor
       Kt.fitting('ocm', f, [-.12, -.04, .04], '-x', .011); Kt.fitting('ocm', f, [-.12, .04, .02], '-x', .011); }
     acc('deoiler', 'Deoiler', 'Self-contained centrifugal deoiler in the right arm of the MGB, on its aft face, driven by a gear. It takes breather air from the gearbox, the No. 3 bearing compartment and the oil tank\'s deaerator, spins the oil out of it back into the gearbox, and vents the air overboard through the deoiler vent duct, which crosses over the top of the gearbox, between it and the core, to its flattened outlet at the left end. Its drive oil seal is line-replaceable.', 'p.66-67, p.236-237');
     /* p.237: a drum on the aft face of the right arm; the vent duct leaves its aft end, turns in over the top of the gearbox (between
@@ -675,6 +684,32 @@
       for (const dx of [-.009, .009]) line('harnesses', [P(-1.065 + dx, 4.8, .41), P(-1.09 + dx * .5, 4.86, .38), P(-1.112, 4.92, .345)], .005, 'harness', { clamps: 0, ends: false });   // N1 probe
       line('harnesses', [P(-1.0355, 1.19, .486), P(-1.05, 1.22, .47), P(-1.09, 1.22, .40), P(-1.115, 1.2, .35)], .006, 'harness', { clamps: 0, ends: false });                  // P2.5/T2.5 probe
       line('harnesses', [P(-1.115, 1.2, .34), P(-1.2, 1.1, .33), P(-1.35, 1.05, .327), P(-1.5, 1.02, .31), P(-1.6, 1.0, .295), P(-1.645, 1.0, .287)], .007, 'harness', { clamps: 3, ends: false });   // T3 probe
+      /* the gearbox units (p.107 draws a cluster of branches round the gearbox; the photos from below show braided runs along its aft
+         side). A trunk leaves W03/W04 where they come up from the bifurcation and runs aft under the MGB at about 6:30 to its aft face.
+         There one branch takes the PMAG's two connectors and the VFG's left connector; one goes up the left of the starter to its speed
+         sensor and on aft to the starter air valve; one crosses back under the VFG to the oil control module's six connectors and the
+         VFG's right connector. The VFG and hydraulic pump circuits belong to the aircraft (generator control unit, hydraulic system)
+         and are assumed to join the bundle here. The VFG's feeder studs are left bare, as in the photo from below */
+      { const leg = (pts, r) => line('harnesses', pts, r || .006, 'harness', { clamps: 0, ends: false });
+        const T1 = P(-1.70, 6.64, .50), T2 = P(-1.80, 6.72, .49), T4 = P(-1.86, 8.2, .523), T6 = P(-1.70, 5.45, .48), T7 = P(-1.79, 5.1, .40);
+        line('harnesses', [P(-1.35, 6.9, .42), P(-1.40, 6.82, .445), P(-1.47, 6.68, .495), P(-1.57, 6.55, .502), P(-1.65, 6.56, .50), T1], .011, 'harness', { clamps: 3, ends: false });
+        leg([T1, P(-1.76, 6.68, .498), T2], .009);
+        leg([P(-1.8052, 7.06, .42), P(-1.813, 6.95, .435), P(-1.81, 6.8, .47), T2], .007);                                     // PMAG, EEC channel A
+        leg([P(-1.8052, 7.05, .38), P(-1.818, 6.93, .40), P(-1.82, 6.8, .45), P(-1.81, 6.74, .48), T2], .007);                 // PMAG, channel B
+        leg([P(-1.776, 6.58, .46), P(-1.795, 6.6, .468), P(-1.805, 6.66, .482), T2]);                                           // VFG, left
+        leg([T2, P(-1.83, 6.85, .50), P(-1.85, 7.3, .515), P(-1.86, 7.8, .52), T4], .008);
+        leg([T4, P(-1.84, 8.6, .524), P(-1.80, 8.95, .51), P(-1.77, 9.1, .45), P(-1.745, 9.08, .39), P(-1.729, 9.06, .366)]);   // starter speed sensor
+        leg([T4, P(-1.92, 8.3, .524), P(-2.0, 8.5, .525), P(-2.05, 8.7, .526), P(-2.068, 8.82, .53), P(-2.07, 8.85, .532)]);      // starter air valve torque motor
+        leg([P(-1.57, 6.55, .502), P(-1.60, 6.2, .49), P(-1.62, 5.85, .49), P(-1.66, 5.55, .49), T6], .009);
+        leg([P(-1.776, 5.72, .46), P(-1.79, 5.72, .455), P(-1.785, 5.6, .44), P(-1.75, 5.5, .445), P(-1.72, 5.46, .46), T6]);   // VFG, right
+        leg([P(-1.698, 5.63, .409), P(-1.69, 5.55, .43), P(-1.695, 5.48, .46), T6]);                                           // VORV/JOSV
+        leg([P(-1.762, 5.40, .477), P(-1.735, 5.43, .48), T6]);                                                                 // MOT sensor
+        leg([T7, P(-1.795, 5.25, .41), P(-1.775, 5.5, .43), P(-1.735, 5.5, .455), T6], .008);
+        leg([P(-1.704, 4.34, .443), P(-1.74, 4.4, .45), P(-1.785, 4.55, .45), P(-1.797, 4.8, .435), P(-1.795, 5.0, .415), T7]);   // MOP sensor
+        leg([P(-1.7525, 4.81, .33), P(-1.78, 4.88, .345), P(-1.79, 5.0, .375), T7]);                                           // active oil damper valve
+        leg([P(-1.7985, 4.66, .36), P(-1.80, 4.8, .37), P(-1.797, 4.95, .385), T7]);                                           // OFDP sensor
+        leg([P(-1.7935, 4.72, .405), P(-1.797, 4.9, .41), T7]); }                                                               // oil debris monitor
+      line('harnesses', [P(-1.262, 6.22, .41), P(-1.24, 6.22, .405), P(-1.215, 6.27, .375), P(-1.20, 6.3, .36)], .006, 'harness', { clamps: 0, ends: false });   // hydraulic pump depressurising solenoid, into WC08
       /* WC05 aft over the fuel manifolds, under the right edge of the precooler and over the clearance control manifolds (the precooler
          sits low enough over the combustor that it can no longer run along 12 o'clock) */
       line('harnesses', [P(-1.67, 12.05, .305), P(-1.684, 12.35, .31), P(-1.697, 12.45, .34), P(-1.712, 12.45, .356), P(-1.75, 12.45, .356), P(-1.80, 12.45, .34), P(-1.95, 12.45, .325), P(-2.05, 12.4, .345), P(-2.10, 12.35, .385), P(-2.14, 12.3, .47), P(-2.20, 12.18, .51), P(-2.24, 12.08, .555), P(-2.40, 12.0, .56), P(-2.45, 12.0, .52), P(-2.465, 12.0, .478)], .012, 'harness', { clamps: 4 });
@@ -709,7 +744,7 @@
         const k = dh > 0 ? .03 : 0, da = dh < 0 ? dh * 1.6 : dh, run = [P(-.673, h0, 1.0403), P(-.70 - k, h0 - .05, 1.04), P(-.735 - k, 7.6 + dh, 1.045), P(-.765 - k, 7.0 + dh, 1.07), P(-.82 - k * .5, 6.4 + dh * 1.5, 1.10), P(-.88, 6.15 + dh * 2.5, 1.10), P(-.94, 6.0 + 3 * dh, 1.09), P(-.985, 6.0 + 3 * dh, 1.06),
           P(-1.05, 6.0 + 3 * dh, 1.03), P(-1.11, 6.0 + 3 * dh, .99), P(-1.15, 6.0 + 2.5 * dh, .86), P(-1.18, 6.0 + 2 * dh, .72), P(-1.21, 5.97 + da, .58), P(-1.30, 5.9 + da, .52), P(-1.50, 5.85 + da, .525), P(-1.75, 5.78 + dh * 1.5, .53)];
         const tail = hp < 4.5 ? [P(-1.82, 5.2, .505), P(-1.82, 4.8, .50), P(-1.815, 4.5, .49), P(-1.79, 4.3, .45), P(-1.80, 4.15, .40), P(-1.81, 4.06, .37), P(-1.81, hp, .347)]
-          : [P(-1.80, 5.45, .47), P(-1.81, 5.15, .42), P(-1.81, 5.02, .385), P(-1.81, hp, .347)];
+          : [P(-1.835, 5.45, .47), P(-1.835, 5.15, .42), P(-1.82, 5.03, .385), P(-1.81, hp, .347)];   // B keeps aft of the OCM's sensor harness
         const ic = line('ignition', run.concat(tail), .0085, 'cable', { clamps: 6, ends: false });
         PW.add('ignition', G.alongCurve(ic, [tAt(ic, -.985)], () => new THREE.CylinderGeometry(.015, .015, .03, 14)), 'silicone').userData.isLine = true;   // orange boot through the bifurcation panel
         /* p.319, from the case out: classified spacer, mounting boss (diamond flange, two bolts, collar), the plug's seating hex, body,
