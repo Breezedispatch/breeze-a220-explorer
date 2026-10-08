@@ -25,14 +25,60 @@
   });
 
   /* ---- nacelle state, driven from the toolbar: fan cowls 0..1 (55 deg), reverser doors 0..1 (45 deg), sleeves 0..1 (deployed) ---- */
-  const S = PW.nac = { fan: 0, tr: 0, sleeve: 0, want: { fan: 0, tr: 0, sleeve: 0 }, hinges: [], sleeves: [], blockers: [] };
+  const S = PW.nac = { fan: 0, tr: 0, sleeve: 0, want: { fan: 0, tr: 0, sleeve: 0 }, hinges: [], sleeves: [], blockers: [], struts: [], stroke: .54 };
+
+  /* a closed slab between an outer and an inner face: P(u, v, s) with u in 0..1 along it, v in -1..1 across and s = 0 outer, 1 inner.
+     Each face has its own vertices so the edges stay sharp; the winding is set from the parameter directions, then turned outward */
+  function slab(nu, nv, P) {
+    const faces = [], grid = (n0, n1, f, flip) => { const pos = [], idx = [];
+      for (let i = 0; i <= n0; i++) for (let j = 0; j <= n1; j++) pos.push(...f(i / n0, j / n1));
+      for (let i = 0; i < n0; i++) for (let j = 0; j < n1; j++) { const a = i * (n1 + 1) + j, b = a + n1 + 1; if (flip) idx.push(a, a + 1, b + 1, a, b + 1, b); else idx.push(a, b, b + 1, a, b + 1, a + 1); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); faces.push(g); };
+    grid(nu, nv, (u, v) => P(u, v * 2 - 1, 0), true); grid(nu, nv, (u, v) => P(u, v * 2 - 1, 1), false);
+    grid(nv, 1, (v, s) => P(0, v * 2 - 1, s), true); grid(nv, 1, (v, s) => P(1, v * 2 - 1, s), false);
+    grid(nu, 1, (u, s) => P(u, -1, s), false); grid(nu, 1, (u, s) => P(u, 1, s), true);
+    const g = G.orientOutward(G.merge(faces)); g.computeVertexNormals(); g.userData.solid = true; return g;
+  }
+  /* aim a blocker door's drag link from its IFS fitting to the bracket on the door, for sleeve travel u and door angle th, in the door's
+     own (hinge) frame. The link's thin side faces round the engine, its chord along the flow */
+  function aimLink(b, u, th) {
+    const c = Math.cos(th), s = Math.sin(th), F = G.onRing(b.xF, b.rF, b.a), Aw = G.onRing(b.xh0 - u + b.lx * c - b.ly * s, b.rc + b.lx * s + b.ly * c, b.a);
+    const yA = Aw.clone().sub(F).normalize(), zA = new THREE.Vector3(0, -Math.sin(b.a), Math.cos(b.a)), xA = new THREE.Vector3().crossVectors(yA, zA).normalize();
+    zA.crossVectors(xA, yA); b.link.position.copy(F).add(Aw).multiplyScalar(.5); b.link.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(xA, yA, zA));
+  }
+  /* rods between a door and the engine that follow the door (opening actuators, hold-open rods): straight sections re-aimed every frame
+     between two ends, telescoping as the distance changes; the first section starts at end a, the last finishes at end b. ends()
+     returns both ends in the group's own frame. Optional eyes: a ball of that radius at each end */
+  function strut(pid, into, secs, ends, eyes) {
+    const g = new THREE.Group(), Y = new THREE.Vector3(0, 1, 0); into.add(g);
+    const ms = secs.map(([r, len, mat]) => { const m = PW.add(pid, new THREE.CylinderGeometry(r, r, len, 14), mat, { into: g, solid: true }); m.userData.len = len; return m; });
+    const es = eyes ? [0, 1].map(() => PW.add(pid, new THREE.SphereGeometry(eyes, 14, 10), 'steel', { into: g, solid: true })) : [];
+    const st = { g, ms, ends, update() { const [a, b] = st.ends(), d = b.clone().sub(a), L = d.length() || 1; d.multiplyScalar(1 / L);
+      const q = new THREE.Quaternion().setFromUnitVectors(Y, d), n = ms.length;
+      ms.forEach((m, i) => { const l = m.userData.len, t = n === 1 ? .5 : i / (n - 1); m.position.copy(a).addScaledVector(d, l / 2 + (L - l) * t); m.quaternion.copy(q); });
+      if (es.length) { es[0].position.copy(a); es[1].position.copy(b); } } };
+    S.struts.push(st); st.update(); return st;
+  }
+  /* a point given in a door's closed position, turned with the door about its hinge line (y, z = h.py, h.pz), and back. Explode offsets
+     are left out, so a strut on the engine side stays with the engine when the doors lift away */
+  const rotX = (v, ang, py, pz) => { const c = Math.cos(ang), s = Math.sin(ang), y = v.y - py, z = v.z - pz; return new THREE.Vector3(v.x, py + y * c - z * s, pz + y * s + z * c); };
+  const doorOut = (h, p) => rotX(p, h.obj.rotation.x, h.py, h.pz), doorIn = (h, q) => rotX(q, -h.obj.rotation.x, h.py, h.pz);
+  const opened = h => Math.max(0, Math.min(1, h.obj.rotation.x / (h.sign * h.max)));
+  const ease01 = s => (s <= 0 ? 0 : s >= 1 ? 1 : s * s * (3 - 2 * s));
+  /* the blocker door angle for sleeve travel u: the drag link keeps its length, so solve |door end - fitting| = L by bisection */
+  function doorAngle(b, u) {
+    if (u < 1e-5) return 0;
+    const f = th => { const c = Math.cos(th), s = Math.sin(th); return Math.hypot(b.xh0 - u + b.lx * c - b.ly * s - b.xF, b.rc + b.lx * s + b.ly * c - b.rF) - b.L; };
+    let lo = 0, hi = 1.6; for (let i = 0; i < 26; i++) { const m = (lo + hi) / 2; if (f(m) > 0) lo = m; else hi = m; }
+    return (lo + hi) / 2;
+  }
 
   function build() {
     if (!D.GEN) return;
     const X = D.zsToX, Z = D.ZS, x = zs => X(zs);
     const nac = D.nacOuter();                                         // outer line [x, r], forward to aft
     const rOut = xx => G.interp(nac, xx);
-    const xHL = x(Z.inletHighlight), xJ1 = x(Z.inletFanCowl), xJ2 = x(Z.fanCowlTR), xSF = x(Z.sleeveFwd), xTE = x(Z.sleeveTE), xCN = D.GEN.nacelle.coreNozzleExit.x;
+    const xHL = x(Z.inletHighlight), xJ1 = x(Z.inletFanCowl), xJ2 = x(Z.fanCowlTR), xTE = x(Z.sleeveTE), xCN = D.GEN.nacelle.coreNozzleExit.x;
     const fA = D.GEN.flanges.find(f => /^A /.test(f.name));
     PW.NACELLE_IDS = ['inlet', 'fan-cowls', 'thrust-reverser', 'pylon'];
     PW.part('nacelle', { label: 'Nacelle and pylon', src: 'Delta CH 70-80 p.8-49; TTM ch. 01, 54, 71, 78',
@@ -40,7 +86,7 @@
 
     /* ============================== INLET ============================== */
     PW.part('inlet', { parent: 'nacelle', label: 'Inlet cowl', explode: [1.0, 0, 0], src: 'p.8-11; TTM ch. 01 Fig. 28; ch. 30; photos',
-      info: 'Bolted to fan case flange A. The lip is anti-iced by bleed air from a piccolo tube inside it, and the inner barrel is lined with acoustic panels. Its lower lip sits about 2 in aft of the upper lip (scarf).\n\nOn the outer barrel: the NACA scoop at 1 o\'clock, the P2T2 probe access panel at 11 o\'clock, the cowl anti-ice duct access panel at 5 o\'clock with the anti-ice exhaust slots near it, and drain holes at the bottom. Check the lip and inner barrel for dents, erosion and damage on every walkaround.' });
+      info: 'Directs the airflow to the fan in all conditions and reduces noise (p.8, p.10). It is bolted to the front flange of the engine (fan case flange A) at its attachment ring. The inner barrel is titanium and composite with 360 degrees of acoustic treatment; the outer barrel is a two-piece composite structure from the lip skin to the leading edge of the fan cowl, with a copper screen in it for lightning strike protection. The lip is anti-iced by bleed air from a piccolo tube inside it, and the air is exhausted through slots at the bottom of the cowl. Its lower lip sits about 2 in aft of the upper lip (scarf).\n\nOn the outer barrel: the NACA scoop at 1 o\'clock for fan compartment cooling, the P2T2 access panel at 11 o\'clock, the cowl anti-ice duct access panel at 5 o\'clock, the hoist points on its joint lines for removing the cowl with the inlet cowl sling, and drain holes at the bottom; more drain holes in the core of the inner barrel let fluids out.' });
     {
       const rHL = 1.072, rTh = .942, rFF = G.interp(D.GEN.lines.fanCaseInner, fA.x);
       const lipTop = [[xHL, rHL]], k = 10;
@@ -71,10 +117,17 @@
         const m = new THREE.Mesh(G.roundedBox(l, .006, w, .01)); m.position.copy(G.onRing(xx, rOut(xx) + .001, a)); m.rotation.x = a; PW.add(pid, m, 'nacellePaint', { mat: { color: '#123f97' }, solid: true }); return m; };
       onBarrel('inlet-p2t2-panel', 'P2/T2 probe access panel', 'Access panel at 11 o\'clock over the P2/T2 probe, its harness and its heater lead.', xHL - .45, 11, .16, .22);
       onBarrel('inlet-cai-panel', 'Cowl anti-ice duct access panel', 'Access panel at 5 o\'clock over the cowl anti-ice duct where it enters the inlet.', xJ1 + .25, 5, .16, .24);
-      { PW.part('inlet-naca', { parent: 'inlet', label: 'NACA scoop', src: 'p.10', info: 'Flush NACA-type air scoop at 1 o\'clock near the front of the outer barrel, ventilating the space inside the inlet cowl.' });
+      { PW.part('inlet-naca', { parent: 'inlet', label: 'NACA scoop', src: 'p.10', info: 'Flush NACA-type air scoop at 1 o\'clock near the front of the outer barrel, used for fan compartment cooling (p.10).' });
         const a = G.clock(1), xx = xHL - .32, m = new THREE.Mesh(G.roundedBox(.16, .02, .07, .008)); m.position.copy(G.onRing(xx, rOut(xx) - .006, a)); m.rotation.x = a; PW.add('inlet-naca', m, 'darkBox', { solid: true }); }
-      { PW.part('inlet-ai-exhaust', { parent: 'inlet', label: 'Cowl anti-ice exhaust slots', src: 'p.10-11', info: 'Slots at the bottom of the outer barrel, near the 5 o\'clock access panel, where the anti-ice air leaves the lip D-duct.' });
-        for (let i = 0; i < 6; i++) { const a = G.clock(5.4) + i * .045, xx = xHL - .26; const m = new THREE.Mesh(G.roundedBox(.11, .006, .016, .004)); m.position.copy(G.onRing(xx, rOut(xx) + .0005, a)); m.rotation.x = a; PW.add('inlet-ai-exhaust', m, 'darkBox', { solid: true }); } }
+      { PW.part('inlet-ai-exhaust', { parent: 'inlet', label: 'Cowl anti-ice exhaust louvers', src: 'p.10-11', info: 'A row of louvers in the bottom of the outer barrel, along the forward edge of the 5 o\'clock cowl anti-ice duct access panel (p.11), where the anti-ice air is exhausted after heating the lip.' });
+        for (let i = 0; i < 5; i++) { const a = G.clock(4.75 + i * .125), xx = xJ1 + .25 + .14; const m = new THREE.Mesh(G.roundedBox(.07, .006, .018, .005)); m.position.copy(G.onRing(xx, rOut(xx) + .0005, a)); m.rotation.x = a; PW.add('inlet-ai-exhaust', m, 'darkBox', { solid: true }); } }
+      /* p.10-11: drain holes in the bottom of the outer barrel beside the anti-ice access panel; the hoist points for the inlet cowl sling
+         on the outer barrel's joint lines (it is a two-piece structure), at the forward and aft ends of each joint */
+      { const Kt = PW.kit;
+        for (const xx of [xJ1 + .2, xJ1 + .25, xJ1 + .3]) Kt.cyl('inlet-outer-barrel', Kt.frame('inlet-outer-barrel', xx, 5.62, rOut(xx)), [0, .0004, 0], 'y', .005, .0012, 'darkBox');
+        for (const h of [2.0, 8.0]) { PW.add('inlet-outer-barrel', G.revolve([[xJ1 + .005, rOut(xJ1 + .005) + .0004], [xHL - .3, rOut(xHL - .3) + .0004], [xHL - .3, rOut(xHL - .3) - .001], [xJ1 + .005, rOut(xJ1 + .005) - .001]], { seg: 1, thetaStart: G.clock(h) - .0015, thetaLength: .003 }), 'darkBox');   // joint line
+          for (const xx of [xJ1 + .03, xHL - .45]) { const f = Kt.frame('inlet-outer-barrel', xx, h, rOut(xx));
+            Kt.box('inlet-outer-barrel', f, [0, .0004, 0], [.05, .0012, .03], 'greyPrimer', { round: .005 }); Kt.cyl('inlet-outer-barrel', f, [0, .0012, 0], 'y', .006, .0012, 'darkBox'); } } }
       { PW.part('inlet-p2t2', { parent: 'inlet', label: 'P2/T2 probe', src: 'p.10, p.102-105',
           info: 'Inlet probe on the inner barrel at 11 o\'clock, reached through the access panel above it. P2 is the inlet total pressure (single channel, to EEC channel B); T2 the inlet total temperature (dual channel, to both). The EEC uses them to check the aircraft air data and in its place when that is invalid; T2 replaces it on the ground below 60 kt.\n\nThe probe is heated from AC BUS 1 on the left engine and AC BUS 2 on the right, switched on by the EEC above idle below 9 deg C (48 deg F). A heater failure gives the 73 L(R) ENGINE FAULT - P2/T2 HEATER INOP info message. If the probe fails too, the EEC uses defaults: 14.7 psi, 17,000 ft pressure altitude and a synthesized inlet temperature.' });
         /* p.105: a rectangular four-bolt flange on the back of the acoustic barrel, the sensor body with its signal connector on top and
@@ -97,14 +150,14 @@
 
     /* ============================== FAN COWL DOORS ============================== */
     PW.part('fan-cowls', { parent: 'nacelle', label: 'Fan cowl doors', src: 'p.8-15; photos',
-      info: 'Two composite doors from the inlet to the thrust reverser, each hung on three hinges from the pylon and latched at the bottom by three flush latches (L1, L2, L3). They open up to 55 degrees on two hold-open rods each; above that the hinges can be damaged.\n\nThe inboard cowl carries the strake. Never open the fan cowls in winds above the AMM limit, and always check all three latches closed and flush after maintenance: an unlatched fan cowl can depart in flight.' });
+      info: 'Two carbon fibre (CFRP) doors between the inlet cowl and the thrust reverser, stiffened with radial stiffeners and longerons, with copper mesh in the laminate for lightning protection. Each hangs from the pylon\'s fan cowl support beam on three hinges, whose pins are held by retaining clips; pulling the pins frees the cowl for removal with the ground handling sling on its three hoist points. Wear strips keep the joints between the cowls smooth.\n\nThe cowls latch together at the bottom centreline with three flush latches, L1 forward to L3 aft, opened and closed in the order L1, L3, L2: push the trigger to release the handle, pull the handle down and lift the hook off the eye-bolt of its keeper. When they are properly closed the handles are flush and their red marks do not show; alignment pins beside the latches line the cowls up. An unlatched fan cowl can depart in flight.\n\nEach door weighs more than 100 lb (45 kg), so two people open it. Do not open a fan cowl in wind above 60 mph (96 km/h), and take care above 46 mph (74 km/h). Lifting it more than 55 degrees can damage the door or the pylon. Two hold-open rods on each door hold it open: the forward rod goes to the forward HOR bracket on the fan case, the aft rod to the door opening system (PDOS) bracket (p.12-15).' });
     const yh = 1.18;                                                   // hinge line height, just under the pylon
     for (const side of ['left', 'right']) {
       const sg = side === 'right' ? 1 : -1, pid = `fan-cowl-${side}`;
       PW.part(pid, { parent: 'fan-cowls', label: `${side === 'left' ? 'Left (inboard)' : 'Right (outboard)'} fan cowl`, src: 'p.12-15; photos',
-        info: side === 'left' ? 'Inboard fan cowl on this right-hand engine. It carries the strake, the vortex fin that improves flow over the wing at high angle of attack. White inside with lime-green frames.' : 'Outboard fan cowl on this right-hand engine, with the fan compartment pressure-relief door. White inside with lime-green frames.' });
+        info: (side === 'left' ? 'Inboard fan cowl on this right-hand engine. It carries the removable strake, which decreases the turbulence from the airflow between the fan cowl and the fuselage (p.8; inboard cowls only). Its latches hook onto the keepers on the outboard cowl, and its two hold-open rods stow along its bottom.' : 'Outboard fan cowl on this right-hand engine. The panel high on its side is the pressure-relief door, which relieves high pressure in the fan compartment if a duct fails (p.12). It carries the latch keepers with their alignment pins, and its two hold-open rods stow low along its side, under the cowl anti-ice duct.') + ' The three plates are its hoist points, each with two screw holes for the ground handling sling, and the drain holes near the bottom split line let fluid out of the fan compartment. White inside with lime-green frames.' });
       const obj = PW.parts.get(pid).obj, hinge = new THREE.Group(); obj.add(hinge); obj.position.set(0, yh, sg * .21); hinge.position.set(0, -yh, -sg * .21);
-      S.hinges.push({ obj, axis: 'fan', sign: -sg, max: deg(55) });
+      const hc = { obj, axis: 'fan', sign: -sg, max: deg(55), py: yh, pz: sg * .21 }; S.hinges.push(hc);
       const t0 = sg > 0 ? deg(10) : Math.PI + deg(1), tl = Math.PI - deg(11);
       const outer = [], inner = []; for (let i = 0; i <= 18; i++) { const xx = xJ1 - .002 + (xJ2 + .002 - xJ1) * i / 18; outer.push([xx, rOut(xx)]); inner.push([xx, rOut(xx) - .028]); }
       PW.add(pid, G.revolve(outer.concat(inner.slice().reverse()), { seg: 72, thetaStart: sg > 0 ? t0 : Math.PI + deg(.08), thetaLength: tl + deg(.92) }), 'nacellePaint', { into: hinge });   // the skins meet at the bottom split line
@@ -116,9 +169,45 @@
         if (sg < 0) { const ah = a + deg(1.3);                                                                   // the flush handle in the left cowl's skin, as on the reverser
           for (const [w, t, l, dr, mat] of [[.156, .003, .04, -.0005, 'darkBox'], [.15, .003, .034, .0008, 'greyPrimer']]) { const hd = new THREE.Mesh(G.roundedBox(w, t, l, .0015)); hd.position.copy(G.onRing(xx, rOut(xx) + dr, ah)); hd.rotation.x = ah; PW.add(pid, hd, mat, { solid: true, into: hinge }); } }
         const hm = new THREE.Mesh(G.roundedBox(.08, .06, .03, .006)); hm.position.set(xx, yh - .02, sg * .22); PW.add(pid, hm, 'lime', { solid: true, into: hinge }); }
-      // two hold-open rods per cowl, stowed along the inside of the door (deployed when the cowl is open)
-      for (const f of [.3, .72]) { const xx = xJ1 + (xJ2 - xJ1) * f, a0 = G.clock(sg > 0 ? 3.2 : 8.8);
-        const r = new THREE.Mesh(G.rod(G.onRing(xx, 1.0, a0), G.onRing(xx - .02, 1.16, G.clock(sg > 0 ? 1.6 : 10.4)), .011)); PW.add(pid, r, 'darkBox', { into: hinge }); }
+      /* two hold-open rods per cowl (p.12-15). Each pivots on a bracket near the cowl's lower edge; with the cowl shut it lies in stow
+         brackets along the inside of the cowl's lower part, as p.15 view A draws them, the one with its free end forward resting in the
+         hold-open rod clip. As the cowl comes up past about 60 % of its travel they go on their fittings on the fan case: the forward HOR
+         bracket, and the door opening system (PDOS) bracket at the aft end of the case (p.14). The model draws them as two-diameter
+         telescopic rods (the p.13 detail shows two diameters), stowed in the forward part of the cowl clear of the ignition cables and
+         harnesses that cross the bottom of the fan case near its aft end. (p.13 draws the outboard cowl's rods rising up its side, but on
+         this No. 2 engine the cowl anti-ice duct runs along the fan case at 5 o'clock under that cowl, so here they lie low, below it) */
+      { const Kt = PW.kit, rr = xx => rOut(xx) - .095, Pc = (xx, th) => G.onRing(xx, rr(xx), sg > 0 ? deg(th) : TAU - deg(th));
+        const full = p => rotX(p, hc.sign * hc.max, hc.py, hc.pz);
+        /* [pivot, stowed free end, fan case fitting] */
+        const RODS = sg > 0 ? [[Pc(.30, 168.5), Pc(-.45, 166), G.onRing(.30, .99, G.clock(3.1))], [Pc(-.62, 163), Pc(.20, 160), G.onRing(-.84, 1.062, G.clock(3.75))]]
+          : [[Pc(.30, 167.5), Pc(-.45, 167), G.onRing(.30, .99, G.clock(9.3))], [Pc(-.62, 164.5), Pc(.20, 164), G.onRing(-.84, 1.062, G.clock(8.25))]];
+        RODS.forEach(([pv, sw, fit], k) => {
+          const Ls = pv.distanceTo(sw), Ld = full(pv).distanceTo(fit), n = 2 * Ls * .96 >= Ld + .06 ? 2 : 3, l = Math.min(Ls * .96, (Ld + .08) / n + .04);
+          for (const [p, nm] of [[pv, 'pivot'], [sw.clone().lerp(pv, .04), 'stow'], [pv.clone().lerp(sw, .5), 'mid']]) {
+            const a = Math.atan2(p.z, p.y), r = Math.hypot(p.y, p.z), f = Kt.frame(pid, p.x, a / (Math.PI / 6), r, { into: hinge }), hgt = rOut(p.x) - .031 - r;
+            Kt.box(pid, f, [0, hgt / 2, 0], nm === 'pivot' ? [.05, hgt, .045] : [.026, hgt, .03], k === 1 && nm === 'stow' ? 'darkBox' : 'greyPrimer', { round: .004 }); }   // pivot bracket, stow brackets (the clip at the forward free end)
+          if (k === 0) { const f = Kt.frame('fan-case-shell', fit.x, Math.atan2(fit.z, fit.y) / (Math.PI / 6), .969);                         // the forward HOR bracket on the fan case
+            Kt.box('fan-case-shell', f, [0, .011, 0], [.04, .022, .035], 'darkBox', { round: .004 }); Kt.cyl('fan-case-shell', f, [0, .021, 0], 'x', .006, .045, 'steel'); }
+          strut(pid, hinge, [[.013, l, 'steel'], [.0105, l, 'steel'], [.008, l, 'steel']].slice(0, n), () => { const w = ease01((opened(hc) - .6) / .4); return [pv, w > 0 ? sw.clone().lerp(doorIn(hc, fit), w) : sw]; }, .016); }); }
+      /* p.12-13: three hoist points on each cowl, each a doubler with two screw holes for the ground handling sling (two on the side,
+         forward and aft, one low and aft); drain holes near the bottom split line; on the outboard cowl the pressure-relief door, a third
+         of the way down from the hinges and mid-length, between the stiffeners, which relieves the fan compartment if a duct fails; wear
+         strips round the forward and aft edges; the hinge pins with their retaining clips; and on the keeper side the alignment pins that
+         enter holes beside the latches as the cowls close (p.14-15) */
+      { const Kt = PW.kit, hs = c => sg > 0 ? c : 12 - c, fx = f => xJ1 + (xJ2 - xJ1) * f;
+        for (const [f, h] of [[.3, 3.9], [.7, 3.9], [.6, 5.3]]) { const xx = fx(f), g = Kt.frame(pid, xx, hs(h), rOut(xx), { into: hinge });
+          Kt.box(pid, g, [0, .0004, 0], [.046, .0012, .116], 'darkBox', { round: .006 }); Kt.box(pid, g, [0, .0011, 0], [.04, .0012, .11], 'greyPrimer', { round: .006 });
+          for (const s of [-1, 1]) Kt.cyl(pid, g, [0, .0016, s * .03], 'y', .0065, .0012, 'darkBox'); }
+        for (const f of [.22, .5, .78]) { const xx = fx(f), g = Kt.frame(pid, xx, hs(5.9), rOut(xx), { into: hinge });
+          Kt.cyl(pid, g, [0, .0004, 0], 'y', .0045, .0012, 'darkBox'); }
+        if (sg > 0) { const xx = fx(.45), g = Kt.frame(pid, xx, 2.4, rOut(xx), { into: hinge });
+          Kt.box(pid, g, [0, .0004, 0], [.266, .0012, .306], 'darkBox', { round: .02 }); Kt.box(pid, g, [0, .0011, 0], [.26, .0012, .3], 'nacellePaint', { round: .02 });
+          for (let i = 0; i < 22; i++) { const t = i / 22 * TAU, c = Math.cos(t), s = Math.sin(t);
+            Kt.hex(pid, g, [Math.sign(c) * Math.min(1, Math.abs(c) * 1.5) * .118, .0017, Math.sign(s) * Math.min(1, Math.abs(s) * 1.5) * .138], 'y', .003, .001, 'steel'); } }
+        for (const xx of [xJ1 - .004, xJ2 + .004]) PW.add(pid, G.revolve([[xx + .012, rOut(xx) - .028], [xx - .012, rOut(xx) - .028], [xx - .012, rOut(xx) - .033], [xx + .012, rOut(xx) - .033]], { seg: 72, thetaStart: t0, thetaLength: tl }), 'rubber', { into: hinge });   // wear strips
+        for (const f of [.2, .5, .8]) { const xx = fx(f);
+          Kt.cyl(pid, Kt.frame(pid, xx, 0, 1, { into: hinge }), [0, yh - .02 - 1, sg * .22], 'x', .007, .1, 'steel');                     // hinge pin through the hinge
+          if (sg > 0) { const g = Kt.frame(pid, xx + .075, hs(5.97), rOut(xx) - .045, { into: hinge }); Kt.cyl(pid, g, [0, 0, .006], 'z', .006, .024, 'steel'); Kt.cone(pid, g, [0, 0, .026], 'z', .002, .006, .016, 'steel'); } } }
     }
     { // strake on the inboard (left) cowl, about 30 deg above the horizontal (10 o'clock), about 36 in long
       const a = G.clock(10), xa = xJ1 - .25, xb = xa - .91, h = .14, p = PW.parts.get('fan-cowl-left').obj.children[0];
@@ -134,49 +223,102 @@
     /* the IFS outer line (inner wall of the fan duct) and the duct's outer wall (inside the T/R door) */
     const bi = D.GEN.lines.bypassInner, xI0 = bi[bi.length - 1][0], rI0 = bi[bi.length - 1][1];
     const IFS = [[xI0, rI0], [xI0 - .2, .555], [-1.35, .585], [-1.9, .588], [-2.2, .575], [xTE, .53], [xTE - .25, .47], [xCN + .004, .392]];
-    const DUCT = [[-.92, .945], [-1.4, .955], [xSF, .952], [-2.3, .94], [xTE, .93]];
+    const DUCT = [[-.92, .945], [-1.4, .955], [-1.981, .952], [-2.3, .94], [xTE, .93]];
     const rIFS = xx => G.interp(IFS, xx), rDuct = xx => G.interp(DUCT, xx);
     for (const side of ['left', 'right']) {
       const sg = side === 'right' ? 1 : -1, pid = `tr-${side}`;
       PW.part(pid, { parent: 'thrust-reverser', label: `${side === 'left' ? 'Left' : 'Right'} thrust reverser door`, explode: [0, .25, sg * .9], src: 'p.18-23; photos',
         info: `${side === 'left' ? 'Left' : 'Right'} C-duct: outer fixed cowl, translating sleeve, cascades, blocker doors and actuators outside, the IFS half inside. It hinges at the pylon and latches to the other door at the bottom.` + (side === 'right' ? ' The oil tank access door is on its IFS at about 2:30.' : ' Its IFS carries the air/oil cooler window and the IFS pressure-relief door at 9 o\'clock, and its latch beam carries the latch access door where the drain mast exits.') });
       const obj = PW.parts.get(pid).obj, hinge = new THREE.Group(); obj.add(hinge); obj.position.set(0, yhT + .2, sg * .2); hinge.position.set(0, -(yhT + .2), -sg * .2);
-      S.hinges.push({ obj, axis: 'tr', sign: -sg, max: deg(45) });
+      const hd = { obj, axis: 'tr', sign: -sg, max: deg(45), py: yhT + .2, pz: sg * .2 }; S.hinges.push(hd);
       const t0 = sg > 0 ? deg(10) : Math.PI + deg(1), tl = Math.PI - deg(11);
       /* inner structure (IFS, fan duct outer wall, forward frame) stops 6 deg either side of 6 o'clock for the lower bifurcation (it was 4 deg until 2026-10-07; p.31 and the photo from below show a bay about 0.2 m wide) */
       const it0 = sg > 0 ? t0 : Math.PI + deg(6), itl = Math.PI - deg(16);
       const rev = (prof, mat, o) => PW.add(o && o.pid || pid, G.revolve(prof, { seg: 72, thetaStart: o && o.inner ? it0 : t0, thetaLength: o && o.inner ? itl : tl }), mat, Object.assign({ into: hinge }, o || {}));
-      /* outer fixed cowl (ZS 732 to 772) */
-      const fo = []; for (let i = 0; i <= 10; i++) { const xx = xJ2 - .002 + (xSF - xJ2 + .002) * i / 10; fo.push([xx, rOut(xx)]); }
-      PW.add(pid, G.revolve(G.shellProfile(fo, fo.map(([xx, r]) => [xx, r - .02])), { seg: 72, thetaStart: sg > 0 ? t0 : Math.PI + deg(.08), thetaLength: tl + deg(.92) }), 'nacellePaint', { into: hinge });   // outer skin, meeting the other door's at the latch line
-      /* the fan duct outer wall and the torque box / forward frame joining them */
-      const dw = []; for (let i = 0; i <= 10; i++) { const xx = -.93 + (xSF + .02 - -.93) * i / 10; dw.push([xx, rDuct(xx)]); }
+      /* door angles are given from 12 o'clock down this door's side, in degrees: A() turns one into the model's angle, span() into a
+         revolve range, hOf() into a clock position */
+      const A = th => sg > 0 ? deg(th) : TAU - deg(th), span = (th0, th1) => ({ thetaStart: sg > 0 ? deg(th0) : TAU - deg(th1), thetaLength: deg(th1 - th0) });
+      const hOf = th => (sg > 0 ? th : 360 - th) / 30;
+      /* p.19, p.29-31, p.331-333, TTM 78 fig. 2: the translating sleeve is the door's whole outer cowl, from the fan cowl at ZS 732 to the
+         trailing edge. Under its forward part, directly behind the torque box, sit the cascades; its inner wall carries the blocker doors.
+         (Until 2026-10-08 the model had a fixed outer cowl to ZS 772 with the cascades behind it, which the manual does not show.) A skin
+         joint crosses the sleeve at ZS 771 (TTM 01 fig. 28, p.333). The sleeve stops 6 deg short of 6 o'clock, where the latch beam's
+         fairing forms the bottom of the nacelle (p.29-31). Stations: torque box to xTB, cascades xC0 to xC1, the sleeve's inner wall from
+         xSI, the aft wall of the sleeve's cascade cavity at xBH (where the actuator rods attach) */
+      const xTB = xJ2 - .062, xC0 = xTB - .006, xC1 = xC0 - .46, xSI = xTB - .008, xBH = xTB - .758, xSk = x(Z.sleeveSeam), STROKE = S.stroke;
+      /* the fan duct outer wall under the torque box, and the torque box itself (the forward frame with the V-blade): fixed */
+      const dw = []; for (let i = 0; i <= 4; i++) { const xx = -.93 + (xTB + .003 + .93) * i / 4; dw.push([xx, rDuct(xx)]); }
       rev(G.shellProfile(dw.map(([xx, r]) => [xx, r + .012]), dw), 'cowlWhite', { inner: true });
-      rev([[xJ2 - .002, rDuct(xJ2) + .012], [xJ2 - .06, rDuct(xJ2) + .012], [xJ2 - .06, rOut(xJ2) - .02], [xJ2 - .002, rOut(xJ2) - .02]], 'lime', { inner: true });      // forward frame with the V-blade
-      /* cascades: fixed segments under the stowed sleeve (ZS ~773 to 791), uncovered when the sleeve moves aft */
+      rev([[xJ2 - .002, rDuct(xJ2) + .012], [xTB, rDuct(xJ2) + .012], [xTB, rOut(xJ2) - .025], [xJ2 - .002, rOut(xJ2) - .025]], 'lime', { inner: true });
+      /* p.330-333: sixteen carbon fibre cascade boxes, eight per door, bolted between the torque box and the aft cascade ring. Each is a
+         grid of curved vanes that turn the air forward, with strongbacks across them; gaps where the two actuators pass; a flow blocker
+         at each end of the row, at the hinge beam and the latch beam */
       const cid = `${pid}-cascades`;
-      PW.part(cid, { parent: pid, label: `${side === 'left' ? 'Left' : 'Right'} cascade segments`, attach: hinge, src: 'p.18-19',
-        info: 'Fixed cascade segments: rows of curved vanes that turn the fan air forward when the sleeve has moved aft. None at the hinge and latch beams.' });
-      const xc0 = x(773.5), xc1 = x(791), rc = .975;
-      PW.add(cid, G.revolve([[xc0, rc - .03], [xc1, rc - .03], [xc1, rc + .03], [xc0, rc + .03]], { seg: 60, thetaStart: t0 + deg(8), thetaLength: tl - deg(16) }), 'cascadeGrey');
-      for (let i = 0; i <= 14; i++) { const xx = xc0 + (xc1 - xc0) * i / 14; PW.add(cid, G.revolve([[xx + .004, rc - .028], [xx - .004, rc - .028], [xx - .016, rc + .028], [xx - .008, rc + .028]], { seg: 60, thetaStart: t0 + deg(8), thetaLength: tl - deg(16) }), 'darkBox'); }
-      /* translating sleeve (ZS 772 to 794): its own group so it can slide aft; blocker doors in its inner wall */
+      PW.part(cid, { parent: pid, label: `${side === 'left' ? 'Left' : 'Right'} cascades, aft ring and flow blockers`, attach: hinge, src: 'p.18-19, p.330-333; TTM 78 fig. 2',
+        info: 'Eight carbon fibre cascade boxes on this door, sixteen on the engine, fixed between the torque box and the aft cascade ring, directly behind the torque box. The stowed sleeve covers them; when it moves aft the fan air leaves through them, and their curved vanes turn it forward for reverse thrust and outward, away from the inlet, the fuselage and the flight controls.\n\nThe boxes are not interchangeable: each is designed for the airflow its position needs, and their fastener patterns make it impossible to fit one in the wrong place. The flow blockers at the hinge beam and the latch beam stop fan air leaking past the ends of the row. The gaps in the row are where the two sleeve actuators run aft from the torque box.' });
+      { const ra = .965, rb = 1.035, nV = 16, frames = [], vanes = [];
+        const BOX = [[14, 27.5], [27.5, 41], [49, 69.5], [69.5, 90], [90, 110.5], [110.5, 131], [139, 154.5], [154.5, 170]];
+        const sp = (a0, a1, seg) => Object.assign({ seg: seg || Math.max(2, Math.round((a1 - a0) / 2)) }, span(a0, a1));
+        for (const [b0, b1] of BOX) { const c0 = b0 + .2, c1 = b1 - .2, n = Math.max(2, Math.round((b1 - b0) / 5));
+          frames.push(G.revolve([[xC0, ra], [xC0 - .012, ra], [xC0 - .012, rb], [xC0, rb]], sp(c0, c1)), G.revolve([[xC1 + .012, ra], [xC1, ra], [xC1, rb], [xC1 + .012, rb]], sp(c0, c1)));   // forward and aft rails
+          for (let k = 0; k <= n; k++) { const t = c0 + (c1 - c0) * k / n, w = k === 0 || k === n ? .45 : .22;                                  // end walls and strongbacks
+            frames.push(G.revolve([[xC0, ra], [xC1, ra], [xC1, rb], [xC0, rb]], sp(Math.max(c0, t - w), Math.min(c1, t + w), 1))); }
+          for (let i = 1; i < nV; i++) { const xx = xC0 - .012 + (xC1 + .024 - xC0) * i / nV;                                                     // vanes, leaning forward at the outside
+            vanes.push(G.revolve([[xx - .006, ra + .003], [xx - .001, (ra + rb) / 2], [xx + .009, rb - .003], [xx + .013, rb - .003], [xx + .003, (ra + rb) / 2], [xx - .002, ra + .003]], sp(c0, c1))); } }
+        PW.add(cid, G.merge(frames), 'cascadeGrey'); PW.add(cid, G.merge(vanes), 'darkBox');
+        PW.add(cid, G.revolve([[xC1, .962], [xC1 - .02, .962], [xC1 - .02, 1.05], [xC1, 1.05]], sp(10, 174, 72)), 'greyPrimer');                    // aft cascade ring
+        for (const [f0, f1] of [[10, 14], [170, 174]]) PW.add(cid, G.revolve([[xC0, .962], [xC1, .962], [xC1, 1.042], [xC0, 1.042]], sp(f0, f1, 2)), 'greyPrimer'); }   // flow blockers
+      /* the translating sleeve: its own group so it can slide aft. Outer skin over the cascade cavity, the solid aft body to the trailing
+         edge, the cavity's aft wall, the inner wall facing the fan duct, the skin joint, the actuator access panels and the blocker doors */
       const sid = `${pid}-sleeve`;
-      PW.part(sid, { parent: pid, label: `${side === 'left' ? 'Left' : 'Right'} translating sleeve`, attach: hinge, src: 'p.18-19, p.332-337; TTM ch. 78',
-        info: 'The outer aft cowl of the door. Two hydraulic actuators move it aft to uncover the cascades: the locking feedback actuator in the upper section, whose LVDT reports its position, and the locking actuator in the lower section, kept in step by a flexible drive shaft. A track lock unit on the latch beam holds it stowed. Its inner wall carries five composite blocker doors that the drag links pull into the fan duct as it moves aft; the upper and lower blocker doors are unique to their positions. A small blanking plate on its lower edge near the front covers the hole for the reverser lockout pin.' });
+      PW.part(sid, { parent: pid, label: `${side === 'left' ? 'Left' : 'Right'} translating sleeve and blocker doors`, attach: hinge, src: 'p.18-19, p.330-337, p.374-375; TTM 78 fig. 2 and 3',
+        info: 'The whole outer cowl of the reverser door, from the fan cowl back to the trailing edge, which slides 0.53 m aft to deploy. Stowed, it covers the cascades in a cavity in its forward part. Two hydraulic actuators on the torque box move it: the locking feedback actuator in the upper section, whose LVDT reports its position, and the locking actuator in the lower section, kept in step by a flexible drive shaft; their rod ends are reached through the two access panels on its skin. A track lock unit on the latch beam holds it stowed.\n\nIts inner wall carries five composite blocker doors, hinged at their forward edge on clevises in the wall. As the sleeve moves aft, each door\'s drag link pulls it down across the fan duct behind the cascades, so the fan air goes out through them. The upper and lower doors are unique to their positions; drain holes stop water collecting in them, and rest pads damp them when stowed.\n\nA small blanking plate on its lower edge near the front covers the hole for the reverser lockout pin.' });
       const sl = PW.parts.get(sid).obj; S.sleeves.push(sl);
-      const so = []; for (let i = 0; i <= 10; i++) { const xx = xSF + (xTE - xSF) * i / 10; so.push([xx, rOut(xx)]); }
-      const si = so.map(([xx, r]) => [xx, Math.min(r - .015, rDuct(xx) + .055 * (1 - Math.pow((xx - xSF) / (xTE - xSF), 1.6)))]);
-      PW.add(sid, G.revolve(G.shellProfile(so, si), { seg: 72, thetaStart: sg > 0 ? t0 : Math.PI + deg(.08), thetaLength: tl + deg(.92) }), 'nacellePaint');
-      PW.add(sid, G.revolve(G.shellProfile(si, si.map(([xx, r]) => [xx, r - .004])), { seg: 72, thetaStart: t0, thetaLength: tl }), 'cowlWhite');
-      // five blocker doors per side: stowed flush in the sleeve's inner wall, they swing down into the duct on drag links
-      for (let i = 0; i < 5; i++) { const a = t0 + deg(12) + (tl - deg(24)) * (i + .5) / 5, piv = new THREE.Group(), xp = xSF - .02;
-        piv.position.copy(G.onRing(xp, rDuct(xp) + .005, a)); piv.rotation.x = a; piv.userData.a = a; sl.add(piv);
-        const bd = new THREE.Mesh(G.roundedBox(.34, .018, .26, .01)); bd.position.set(-.17, 0, 0); bd.userData.pid = sid; piv.add(bd); PW.add(sid, bd, 'cowlWhite', { solid: true, into: piv });
-        S.blockers.push(piv); }
+      { const SP = Object.assign({ seg: 72 }, span(10, 174)), so = [], sa = [], sw = [];
+        for (let i = 0; i <= 14; i++) { const xx = xJ2 - .002 + (xBH - xJ2 + .002) * i / 14; so.push([xx, rOut(xx)]); }
+        PW.add(sid, G.revolve(G.shellProfile(so, so.map(([xx, r]) => [xx, r - .018])), SP), 'nacellePaint');                                       // outer skin over the cavity
+        for (let i = 0; i <= 10; i++) { const xx = xBH + (xTE - xBH) * i / 10; sa.push([xx, rOut(xx)]); }
+        PW.add(sid, G.revolve(G.shellProfile(sa, sa.map(([xx]) => [xx, rDuct(xx) + .004])), SP), 'nacellePaint');                                 // aft body to the trailing edge
+        PW.add(sid, G.revolve([[xBH + .001, rDuct(xBH) + .004], [xBH - .009, rDuct(xBH) + .004], [xBH - .009, rOut(xBH) - .018], [xBH + .001, rOut(xBH) - .018]], SP), 'greyPrimer');   // cavity aft wall
+        for (let i = 0; i <= 12; i++) { const xx = xSI + (xTE - xSI) * i / 12; sw.push([xx, rDuct(xx) + .004]); }
+        PW.add(sid, G.revolve(G.shellProfile(sw, sw.map(([xx, r]) => [xx, r - .004])), SP), 'cowlWhite');                                         // inner wall: the duct's outer wall
+        PW.add(sid, G.revolve([[xSk + .002, rOut(xSk) + .0004], [xSk - .002, rOut(xSk) + .0004], [xSk - .002, rOut(xSk) - .002], [xSk + .002, rOut(xSk) - .002]], SP), 'darkBox');   // skin joint, ZS 771
+        /* TTM 78 fig. 3: an access panel over each actuator's rod end */
+        for (const th of [45, 135]) { const xx = xBH + .04, f = PW.kit.frame(sid, xx, hOf(th), rOut(xx));
+          PW.kit.box(sid, f, [0, .0004, 0], [.206, .0012, .146], 'darkBox', { round: .02 }); PW.kit.box(sid, f, [0, .0011, 0], [.2, .0012, .14], 'nacellePaint', { round: .02 });
+          for (let i = 0; i < 12; i++) { const t = i / 12 * TAU, c = Math.cos(t), s = Math.sin(t);
+            PW.kit.hex(sid, f, [Math.sign(c) * Math.min(1, Math.abs(c) * 1.6) * .088, .0017, Math.sign(s) * Math.min(1, Math.abs(s) * 1.6) * .058], 'y', .0028, .001, 'steel'); } } }
+      /* five blocker doors (p.332-333): curved composite panels hinged on clevises in the sleeve's inner wall just aft of the torque box,
+         flush with it when stowed; the split lines are measured off the p.333 deployed view. Each narrows toward its free edge, so that
+         deployed the five close the duct like slices of a ring. As the sleeve moves aft, each door's fixed-length drag link, anchored on a
+         fitting near the front of the IFS (p.23), pulls it down behind the cascades; the door angle is solved every frame from the link
+         length (the nacelle animation below) */
+      { const xh0 = xSI - .01, LD = .36, KN = .6, xF = -1.22, DOORS = [[10.5, 40.75], [41.25, 76.75], [77.25, 111.75], [112.25, 147.75], [148.25, 173.5]];
+        const did = `${pid}-drag-links`;
+        PW.part(did, { parent: pid, label: `${side === 'left' ? 'Left' : 'Right'} drag links and IFS fittings`, attach: hinge, src: 'p.23, p.332-333; TTM 78 fig. 2',
+          info: 'Five drag links, one per blocker door: fixed-length aluminium rods with an airfoil cross-section, since they sit in the fan stream in forward thrust, and Teflon-coated spherical bearings at both ends. The inner end is on a drag link fitting near the front of the IFS (ten fittings on the engine); the outer end is on a housing bracket on the blocker door, whose leaf spring absorbs the link loads.\n\nAs the sleeve moves aft the links swing back, pulling the blocker doors down across the duct; deployed they lie almost along the IFS.' });
+        for (const [d0, d1] of DOORS) { const a = A((d0 + d1) / 2), ph = deg((d1 - d0) / 2), rp = rDuct(xh0), rc = rp * Math.cos(ph);
+          const piv = new THREE.Group(); piv.position.copy(G.onRing(xh0, rc, a)); piv.rotation.x = a; sl.add(piv);
+          /* the door as a closed slab in the pivot frame (x forward, y out at its centre, z round): outer face flush with the wall */
+          const P = (u, v, s) => { const rr = rDuct(xh0 - u * LD) - .002 - s * .016, f = v * ph * (1 - u * (1 - KN)); return [-u * LD, rr * Math.cos(f) - rc, rr * Math.sin(f)]; };
+          PW.add(sid, slab(10, 8, P), 'cowlWhite', { into: piv });
+          const fb = new THREE.Group(); fb.position.set(-.34, P(.944, 0, 1)[1] - .008, 0); piv.add(fb);                                          // drag link housing bracket
+          PW.kit.box(sid, fb, [0, 0, 0], [.05, .016, .03], 'greyPrimer', { round: .004 });
+          for (const s of [-1, 1]) { const zc = rp * Math.sin(ph * .8) * s, yc = rp * Math.cos(ph * .8) - rc;                                     // hinge fittings and the wall's clevises
+            PW.kit.box(sid, piv, [-.012, yc - .012, zc], [.03, .016, .02], 'steel', { round: .003 });
+            PW.kit.cyl(sid, piv, [0, yc - .006, zc], 'z', .005, .03, 'steel'); }
+          const ly = P(.944, 0, 1)[1] - .016, lx = -.34;                                                                                       // the link's door end, in the pivot frame
+          const rF = rIFS(xF) + .025, A0x = xh0 + lx, A0r = rc + ly, L = Math.hypot(A0x - xF, A0r - rF);
+          const fi = PW.kit.frame(did, xF, hOf((d0 + d1) / 2), rIFS(xF));                                                                    // drag link fitting on the IFS
+          PW.kit.box(did, fi, [0, .009, 0], [.05, .018, .036], 'greyPrimer', { round: .004 }); PW.kit.box(did, fi, [0, .02, 0], [.022, .014, .028], 'greyPrimer', { round: .003 });
+          const link = new THREE.Group(); PW.parts.get(did).obj.add(link);
+          PW.add(did, new THREE.CylinderGeometry(1, 1, L - .022, 12).scale(.012, 1, .0045), 'castAl', { into: link, solid: true });                    // airfoil-section rod
+          for (const s of [-1, 1]) PW.add(did, new THREE.CylinderGeometry(.0085, .0085, .014, 14).rotateX(Math.PI / 2).translate(0, s * L / 2, 0), 'steel', { into: link, solid: true });   // spherical bearing eyes
+          S.blockers.push({ piv, a, xh0, rc, lx, ly, xF, rF, L, link });
+          aimLink(S.blockers[S.blockers.length - 1], 0, 0); } }
       /* p.374-375: the lockout pin hole in the sleeve's lower edge near its forward end, covered by a blanking plate unless the reverser
          is locked out; the pin then goes down through it into the lug on the latch beam */
-      { const fb = PW.kit.frame(sid, xSF - .04, sg > 0 ? 5.955 : 6.045, rOut(xSF - .04));
+      { const fb = PW.kit.frame(sid, xJ2 - .10, hOf(173.4), rOut(xJ2 - .10));
         PW.kit.box(sid, fb, [0, .0008, 0], [.036, .0016, .024], 'greyPrimer', { round: .008 });
         for (const s of [-1, 1]) PW.kit.hex(sid, fb, [s * .011, .0021, 0], 'y', .0024, .0012, 'steel'); }
       /* the IFS half: white composite wall facing the fan stream, quilted stainless blanket facing the core, bare metal aft core cowl */
@@ -220,12 +362,16 @@
             : 'The bottom edge of the left door. Latches 1 to 5 hook onto the right door: open them 5, 4, 3, 2, 1 and close them 1 to 5, using the closure assist assembly to pull the doors together first. Latches 2 and 3 are inside the bay behind the latch access door.\n\nThe bifurcation latch system (BLS) pins the two IFS halves together at the bottom to limit IFS deflection if an air duct bursts. Its handle is painted red and is worked through the latch access door; if it is not locked, the latch access door cannot be closed. Open the BLS before the latches and close it last.\n\nThe two reverser lockout pins are stowed in sockets in the same bay. To lock the reversers out for MEL dispatch, first pin the ICU\'s inhibit lever, then fit a pin down through each sleeve\'s lower edge into the lug on its latch beam, and stow the sleeves\' blanking plates here in their place (p.372-375). For maintenance alone the ICU inhibit is enough.' });
         /* the web, 1.6 deg in from the door's bottom edge, from just aft of the bifurcation pass-through panel to the sleeve; the drain
            mast passes down between the two webs */
-        const aW = aB - sg * deg(.6), hW = aW / (Math.PI / 6), web = new THREE.Shape(), xa = -1.10, xb = xSF, n = 8, pts = [];
+        const aW = aB - sg * deg(.6), hW = aW / (Math.PI / 6), web = new THREE.Shape(), xa = -1.10, xb = xTE - .05, n = 8, pts = [];
         for (let i = 0; i <= n; i++) { const xx = xa + (xb - xa) * i / n; pts.push([xx, rDuct(xx) + .012]); } for (let i = n; i >= 0; i--) { const xx = xa + (xb - xa) * i / n; pts.push([xx, rOut(xx) - .022]); }
         web.moveTo(...pts[0]); pts.slice(1).forEach(p => web.lineTo(...p)); const wg = new THREE.ExtrudeGeometry(web, { depth: .008, bevelEnabled: false }); wg.translate(0, 0, -.004);
         const wm = new THREE.Mesh(wg); wm.rotation.set(aW, 0, 0); PW.add(lb, wm, 'lime', { solid: true });
+        /* the latch beam's fairing, the bottom of the nacelle between the two sleeves' lower edges, 6 deg either side of 6 o'clock
+           (p.29-31, TTM 01 fig. 28): the flush handles of latches 1, 4 and 5 and the latch access door are in the left one */
+        { const fs = []; for (let i = 0; i <= 12; i++) { const xx = xJ2 - .002 + (xTE - .028 - xJ2 + .002) * i / 12; fs.push([xx, rOut(xx)]); }
+          PW.add(lb, G.revolve(G.shellProfile(fs, fs.map(([xx, r]) => [xx, r - .02])), Object.assign({ seg: 3 }, span(174, 180))), 'nacellePaint'); }
         /* latches: [x, radius, has an outer handle]; the hooks on the left web reach across onto the keepers on the right */
-        for (const [xx, rr, outside] of [[-.99, rOut(-.99) - .035, true], [-1.22, rOut(-1.22) - .06, false], [-1.40, rDuct(-1.40) + .05, false], [-1.62, rOut(-1.62) - .035, true], [-1.88, rOut(-1.88) - .035, true]]) {
+        for (const [xx, rr, outside] of [[-.99, rOut(-.99) - .035, true], [-1.22, rOut(-1.22) - .06, false], [-1.40, rDuct(-1.40) + .05, false], [-1.81, rOut(-1.81) - .035, true], [-2.09, rOut(-2.09) - .035, true]]) {
           const f = Kt.frame(lb, xx, xx < -1.1 ? hW : hB, rr);
           if (sg < 0) { Kt.box(lb, f, [0, 0, -.017], [.1, .03, .03], 'steel', { round: .004 }); Kt.box(lb, f, [.05, 0, -.036], [.016, .01, .014], 'steel', { round: .003 });   // hook body and hook
             if (outside) { const g = Kt.frame(lb, xx, hB + .04, rOut(xx)); Kt.box(lb, g, [0, -.0005, 0], [.156, .003, .04], 'darkBox', { round: .0015 }); Kt.box(lb, g, [0, .0008, 0], [.15, .003, .034], 'greyPrimer', { round: .004 }); } }
@@ -251,7 +397,7 @@
         /* p.372-375: reverser lockout, for MEL dispatch or maintenance. With the ICU's inhibit lever pinned, a lockout pin goes down
            through the stowed sleeve's lower edge into this lug, so the sleeve cannot deploy. The two pins live in sockets in the bay at
            the latch access panel; when they are fitted, the sleeves' blanking plates are stowed there instead */
-        { const fu = Kt.frame(lb, xSF - .04, hW, rOut(xSF - .04) - .03);
+        { const fu = Kt.frame(lb, xJ2 - .10, hOf(173.4), rOut(xJ2 - .10) - .035);
           Kt.box(lb, fu, [0, 0, 0], [.03, .024, .028], 'steel', { round: .004 }); Kt.cyl(lb, fu, [0, .0125, 0], 'y', .0055, .002, 'darkBox'); }
         if (sg < 0) for (const dx of [0, .032]) { const fp = Kt.frame(lb, -1.45 - dx, hB + .07, rOut(-1.46) - .06);
           Kt.box(lb, fp, [0, .005, 0], [.024, .01, .024], 'steel', { round: .003 });                                                 // stowage socket
@@ -260,28 +406,31 @@
       /* the latch access door on the bottom of the left door, ahead of the drain mast (p.31) */
       if (sg < 0) { PW.part('tr-latch-access-door', { parent: pid, attach: hinge, label: 'Latch access door', src: 'p.24, p.30-31, p.50',
           info: 'Door in the bottom of the left reverser door, ahead of the drain mast. Behind it are latches 2 and 3, the red bifurcation latch system handle and the closure assist assembly. It will not close unless the BLS handle is locked, so a latch access door that will not close means the BLS is not latched. The drain mast exits next to it, and the drain map placard is inside it.' });
-        const f = PW.kit.frame('tr-latch-access-door', -1.34, 6.2, rOut(-1.34));
-        PW.kit.box('tr-latch-access-door', f, [0, .0002, 0], [.326, .003, .146], 'darkBox', { round: .002 }); PW.kit.box('tr-latch-access-door', f, [0, .0016, 0], [.32, .004, .14], 'nacellePaint', { round: .008 });
-        for (const s of [-1, 1]) PW.kit.box('tr-latch-access-door', f, [s * .12, .0036, .05], [.026, .002, .016], 'greyPrimer', { round: .003 }); }
+        const f = PW.kit.frame('tr-latch-access-door', -1.34, 6.1, rOut(-1.34));
+        PW.kit.box('tr-latch-access-door', f, [0, .0002, 0], [.326, .003, .1], 'darkBox', { round: .002 }); PW.kit.box('tr-latch-access-door', f, [0, .0016, 0], [.32, .004, .094], 'nacellePaint', { round: .008 });
+        for (const s of [-1, 1]) PW.kit.box('tr-latch-access-door', f, [s * .12, .0036, .03], [.026, .002, .016], 'greyPrimer', { round: .003 }); }
       { const a = sg > 0 ? t0 : t0 + tl, m = new THREE.Mesh(G.roundedBox(1.5, .05, .04, .01)); m.position.copy(G.onRing(-1.75, yhT + .03, a)); m.rotation.x = a; PW.add(pid, m, 'nickel', { solid: true, into: hinge }); }
       /* actuation (p.334-351, p.347): on the torque box at the forward end of the door, the locking feedback actuator in the upper section
          and the locking actuator in the lower one, joined round the ring by the flexible drive shaft and the deploy tube, with the stow,
-         deploy and return lines coming down from the hinge beam. The rods belong to the sleeve and slide with it (0.48 m stroke, still
-         inside the bodies at full deploy). The track lock unit sits on the latch beam at the sleeve's forward end, its valve nearby */
+         deploy and return lines coming down from the hinge beam. The bodies run aft between the cascade boxes; the rods belong to the
+         sleeve and slide with it (0.54 m stroke, still inside the bodies at full deploy), their rod ends on the aft wall of the sleeve's
+         cascade cavity. The track lock valves are on the torque box at about 5 and 7 o'clock (p.352), the track lock units on the latch
+         beams (p.354) */
       { const Kt = PW.kit, aid = `${pid}-actuators`, xm = xJ2 - .075, ra = 1.06, hU = sg > 0 ? 1.5 : 10.5, hL = sg > 0 ? 4.5 : 7.5, hBot = (sg > 0 ? t0 + tl : t0) / (Math.PI / 6);
-        PW.part(aid, { parent: pid, attach: hinge, label: `${side === 'left' ? 'Left' : 'Right'} sleeve actuators, drive shaft and track lock`, src: 'p.326-351',
-          info: 'Two hydraulic jackscrew actuators move this door\'s translating sleeve. The locking feedback actuator in the upper section carries the LVDT on its forward end that reports sleeve position to the EEC; the locking actuator in the lower section carries the manual drive unit. Each has an internal lock released by hydraulic pressure, a proximity sensor on the lock and a manual lock lever. The flexible drive shaft keeps the two in step and the deploy tube feeds the locking actuator.\n\nThe track lock unit on the latch beam, worked by its track lock valve, locks the stowed sleeve: with the actuator locks it gives mechanical protection against an inadvertent deploy. To move a sleeve by hand, release the manual locks and turn the manual drive unit; its torque limiter protects the actuators.' });
+        PW.part(aid, { parent: pid, attach: hinge, label: `${side === 'left' ? 'Left' : 'Right'} sleeve actuators, drive shaft and track lock`, src: 'p.326-357',
+          info: 'Two hydraulic actuators on the torque box move this door\'s translating sleeve, their bodies running aft between the cascade boxes and their rod ends on the sleeve. The locking feedback actuator in the upper section carries the LVDT on its forward end that reports sleeve position to the EEC; the locking actuator in the lower section carries the manual drive unit. Each has an internal lock released by hydraulic pressure, a proximity sensor on the lock and a manual lock lever. The flexible drive shaft keeps the two in step and the deploy tube feeds the locking actuator.\n\nThe track lock unit on the latch beam pushes a spring-loaded bolt into the sleeve\'s path, so the sleeve cannot deploy even if the actuators do; two proximity sensors report the bolt to the EEC. Its track lock valve, on the torque box next to the locking actuator, takes pressure from that actuator\'s head and is opened by the CDC to pull the bolt back; it stays open until the reverser is stowed again. To move a sleeve by hand, release the manual locks and turn the manual drive unit; its torque limiter protects the actuators.' });
         for (const [h, feedback] of [[hU, true], [hL, false]]) {
           const f = Kt.frame(aid, xm, h, ra);
           Kt.box(aid, f, [.02, 0, 0], [.05, .075, .075], 'steel', { round: .008 });                                              // gimbal mount on the torque box
-          Kt.cyl(aid, f, [-.27, 0, 0], 'x', .033, .5, 'steel', { edge: .006 }); Kt.cyl(aid, f, [-.525, 0, 0], 'x', .027, .03, 'steel');   // body and rod gland
-          for (const xr of [-.12, -.36]) Kt.tube(aid, f, [xr, 0, 0], 'x', .033, .037, .012, 'steel');
+          Kt.cyl(aid, f, [-.33, 0, 0], 'x', .033, .62, 'steel', { edge: .006 }); Kt.cyl(aid, f, [-.655, 0, 0], 'x', .027, .03, 'steel');   // body and rod gland
+          for (const xr of [-.15, -.45]) Kt.tube(aid, f, [xr, 0, 0], 'x', .033, .037, .012, 'steel');
           Kt.cyl(aid, f, [-.1, .038, 0], 'y', .009, .02, 'steel'); Kt.connector(aid, f, [-.1, .048, 0], 'y', .007, { lead: 'x' });    // lock proximity sensor
           Kt.box(aid, f, [-.18, .036, .02], [.05, .01, .012], 'steel', { round: .003, mat: { color: '#c0262b', metalness: .2, roughness: .5 } });   // manual lock lever
-          for (const xr of [-.06, -.44]) Kt.fitting(aid, f, [xr, .028, -.03 * sg], 'y', .008);                                      // deploy (head) and stow (rod end) ports, on the hinge side
+          for (const xr of [-.06, -.60]) Kt.fitting(aid, f, [xr, .028, -.03 * sg], 'y', .008);                                      // deploy (head) and stow (rod end) ports, on the hinge side
           if (feedback) { Kt.cyl(aid, f, [.085, 0, 0], 'x', .016, .1, 'steel'); Kt.connector(aid, f, [.135, 0, 0], 'x', .009, { lead: 'y' }); }   // LVDT
           else { Kt.cyl(aid, f, [.035, .04, 0], 'y', .015, .03, 'steel'); Kt.hex(aid, f, [.035, .06, 0], 'y', .011, .01, 'steel'); Kt.cyl(aid, f, [.035, .068, 0], 'y', .008, .006, 'capBlack'); }   // manual drive unit
-          const g = Kt.frame(sid, xm, h, ra); Kt.cyl(sid, g, [-.49, 0, 0], 'x', .016, .94, 'steel'); Kt.box(sid, g, [-.96, 0, 0], [.04, .05, .05], 'steel', { round: .006 }); }   // rod and rod end on the sleeve
+          const g = Kt.frame(sid, xm, h, ra); Kt.cyl(sid, g, [-.39, 0, 0], 'x', .016, .62, 'steel'); Kt.box(sid, g, [-.72, 0, 0], [.04, .05, .05], 'steel', { round: .006 });   // rod and rod end on the sleeve
+          Kt.box(sid, g, [-.748, 0, 0], [.014, .07, .06], 'greyPrimer', { round: .004 }); }                                         // its clevis on the cavity's aft wall
         const arc = (h0, h1, r, dx) => { const pts = [], n = Math.max(1, Math.ceil(Math.abs(h1 - h0) / .2)); for (let i = 0; i <= n; i++) pts.push(G.onRing(xm + dx, r, G.clock(h0 + (h1 - h0) * i / n))); return pts; };
         /* a routed line on this door, tagged for the connection audit like build-external's (hydraulic tube or braided harness) */
         const tube = (pts, r, mat, kind) => { const tg = G.tube(pts, r, { radial: 8, tension: .3 }), harn = kind === 'harness';
@@ -292,34 +441,67 @@
            increasing clock */
         const loc = (x0, h, r0, lx, ly, lz) => { const a = G.clock(h); return new THREE.Vector3(x0 + lx, (r0 + ly) * Math.cos(a) - lz * Math.sin(a), (r0 + ly) * Math.sin(a) + lz * Math.cos(a)); };
         const U = (lx, ly, lz) => loc(xm, hU, ra, lx, ly, lz), Lw = (lx, ly, lz) => loc(xm, hL, ra, lx, ly, lz);
-        const hV = hBot - sg * .18, hT = hBot - sg * .1, V = (lx, ly, lz) => loc(-1.72, hV, 1.025, lx, ly, lz), T = (lx, ly, lz) => loc(-1.93, hT, 1.02, lx, ly, lz);
+        const hV = hOf(150), hT = hBot - sg * .1, V = (lx, ly, lz) => loc(xm - .025, hV, 1.075, lx, ly, lz), T = (lx, ly, lz) => loc(-1.93, hT, 1.0, lx, ly, lz);
         tube(arc(hU, hL, ra + .048, -.002), .009, 'blackHose');                                                                  // flexible drive shaft
         /* p.347-349: the deploy tube leaves the upper actuator's head and runs down the torque box into the lower actuator's head */
         tube([U(-.03, .02, -.03 * zh), U(-.03, .03, -.06 * zh)].concat(arc(hU + .12 * sg, hL - .15 * sg, ra + .03, -.03), [Lw(-.04, .045, .05 * zh), Lw(-.06, .0396, .03 * zh)]), .006, 'tube');
         /* stow, deploy and return lines from the DCU come down from the hinge beam (p.347): deploy into the upper actuator's head, stow
-           along its body (the stow tube) to its rod end and on down the torque box to the lower actuator's rod end; return over the
-           actuators and along the latch beam to the track lock valve, which takes its pressure from the lower actuator's head */
-        tube(arc(hm(.35), hm(1.30), ra + .056, -.084).concat([U(-.10, .06, .07 * zh), U(-.20, .045, .05 * zh), U(-.42, .05, .05 * zh), U(-.44, .045, .035 * zh), U(-.44, .0396, .03 * zh)]), .006, 'tube');   // stow
-        tube(arc(hm(.35), hm(1.36), ra + .038, -.072).concat([U(-.07, .055, .05 * zh), U(-.06, .045, .035 * zh), U(-.06, .0396, .03 * zh)]), .006, 'tube');   // deploy
-        tube([U(-.44, .0396, .03 * zh), U(-.455, .055, .02 * zh), U(-.465, .055, -.03 * zh), U(-.47, .045, -.07 * zh)].concat(arc(hU + .25 * sg, hL - .25 * sg, ra + .04, -.47), [Lw(-.47, .045, .07 * zh), Lw(-.455, .045, .045 * zh), Lw(-.44, .0396, .03 * zh)]), .006, 'tube');   // stow on to the lower actuator
-        tube(arc(hm(.35), hm(1.2), ra + .02, -.06).concat([G.onRing(-1.09, 1.12, G.clock(hm(1.3)))], arc(hm(1.4), hm(5.2), ra + .085, -.04), [G.onRing(-1.25, 1.13, G.clock(hm(5.45))), G.onRing(-1.50, 1.10, G.clock(hm(5.60))), G.onRing(-1.62, 1.065, G.clock(hm(5.72))), V(.09, .03, -.012), V(.0387, 0, -.012)]), .006, 'tube');   // return
-        tube([Lw(-.06, .0396, .03 * zh), Lw(-.05, .07, 0), Lw(-.06, .065, -.06 * zh)].concat(arc(hL + .2 * sg, hm(5.0), ra + .05, -.06), [G.onRing(-1.30, 1.10, G.clock(hm(5.55))), G.onRing(-1.55, 1.075, G.clock(hm(5.70))), V(.09, .02, .012), V(.0387, 0, .012)]), .006, 'tube');   // track lock pressure
+           along its body (the stow tube) to its rod end and on down the torque box to the lower actuator's rod end; return down the
+           torque box to the track lock valve, which takes its pressure from the lower actuator's head and feeds the track lock unit */
+        tube(arc(hm(.35), hm(1.30), ra + .05, -.084).concat([U(-.10, .05, .07 * zh), U(-.30, .045, .05 * zh), U(-.56, .042, .048 * zh), U(-.60, .042, .035 * zh), U(-.60, .0396, .03 * zh)]), .006, 'tube');   // stow, under the harness
+        tube(arc(hm(.35), hm(1.36), ra + .038, -.072).concat([U(-.07, .05, .05 * zh), U(-.06, .045, .035 * zh), U(-.06, .0396, .03 * zh)]), .006, 'tube');   // deploy
+        tube([U(-.60, .0396, .03 * zh), U(-.615, .045, .02 * zh), U(-.625, .045, -.03 * zh), U(-.63, .04, -.07 * zh)].concat(arc(hU + .25 * sg, hL - .25 * sg, ra + .036, -.63), [Lw(-.63, .04, .07 * zh), Lw(-.615, .042, .045 * zh), Lw(-.60, .0396, .03 * zh)]), .006, 'tube');   // stow on to the lower actuator
+        tube(arc(hm(.35), hm(1.2), ra + .02, -.06).concat([G.onRing(-1.09, 1.12, G.clock(hm(1.3)))], arc(hm(1.4), hm(4.75), ra + .085, -.04), [V(0, .03, .075 * zh), V(0, .008, .075 * zh), V(0, .008, .0337 * zh)]), .006, 'tube');   // return, the upper union
+        tube([Lw(-.06, .0396, .03 * zh), Lw(-.055, .07, 0), Lw(-.05, .065, -.07 * zh), loc(xm - .035, hOf(143), 1.09, 0, 0, 0), V(0, -.022, .075 * zh), V(0, -.008, .075 * zh), V(0, -.008, .0337 * zh)], .006, 'tube');   // track lock pressure, the lower
+        /* the track lock valve's two lines aft along the latch beam to the track lock unit, side by side: unlock pressure and return.
+           Low in the latch beam, under the closure assist and the stowed lockout pins and outboard of the BLS rod; they reach the unit's
+           ports from forward, under the harness */
+        for (const [z, th] of [[.012, 175.6], [-.012, 176.2]]) {
+          const zz = z * zh, s = Math.sign(zz) * sg;                                                                             // s: which side of the pair, in door angle
+          tube([V(-.0337, 0, zz), V(-.07, 0, zz), G.onRing(-1.16, 1.08, A(154.5 + s * 1.6)), G.onRing(-1.20, 1.07, A(164 + s * 1.5)), G.onRing(-1.26, 1.058, A(172 + s * .8)), G.onRing(-1.32, 1.04, A(th)), G.onRing(-1.45, 1.035, A(th)),
+            G.onRing(-1.80, 1.035, A(th)), T(.075, .045, zz), T(.025, .05, zz), T(.025, .0337, zz)], .0045, 'tube'); }
         /* the reverser harness (EEC and CDC circuits, p.336) down the torque box from the hinge beam: LVDT and lock sensor on the upper
-           actuator, lock sensor on the lower, then along the latch beam to the track lock valve solenoid and the track lock unit sensor */
-        const tk = arc(hm(.36), hm(4.6), ra + .07, -.13).concat([G.onRing(-1.20, 1.125, G.clock(hm(5.0))), G.onRing(-1.30, 1.11, G.clock(hm(5.75))), G.onRing(-1.55, 1.09, G.clock(hm(5.83))), G.onRing(-1.70, 1.085, G.clock(hm(5.86))), G.onRing(-1.82, 1.075, G.clock(hT)), T(.0326, .0583, 0)]);
+           actuator, lock sensor on the lower, the track lock valve solenoid, then along the latch beam to the two track lock unit sensors */
+        const tk = arc(hm(.36), hm(4.6), ra + .07, -.13).concat([G.onRing(-1.20, 1.125, G.clock(hm(5.0))), G.onRing(-1.30, 1.11, G.clock(hm(5.75))), G.onRing(-1.55, 1.09, G.clock(hm(5.83))), G.onRing(-1.70, 1.085, G.clock(hm(5.86))), G.onRing(-1.84, 1.075, G.clock(hT)), T(.02, .068, .012), T(-.0094, .0583, .012)]);
         tube(tk, .005, 'harness', 'harness');
+        tube([T(-.0094, .0583, -.012), T(.02, .068, -.008), G.onRing(-1.84, 1.075, G.clock(hT))], .004, 'harness', 'harness');                  // the second track lock unit sensor
         const onTk = h => G.onRing(xm - .13, ra + .07, G.clock(hm(h)));
-        { const lc = tube([U(.1521, .0162, 0), U(.1521, .03, 0), U(.12, .05, .025 * zh), U(.04, .055, .04 * zh), U(-.06, .06, .05 * zh), onTk(1.4)], .004, 'harness', 'harness').geometry.userData.curve;   // LVDT
+        { const lc = tube([U(.1521, .0162, 0), U(.1521, .03, 0), U(.12, .05, .025 * zh), U(.04, .058, .04 * zh), U(-.05, .068, .045 * zh), onTk(1.4)], .004, 'harness', 'harness').geometry.userData.curve;   // LVDT, over the deploy line
           let tb = 0, best = Infinity; for (let i = 0; i <= 200; i++) { const d = Math.abs(lc.getPointAt(i / 200).x + .996); if (d < best) { best = d; tb = i / 200; } }
           PW.add(aid, G.alongCurve(lc, [tb], () => new THREE.CylinderGeometry(.009, .009, .05, 12)), 'silicone').userData.isLine = true; }   // grommet through the torque box's forward frame (x -0.967 to -1.025)
         for (const [W, h] of [[U, 1.47], [Lw, 4.47]]) tube([W(-.0874, .0613, 0), W(-.07, .072, 0), W(-.085, .076, .02 * zh), onTk(h)], .004, 'harness', 'harness');   // lock sensors
-        tube([V(.0126, .0563, 0), V(.03, .06, 0), G.onRing(-1.68, 1.086, G.clock(hm(5.86)))], .004, 'harness', 'harness');            // track lock valve solenoid
-        const ft = Kt.frame(aid, -1.93, hT, 1.02);                                                                              // track lock unit on the latch beam
+        tube([V(-.0126, .0583, 0), V(-.05, .075, 0), G.onRing(-1.20, 1.125, G.clock(hm(5.0)))], .004, 'harness', 'harness');            // track lock valve solenoid
+        /* the track lock unit on the latch beam (p.354-355, p.377): block on a pad, the bolt's boss facing aft, two proximity sensors and the
+           two hydraulic ports on top */
+        const ft = Kt.frame(aid, -1.93, hT, 1.0);
         Kt.box(aid, ft, [0, 0, 0], [.09, .05, .045], 'steel', { round: .006 }); Kt.cyl(aid, ft, [-.06, 0, 0], 'x', .008, .03, 'steel');
-        Kt.cyl(aid, ft, [.02, .035, 0], 'y', .009, .02, 'steel'); Kt.connector(aid, ft, [.02, .045, 0], 'y', .007, { lead: 'x' });
-        const fv = Kt.frame(aid, -1.72, hV, 1.025);                                                                               // track lock valve
-        Kt.box(aid, fv, [0, 0, 0], [.06, .04, .04], 'castAl', { round: .005 }); Kt.cyl(aid, fv, [0, .03, 0], 'y', .012, .025, 'darkBox'); Kt.connector(aid, fv, [0, .043, 0], 'y', .007, { lead: 'x' });
-        for (const z of [-.012, .012]) Kt.fitting(aid, fv, [.03, 0, z], 'x', .006); }                                          // return and pressure, facing the lines
+        for (const z of [-.012, .012]) { Kt.cyl(aid, ft, [-.022, .035, z], 'y', .007, .02, 'steel'); Kt.connector(aid, ft, [-.022, .045, z], 'y', .007, { lead: 'x' }); Kt.fitting(aid, ft, [.025, .025, z], 'y', .006); }   // sensors aft, hydraulic ports forward
+        /* the track lock valve on the torque box (p.352-353): block body with its solenoid and connector on top, the supply from the
+           locking actuator and the return to the aircraft on the side toward the actuator, the lines to the track lock unit aft */
+        const fv = Kt.frame(aid, xm - .025, hV, 1.075);
+        Kt.box(aid, fv, [0, 0, 0], [.05, .036, .05], 'castAl', { round: .005 }); Kt.cyl(aid, fv, [0, .028, 0], 'y', .012, .022, 'darkBox'); Kt.connector(aid, fv, [0, .045, 0], 'y', .007, { lead: '-x' });
+        for (const y of [.008, -.008]) Kt.fitting(aid, fv, [0, y, .025 * zh], zh > 0 ? 'z' : '-z', .006);
+        for (const z of [-.012, .012]) Kt.fitting(aid, fv, [-.025, 0, z], '-x', .006); }
+      /* the door opening (PDOS) locking actuator (p.32, p.36, p.41, p.43): connected between the fan case and the torque box, it lies
+         along the aft end of the fan case, retracted, from its bearing end on a bracket at 3:45 (8:15) up to its rod end on a lug on the
+         torque box's forward face, centred on 3 (9) o'clock. It extends to lift the door and its internal lock holds it open. The
+         powerpack's line reaches it at the quick-disconnect by the bearing end */
+      { const Kt = PW.kit, hF = sg > 0 ? 3.75 : 8.25, Af = G.onRing(-.86, 1.06, G.clock(hF)), Ad = G.onRing(-.955, 1.08, A(73.5));
+        const fl = Kt.frame('pdos', -.86, hF, .968);
+        Kt.box('pdos', fl, [0, .05, 0], [.03, .1, .045], 'lime', { round: .004 }); Kt.fitting('pdos', fl, [.015, .055, 0], 'x', .009);       // bracket on the fan case's aft ring, and the quick-disconnect
+        const fd = Kt.frame(pid, -.957, hOf(73.5), 1.08, { into: hinge }); Kt.box(pid, fd, [0, 0, 0], [.02, .05, .045], 'lime', { round: .004 });   // lug on the torque box
+        strut('pdos', PW.parts.get('pdos').obj, [[.03, .62, 'steel'], [.022, .6, 'steel'], [.015, .58, 'steel']], () => [Af, doorOut(hd, Ad)], .02);
+        /* the door's telescopic hold-open rod (p.40-43): pivoted on the torque box's forward face, stowed up along it with its top end in
+           the stow bracket; with the door open it goes to the HOR open fitting on the fan case just below the actuator's bracket. A
+           red band shows when its lock collar is unlocked, green when locked */
+        const hid = `${pid}-hor`, Pv = G.onRing(-.955, 1.12, A(129)), Sw = G.onRing(-.955, 1.14, A(97.5)), Ft = G.onRing(-.86, 1.03, G.clock(sg > 0 ? 4.0 : 8.0));
+        PW.part(hid, { parent: 'pdos', attach: hinge, label: `${side === 'left' ? 'Left' : 'Right'} reverser door hold-open rod`, src: 'p.32, p.36-43',
+          info: 'Telescopic hold-open rod for this reverser door. When not in use it is stowed on the door\'s torque box, its top end in the stow bracket. With the door opened by the locking actuator, release the top end and fit it to the HOR open fitting on the fan case. The actuator carries 100 % of the load in normal operation; the rod is the failsafe.\n\nLock collars extend and retract it: a red band shows when it is unlocked, green when it is locked. Do not go between the engine and an open reverser door until the rod is installed: if the door opening system fails, the heavy door can close quickly.' });
+        for (const [p, sz] of [[Pv, [.03, .045, .05]], [Sw, [.025, .03, .03]]]) { const a = Math.atan2(p.z, p.y), f = Kt.frame(hid, p.x - .012, a / (Math.PI / 6), Math.hypot(p.y, p.z), { into: hinge });
+          Kt.box(hid, f, [0, 0, 0], sz, 'greyPrimer', { round: .004 }); }                                                                  // pivot and stow brackets
+        const ff = Kt.frame('pdos', -.86, sg > 0 ? 4.0 : 8.0, .968); Kt.box('pdos', ff, [0, .03, 0], [.03, .06, .04], 'darkBox', { round: .004 }); Kt.cyl('pdos', ff, [0, .062, 0], 'x', .006, .04, 'steel');   // HOR open fitting
+        const ln = Pv.distanceTo(Sw);
+        strut(hid, hinge, [[.016, ln * .9, 'steel'], [.013, ln * .9, 'steel'], [.0105, ln * .9, 'steel']], () => { const w = ease01((opened(hd) - .6) / .4); return [Pv, w > 0 ? Sw.clone().lerp(doorIn(hd, Ft), w) : Sw]; }, .018); }
     }
     /* IFS features: oil tank access door (right, 3 o'clock), AOC window and pressure-relief door (left, 9 o'clock), ACC scoop (right, 1:30) */
     const ifsPanel = (pid, parentDoor, label, info, xx, h, l, w, mat) => { PW.part(pid, { parent: parentDoor, label, info, src: 'p.20-23', attach: PW.parts.get(parentDoor).obj.children[0] }); const a = G.clock(h);
@@ -370,8 +552,10 @@
     PW.anim.push(dt => { const k = 1 - Math.exp(-3.5 * dt), s = Math.min(1, Math.max(0, (PW.explodeT || 0) / .12)), ex = s * s * (3 - 2 * s);
       for (const key of ['fan', 'tr', 'sleeve']) S[key] += (S.want[key] - S[key]) * k;
       for (const h of S.hinges) h.obj.rotation.x = h.sign * h.max * Math.max(S[h.axis], ex);
-      for (const sl of S.sleeves) sl.position.x = -.48 * S.sleeve;
-      S.blockers.forEach(p => { p.rotation.set(p.userData.a, 0, 0); p.rotateZ(deg(62) * S.sleeve); });
+      const u = S.stroke * S.sleeve;
+      for (const sl of S.sleeves) sl.position.x = -u;
+      for (const b of S.blockers) { const th = doorAngle(b, u); b.piv.rotation.set(b.a, 0, 0); b.piv.rotateZ(th); aimLink(b, u, th); }
+      for (const st of S.struts) st.update();
     });
     PW.addControl && PW.addControl('Cowls', [
       { label: 'Closed', on: true, apply: () => { S.want.fan = 0; S.want.tr = 0; } },

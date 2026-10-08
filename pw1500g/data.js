@@ -12,7 +12,7 @@
      (set from the reconciled cross-section; see geometry notes). */
   D.ZS_FAN_LE = 690.0;                 // placeholder until geometry-final.json is in
   D.zsToX = zs => (D.GEN && D.GEN.zsToX ? D.GEN.zsToX.a + D.GEN.zsToX.b * zs : (D.ZS_FAN_LE - zs) * IN);   // reconciled: fan tip LE at ZS 694.0
-  D.ZS = { inletHighlight: 647.1, inletLipBottom: 649.2, inletFanCowl: 678.9, fanCowlTR: 732.0, sleeveFwd: 772.0, sleeveTE: 794.0,
+  D.ZS = { inletHighlight: 647.1, inletLipBottom: 649.2, inletFanCowl: 678.9, fanCowlTR: 732.0, sleeveSeam: 771.0, sleeveTE: 794.0,
            pylonFairingEnd: 809.6, coreNozzle: 816.2, plugTip: 833.3, pylonFront: 679.1, pylonAft: 910.8 };
   /* the nacelle's outer line (radius m against ZS), converted from the explorer's NAC table (aircraft X = 23.612 - 0.0254 ZS),
      which was measured off Fig. 28 and scaled to the 2.41 m (95 in) maximum diameter of TTM ch. 71 Table 1 */

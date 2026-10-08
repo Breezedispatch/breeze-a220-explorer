@@ -1128,7 +1128,7 @@
       Kt.label('phmu', f, [xc, .0408, -.02], 'y', 'z', .04, .03, 'white'); Kt.label('phmu', f, [xc, .0408, -.065], 'y', 'z', .03, .02, 'dataBlack');
       for (const s of [-1, 1]) Kt.connector('phmu', f, [xc - .06, 0, s * .105], s > 0 ? 'z' : '-z', .013, { lead: s > 0 ? 'z' : '-z' }); }
     PW.part('pdos', { label: 'Power door opening system', explode: [0, .3, .4], src: 'p.32-43',
-      info: 'Hydraulic powerpack on the fan case at about 2 o\'clock and one opening actuator per reverser door, which lifts the door to the hold-open rod position. A hand pump can be connected at the quick-disconnect instead; the TTM notes that newer production aircraft have no powerpack and use the hand pump only. Never stand under a door held only by its actuator: install the hold-open rods.' });
+      info: 'Opens the thrust reverser doors, one at a time, and supports them open (p.32-43). An electrohydraulic powerpack on the fan case, an AC motor driving a gear pump, makes 2300 psi for two locking actuators, one per door, each connected between the fan case and its door\'s torque box. It works only on the ground with the engine shut down (weight on wheels and the EEC\'s engine-off signal, through the CDC): the left engine\'s motor runs on AC BUS 1 with control from DC BUS 1, the right engine\'s on AC BUS 2 and DC BUS 2. A thermal switch stops an overheating motor.\n\nTo open a door, hold its T/R door switch on the fan case until the actuator is fully extended and for 5 seconds more; the pressure-relief valve opens, and on release the actuator settles onto its internal mechanical lock. Then fit the hold-open rod, the failsafe. To close, refit the rod in its stow bracket and hold the switch: the actuator extends slightly, the lock releases, and the door\'s weight closes it, slowed by an internal restrictor. Make sure the V-groove blade and the alignment pins engage. Without power, a hand pump on the actuator\'s quick-disconnect opens the door; the TTM notes that newer aircraft have the hand pump only.\n\nThe powerpack is serviced with engine oil: dipstick under the filler cap, L 0.74 L, N 0.82 L, H 0.89 L, with the doors closed. Cautions: the inboard reverser doors can hit the slats if they are extended, and pumping by hand can overflow the reservoir.' });
     /* p.33-35: the powerpack at the aft end of the fan case on the right: an AC motor driving a gear pump, a reservoir and manifold
        with the solenoid valve, and the hydraulic line down to the right door's locking actuator */
     { const f = Kt.frame('pdos', -.555, 2.2, .97);
@@ -1143,11 +1143,12 @@
       /* p.32-37: a hydraulic line with a quick-disconnect at the far end to each door's locking actuator, the right one short, the left
          one down the aft flange and round the bottom of the fan case on its aft mount ring (p.37), under the cowl anti-ice duct, the
          W03 and W04 harnesses and the ignition cables where they lift over the ring */
-      line('pdos', [P(-.655, 2.3, 1.0), P(-.70, 2.55, 1.03), P(-.76, 2.85, 1.025), P(-.80, 3.0, 1.0)], .007, 'black', { clamps: 1 });
-      { const ring = []; for (let h = 3.4; h < 8.5; h += .4) ring.push(P(h < 4.2 ? -.72 - (h - 3.4) * .0625 : h > 7.6 ? -.77 + (h - 7.6) * .05 : -.77, h, 1.008));
-        line('pdos', [P(-.6416, 2.242, 1.0), P(-.665, 2.26, 1.005), P(-.69, 2.5, 1.008), P(-.705, 2.9, 1.008)].concat(ring, [P(-.73, 8.6, 1.008), P(-.765, 8.85, 1.006), P(-.80, 9.0, 1.0)]), .005, 'black', { clamps: 6 }); } }
-    /* the door locking actuators, on the fan case at 3 and 9 o'clock (p.36; at 4 and 8 until 2026-10-08) */
-    for (const h of [3, 9]) line('pdos', [P(-.80, h, 1.0), P(-1.0, h, 1.05)], .022, 'tube', { clamps: 0 });
+      line('pdos', [P(-.655, 2.3, 1.0), P(-.70, 2.6, 1.04), P(-.76, 3.1, 1.05), P(-.80, 3.55, 1.05), P(-.818, 3.72, 1.026), P(-.832, 3.75, 1.023)], .007, 'black', { clamps: 1 });
+      { const ring = []; for (let h = 3.4; h < 8.3; h += .4) ring.push(P(h < 4.2 ? -.72 - (h - 3.4) * .0625 : h > 7.6 ? -.77 + (h - 7.6) * .05 : -.77, h, 1.008));
+        line('pdos', [P(-.6416, 2.242, 1.0), P(-.665, 2.26, 1.005), P(-.69, 2.5, 1.008), P(-.705, 2.9, 1.008)].concat(ring, [P(-.775, 8.22, 1.025), P(-.815, 8.245, 1.025), P(-.832, 8.25, 1.023)]), .005, 'black', { clamps: 6 }); } }
+    /* the door locking actuators themselves (p.32, p.36, p.41: between the fan case at 3:45 and 8:15 and the torque boxes, centred on 3
+       and 9 o'clock) are built with the reverser doors in build-nacelle.js, since they follow the doors open; these lines end at their
+       quick-disconnects */
     /* p.32-37: one door switch per door on the aft fan case (p.36: 4 and 8 o'clock; the left one sits at 7:42, below the ignition
        exciter, which fills 8 o'clock), a guarded push switch in a small housing on a bracket. Their leads go to the powerpack's harness:
        the right one up the case, the left one round the bottom of the case just ahead of the mount ring, under the cowl anti-ice duct
