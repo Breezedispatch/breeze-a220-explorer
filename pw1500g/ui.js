@@ -121,10 +121,13 @@
   function recentreCut() { if (!cutSolo) return; PW.root.updateMatrixWorld(true); const box = new THREE.Box3(); for (const m of PW.meshesOf(cutSolo)) if (m.visible) box.expandByObject(m);
     if (!box.isEmpty()) { box.getCenter(PW.cut.pivot); PW.setCutPlane(null); } }
   document.getElementById('cutOff').oninput = e => PW.setCutPlane(null, +e.target.value);
-  /* exploding spreads the engine over about 11 m: pull the camera back as it opens so the whole breakdown stays in view */
+  /* exploding opens the engine in layers and finally spreads it over about 11 m: pull the camera back as each layer opens so the
+     whole breakdown stays in view (the stretches match the layers in build-nacelle.js) */
   let lastT = 0;
+  const ease = s => (s <= 0 ? 0 : s >= 1 ? 1 : s * s * (3 - 2 * s));
+  const reach = t => 6 + 3 * ease(t / .22) + 1.5 * ease((t - .18) / .27) + 1.5 * ease((t - .4) / .28) + 6 * ease((t - .62) / .38);
   document.getElementById('explode').oninput = e => { const t = +e.target.value; PW.setExplode(t);
-    if (t > lastT) { const W = PW.ctl.want; W.r = Math.max(W.r, 9 + 9 * t); W.target.x = W.target.x + ((-1.3 - .4 * t) - W.target.x) * .5; }
+    if (t > lastT) { const W = PW.ctl.want; W.r = Math.max(W.r, reach(t)); W.target.x = W.target.x + ((-1.3 - 1.3 * ease((t - .62) / .38)) - W.target.x) * .5; }
     lastT = t; };
   let nacMode = 'on';
   function setNacelle(m) { nacMode = m; const ids = PW.NACELLE_IDS || []; for (const id of ids) { PW.setHidden(id, m === 'off'); PW.setGhost(id, m === 'ghost'); } syncTree(); PW.applyCut(); }

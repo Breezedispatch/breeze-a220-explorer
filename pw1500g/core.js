@@ -286,26 +286,32 @@
   };
 
   /* ---------------- explode ---------------- */
-  /* a part hung on a spool or hinge is not carried by its module's group, so it adds its ancestors' explode moves itself */
-  /* Exploded, routed tubes, hoses and harnesses (meshes marked isLine) and parts marked explodeHide (sensors spread over several
-     modules, links, loops) are put away, as on a module breakdown drawing; they come back when the engine is put together again */
+  /* The engine opens from the outside in. Each part's explode is a list of staged moves, p.moves = [{ v, a, b }]: move v eased in
+     over its own stretch a..b of the slider, so the nacelle comes off first, then the dressing, the accessories, and last the core
+     modules. A part with no staged moves uses p.explode over the whole slider. Nothing is put away: tubes and harnesses travel with
+     their parts. A part hung on a spool or hinge is not carried by its module's group, so it adds its ancestors' moves itself */
   /* Parts pulled out with the Move tool keep their offset in world space (p.dragW). It is turned into the frame of whatever the part
      hangs from each time, so a dragged rotor stays put while its spool turns and a part on a door keeps its place as the door swings */
   /* A part hung from a spool (shafts, rotors) takes its explode offset in world space as well: applied in the spool's own frame, a
      sideways offset would swing round the engine axis as the spool turns. Such offsets are re-applied every frame while the engine runs */
-  const qInv = new THREE.Quaternion(), wv = new THREE.Vector3();
+  const qInv = new THREE.Quaternion(), wv = new THREE.Vector3(), anc = new THREE.Vector3();
+  const ease = s => (s <= 0 ? 0 : s >= 1 ? 1 : s * s * (3 - 2 * s));
+  PW.explodeAt = function (p, t, out) { out.set(0, 0, 0);
+    if (p.moves && p.moves.length) { for (const m of p.moves) out.addScaledVector(m.v, ease((t - m.a) / Math.max(1e-6, m.b - m.a))); }
+    else out.addScaledVector(p.explode, t);
+    return out; };
+  const hasMove = p => (p.moves && p.moves.length) || p.explode.lengthSq() > 0;
   PW.setExplode = function (t) {
-    PW.explodeT = t; const away = t > .02; let any = false, spin = false;
+    PW.explodeT = t; let any = false, spin = false;
     for (const p of PW.parts.values()) {
-      if (p.explodeHide) p.obj.visible = !p.hidden && !away;
-      for (const m of p.meshes) if (m.userData.isLine) m.visible = !away;
-      const v = p.explode.clone(); wv.set(0, 0, 0); if (p.dragW) wv.add(p.dragW);
-      if (p.detached) { for (let q = PW.parts.get(p.parent); q; q = q.parent && PW.parts.get(q.parent)) { v.add(q.explode); if (q.dragW) wv.add(q.dragW); }
-        wv.addScaledVector(v, t); v.set(0, 0, 0); if (t > 0) spin = true; }
+      const v = PW.explodeAt(p, t, new THREE.Vector3()); wv.set(0, 0, 0); if (p.dragW) wv.add(p.dragW);
+      let staged = hasMove(p);
+      if (p.detached) { for (let q = PW.parts.get(p.parent); q; q = q.parent && PW.parts.get(q.parent)) { v.add(PW.explodeAt(q, t, anc)); staged = staged || hasMove(q); if (q.dragW) wv.add(q.dragW); }
+        wv.add(v); v.set(0, 0, 0); if (t > 0 && staged) spin = true; }
       if (p.dragW) any = true;
       const moved = wv.lengthSq() > 0;
-      if (!v.lengthSq() && !moved && !p.wasDragged) continue;
-      p.obj.position.copy(p.base).addScaledVector(v, t);
+      if (!staged && !moved && !p.wasDragged) continue;
+      p.obj.position.copy(p.base).add(v);
       if (moved) { p.obj.parent.getWorldQuaternion(qInv).invert(); p.obj.position.add(wv.clone().applyQuaternion(qInv)); }
       p.wasDragged = moved; }
     PW.anyDrag = any; PW.explodeSpin = spin;

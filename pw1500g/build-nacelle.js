@@ -320,10 +320,11 @@
         PW.kit.box('pylon', f, [0, 0, s * (hw + .0005)], [.266, .206, .003], 'darkBox', { round: .002 }); PW.kit.box('pylon', f, [0, 0, s * (hw + .0018)], [.26, .2, .003], 'whitePaint', { round: .012 }); }
     }
 
-    /* the nacelle animation: hinges, sleeves and blocker doors follow the toolbar state */
-    PW.anim.push(dt => { const k = 1 - Math.exp(-3.5 * dt);
+    /* the nacelle animation: hinges, sleeves and blocker doors follow the toolbar state; the first part of the explode slider swings
+       the fan cowls and reverser doors open as well, before they lift away */
+    PW.anim.push(dt => { const k = 1 - Math.exp(-3.5 * dt), s = Math.min(1, Math.max(0, (PW.explodeT || 0) / .12)), ex = s * s * (3 - 2 * s);
       for (const key of ['fan', 'tr', 'sleeve']) S[key] += (S.want[key] - S[key]) * k;
-      for (const h of S.hinges) h.obj.rotation.x = h.sign * h.max * S[h.axis];
+      for (const h of S.hinges) h.obj.rotation.x = h.sign * h.max * Math.max(S[h.axis], ex);
       for (const sl of S.sleeves) sl.position.x = -.48 * S.sleeve;
       S.blockers.forEach(p => { p.rotation.set(p.userData.a, 0, 0); p.rotateZ(deg(62) * S.sleeve); });
     });
@@ -336,41 +337,77 @@
       { label: 'Deployed', apply: () => { S.want.sleeve = 1; S.want.tr = 0; } }]);
   }
 
-  /* ---- the exploded view: the manual's module breakdown (p.54-55) laid out along the axis ----
-     Runs after every builder. Each module's real length is measured and the modules are spaced in order with even gaps: forward of
-     the fan case the FDGS, the fan rotor and the inlet cone; aft of it the FIC, LPC, CIC, HPC, diffuser and combustor, HPT, TIC,
-     LPT, TEC and exhaust. Gearboxes drop below, the oil system moves out to the right, the nacelle opens out round the engine, and
-     dressing that spans modules is put away. */
+  /* ---- the exploded view, from the outside in ----
+     Runs after every builder. The slider opens the engine in four overlapping layers, and nothing is put away:
+     1 (0 to 0.24) the nacelle: inlet forward, fan cowls and reverser doors swung open on their hinges (the nacelle animation does
+       that over the first 0.12) and lifted clear, and the pylon lifted with what it carries (precooler, ICU and DCU, the fire element
+       on its underside); the mounts rise halfway, between it and the engine.
+     2 (0.18 to 0.45) the dressing lifts off the cases: the EEC, PHMU and exciter out from the fan case; harnesses, tubes, ducts,
+       sensors, borescope plugs, drains and igniters out from the core, each away from the side it sits on.
+     3 (0.40 to 0.68) the accessories: the gearboxes and the units on them drop below; the oil tank and coolers move out sideways.
+     4 (0.62 to 1) the core comes apart as in the manual's module breakdown (p.54-55). Each module's real length is measured and the
+       modules are spaced in order with even gaps: forward of the fan case the FDGS, the fan rotor and the inlet cone; aft of it the
+       FIC, LPC, CIC, HPC, diffuser and combustor, HPT, TIC, LPT, TEC and exhaust. Each bearing goes with the case that carries it,
+       the shafts drop below, and the dressing and accessories follow the module they sit on. */
   PW.builders.push(function explodePlan() {
-    const P = id => PW.parts.get(id), set = (id, v, hide) => { const p = P(id); if (!p) return; if (v) p.explode.set(...v); if (hide) p.explodeHide = true; };
-    const xr = ids => { const b = new THREE.Box3(); PW.root.updateMatrixWorld(true); for (const id of ids) for (const m of PW.meshesOf(id)) b.expandByObject(m); return [b.min.x, b.max.x]; };
-    const GAP = .25, off = {}; set('fan-case', [0, 0, 0]);
-    const fc = xr(['fan-case']);
-    /* aft chain */
+    const P = id => PW.parts.get(id), V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+    const S1 = [0, .22], S1d = [.08, .24], S2 = [.18, .45], S3 = [.40, .68], S4 = [.62, 1];   // S1d: the doors lift once they have swung open
+    const stage = (id, v, [a, b]) => { const p = P(id); if (p && (v[0] || v[1] || v[2])) p.moves.push({ v: V3(...v), a, b }); };
+    for (const p of PW.parts.values()) { p.moves = []; p.explode.set(0, 0, 0); }
+    PW.root.updateMatrixWorld(true);
+    const bounds = (id, own) => { const b = new THREE.Box3(); for (const m of own ? P(id).meshes : PW.meshesOf(id)) b.expandByObject(m); return b; };
+    const xr = ids => { const b = new THREE.Box3(); for (const id of ids) b.union(bounds(id)); return [b.min.x, b.max.x]; };
+    /* L metres straight out from the engine axis, toward clock h, or away from the side the part sits on (straight up if it rings
+       the engine) */
+    const radial = (id, L, h) => { let y = 1, z = 0;
+      if (h !== undefined) { y = Math.cos(G.clock(h)); z = Math.sin(G.clock(h)); }
+      else { const c = bounds(id).getCenter(V3()), r = Math.hypot(c.y, c.z); if (r > .08) { y = c.y / r; z = c.z / r; } }
+      return [0, L * y, L * z]; };
+
+    /* layer 4, worked out first because the others follow it: the module chain */
+    const GAP = .25, off = {}, span = {}, fc = xr(['fan-case']);
+    const chain = ['fic', 'lpc', 'cic', 'hpc', 'combustor', 'hpt', 'tic', 'lpt', 'tec', 'exhaust'].filter(P);
     let cur = fc[0] - GAP;
-    for (const id of ['fic', 'lpc', 'cic', 'hpc', 'combustor', 'hpt', 'tic', 'lpt', 'tec', 'exhaust']) { if (!P(id)) continue;
-      const [a, b] = xr([id]); off[id] = cur - b; cur = a + off[id] - GAP; set(id, [off[id], 0, 0]); }
-    /* forward chain: FDGS, then the fan rotor (blades and hub), then the inlet cone, which hangs on the rotor */
+    for (const id of chain) { const [a, b] = xr([id]); off[id] = cur - b; cur = a + off[id] - GAP; span[id] = [a, b]; stage(id, [off[id], 0, 0], S4); }
+    /* forward: FDGS, then the fan rotor (blades and hub), then the inlet cone, which hangs on the rotor */
     cur = fc[1] + GAP;
-    { const [a, b] = xr(['fdgs']); off.fdgs = cur - a; cur = b + off.fdgs + GAP; set('fdgs', [off.fdgs, 0, 0]); }
-    { const [a, b] = xr(['fan-blades', 'fan-hub']); off.fan = cur - a; cur = b + off.fan + GAP; set('fan-rotor', [off.fan, 0, 0]); }
-    { const [a, b] = xr(['inlet-cone']); const o = cur - a; cur = b + o + GAP; set('inlet-cone', [o - off.fan, 0, 0]); }
-    /* the nacelle opens out: inlet ahead of everything, fan cowls up and out, reverser doors out beside the core, pylon up */
-    { const [a] = xr(['inlet']); set('inlet', [cur + .2 - a, 0, 0]); }
-    set('fan-cowl-left', [0, .6, -1.5]); set('fan-cowl-right', [0, .6, 1.5]);
-    set('tr-left', [off.hpc * .6, .35, -1.8]); set('tr-right', [off.hpc * .6, .35, 1.8]); set('pylon', [0, 1.9, 0]);
-    /* each bearing with the case that carries it; the shafts below the line */
-    for (const [b, m] of [['bearing-1', 'fdgs'], ['bearing-1-5', 'fdgs'], ['bearing-2', 'lpc'], ['bearing-3', 'cic'], ['bearing-4', 'tic'], ['bearing-5', 'lpt'], ['bearing-6', 'tec']]) set(b, [off[m] || 0, 0, 0]);
-    set('shafts', [off.hpc, -1.0, 0]);
-    /* gearboxes and accessories below; oil system out to the right with the air/oil cooler kept on the left */
-    set('gearboxes', [off.hpc, -1.3, 0]); set('oil', [off.combustor, 0, 1.15]); set('aoc', [0, 0, -2.3]);
-    set('fuel', [off.combustor, 0, 0]); set('igniters', [off.combustor, 0, .35]);
-    /* air system parts stay with their cases; the precooler rises with the pylon */
-    set('air', [0, 0, 0]); set('hpc-sva', [off.hpc, 0, 0]); set('lpc-sva', [off.lpc, 0, 0]); set('bleed-25', [off.cic, 0, 0]); set('bleed-hp', [off.hpc, 0, 0]);
-    set('precooler', [off.hpc, 1.4, 0]); set('tacc', null, true); set('cai', null, true);
-    /* units on the fan case move out from it a little */
-    set('eec', [0, 0, -.45]); set('phmu', [-.15, 0, -.45]); set('ignition', [0, 0, -.35]); set('pdos', [0, .25, .3]);
-    for (const id of ['harnesses', 'sensors', 'fire', 'fire-left', 'fire-right', 'mounts', 'drain-mast', 'borescope']) set(id, [0, 0, 0], true);
+    { const [a, b] = xr(['fdgs']); off.fdgs = cur - a; cur = b + off.fdgs + GAP; stage('fdgs', [off.fdgs, 0, 0], S4); }
+    { const [a, b] = xr(['fan-blades', 'fan-hub']); off.fan = cur - a; cur = b + off.fan + GAP; stage('fan-rotor', [off.fan, 0, 0], S4); }
+    { const [a, b] = xr(['inlet-cone']); const o = cur - a; cur = b + o + GAP; stage('inlet-cone', [o - off.fan, 0, 0], S4); }
+    for (const [b, m] of [['bearing-1', 'fdgs'], ['bearing-1-5', 'fdgs'], ['bearing-2', 'lpc'], ['bearing-3', 'cic'], ['bearing-4', 'tic'], ['bearing-5', 'lpt'], ['bearing-6', 'tec']]) stage(b, [off[m] || 0, 0, 0], S4);
+    stage('shafts', [off.hpc, -1.0, 0], S4);
+    /* the module an outside part sits on: the one whose length covers the middle of the part */
+    const carrier = id => { const c = bounds(id, P(id).meshes.length > 0).getCenter(V3()); let best = chain[0], bd = Infinity;
+      for (const m of chain) { const [a, b] = span[m], d = c.x < a ? a - c.x : c.x > b ? c.x - b : 0; if (d < bd) { bd = d; best = m; } }
+      return off[best]; };
+
+    /* layer 1: the nacelle */
+    { const [a] = xr(['inlet']), all = cur + .2 - a; stage('inlet', [1.6, 0, 0], S1); stage('inlet', [all - 1.6, 0, 0], S4); }
+    stage('fan-cowl-left', [0, 2.1, -1.5], S1d); stage('fan-cowl-right', [0, 2.1, 1.5], S1d);
+    stage('fan-cowl-left', [0, 1.2, -.8], S4); stage('fan-cowl-right', [0, 1.2, .8], S4);                 // higher still once the core spreads out
+    for (const [id, s] of [['tr-left', -1], ['tr-right', 1]]) { stage(id, [-.3, 2.0, 2.0 * s], S1d); stage(id, [off.hpc * .6 + .3, 1.2, .8 * s], S4); }
+    for (const id of ['pylon', 'precooler', 'tras-control', 'fire']) stage(id, [0, 3.0, 0], S1);
+    for (const id of ['fire-left', 'fire-right']) stage(id, [0, -3.0, 0], S1);                     // the core cowl elements stay on their doors
+    stage('mounts', [0, 1.5, 0], S1);
+
+    /* layer 2: the dressing */
+    stage('eec', radial('eec', .5, 9), S2); stage('phmu', radial('phmu', .5, 9), S2); stage('pdos', radial('pdos', .4, 3), S2);
+    const ign = radial('ignition', .45, 8), igs = radial('igniters', .3, 4.5);
+    stage('ignition', ign, S2); stage('igniters', [0, igs[1] - ign[1], igs[2] - ign[2]], S2);    // the plugs leave the core, not the fan case
+    stage('harnesses', [0, .25, -.3], S2); stage('drain-mast', [0, -.35, 0], S2); stage('fuel', radial('fuel', .3), S2);
+    for (const id of ['hpc-bleed-valve', 'bleed-hp', 'buffer-air', 'hpt-cooling', 'tacc', 'cai']) stage(id, radial(id, .3), S2);
+    for (const id of P('sensors').children) stage(id, radial(id, .3), S2);
+    for (const id of P('borescope').children) stage(id, radial(id, .25), S2);
+
+    /* layer 3: the accessories */
+    stage('gearboxes', [0, -1.1, 0], S3);
+    stage('oil-tank', radial('oil-tank', .75, 3), S3); stage('aoc', radial('aoc', .8, 10.5), S3);
+    stage('vfgoohx', radial('vfgoohx', .65, 9), S3); stage('fohe', radial('fohe', .6, 11.5), S3);
+
+    /* layer 4: dressing and accessories follow the module they sit on; the anti-ice duct, harnesses and fan case units stay */
+    stage('gearboxes', [off.hpc, 0, 0], S4); stage('oil', [off.combustor, 0, 0], S4); stage('fuel', [off.combustor, 0, 0], S4); stage('igniters', [off.combustor, 0, 0], S4);
+    for (const id of ['hpc-sva', 'lpc-sva', 'bleed-25', 'hpc-bleed-valve', 'bleed-hp', 'buffer-air', 'hpt-cooling', 'tacc', 'drain-mast'].concat(P('sensors').children, P('borescope').children))
+      stage(id, [carrier(id), 0, 0], S4);
     PW.EXPLODE_SPAN = cur;
   });
 
