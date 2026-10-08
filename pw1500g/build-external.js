@@ -870,6 +870,19 @@
       for (const z of [-.015, .015]) Kt.connector('tras-dcu', f, [-.06, .035, z], 'y', .007, { lead: '-x' });                 // pressure proximity sensor, two channels
       for (const xr of [-.08, -.03, .02, .07]) Kt.fitting('tras-dcu', f, [xr, -.035, 0], '-y', .01);                          // pressure, return, deploy, stow
       Kt.plate('tras-dcu', f, [0, 0, .0405], 'z', 'y', .05, .03); }
+    /* the lines inside the pylon (they show with the nacelle ghosted): the DCU's return, deploy and stow ports out to each door's
+       lines at the hinge beam (the door ends are built with the doors, from 0:21 or 11:39 o'clock); the ICU's outlet forward to the
+       DCU's pressure port; the ICU's supply from the aircraft system above; and the units' connectors into the pylon's wiring. The
+       hinge crossing is a short flexible hose in the aircraft; here the door's half swings away with the door */
+    { const xm = -1.0406, ra = 1.06;
+      for (const [xp, dr, dx] of [[-1.38, .02, -.06], [-1.33, .038, -.072], [-1.28, .056, -.084]]) for (const h of [.35, 11.65]) {   // return, deploy, stow
+        const s = h < 6 ? 1 : -1;
+        line('tras-dcu', [P(xp, 12, 1.0705), P(xp, 12, 1.055), P(xp + .06, 12 + s * .12, 1.06), P(xm + dx - .06, h - s * .05, ra + dr), P(xm + dx, h, ra + dr)], .006, 'tube', { clamps: 0, ends: false }); }
+      line('tras-icu', [P(-2.935, 11.99, 1.1826), P(-2.935, 11.99, 1.15), P(-2.6, 12, 1.135), P(-2.25, 12, 1.13), P(-1.9, 12, 1.08), P(-1.5, 12, 1.055), P(-1.43, 12, 1.056), P(-1.43, 12, 1.0705)], .007, 'tube', { clamps: 0, ends: false });   // ICU outlet to the DCU pressure port
+      line('tras-icu', [P(-2.865, 11.99, 1.1826), P(-2.865, 11.99, 1.16), P(-2.80, 12, 1.40)], .007, 'tube', { clamps: 0, ends: false });   // supply from the aircraft hydraulic system
+      for (const [pid, pts] of [['tras-dcu', [P(-1.171, 12, 1.138), P(-1.16, 12, 1.16), P(-1.10, 12, 1.25)]], ['tras-dcu', [P(-1.423, 11.98, 1.168), P(-1.40, 11.97, 1.20), P(-1.30, 11.97, 1.27)]],
+        ['tras-dcu', [P(-1.423, .02, 1.168), P(-1.40, .03, 1.20), P(-1.30, .03, 1.27)]], ['tras-icu', [P(-2.734, 11.97, 1.29), P(-2.70, 11.97, 1.33), P(-2.60, 11.97, 1.40)]]])
+        line(pid, pts, .005, 'harness', { clamps: 0, ends: false }); }
 
     /* ============================== BORESCOPE PORTS ============================== */
     /* p.70-73: every port with its clock position and what it looks at. Each sits in the gap behind the first row it names, as a plugged

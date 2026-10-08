@@ -264,20 +264,48 @@
           for (const xr of [-.12, -.36]) Kt.tube(aid, f, [xr, 0, 0], 'x', .033, .037, .012, 'steel');
           Kt.cyl(aid, f, [-.1, .038, 0], 'y', .009, .02, 'steel'); Kt.connector(aid, f, [-.1, .048, 0], 'y', .007, { lead: 'x' });    // lock proximity sensor
           Kt.box(aid, f, [-.18, .036, .02], [.05, .01, .012], 'steel', { round: .003, mat: { color: '#c0262b', metalness: .2, roughness: .5 } });   // manual lock lever
-          for (const xr of [-.06, -.44]) Kt.fitting(aid, f, [xr, .028, -.03], 'y', .008);                                           // stow and deploy ports
+          for (const xr of [-.06, -.44]) Kt.fitting(aid, f, [xr, .028, -.03 * sg], 'y', .008);                                      // deploy (head) and stow (rod end) ports, on the hinge side
           if (feedback) { Kt.cyl(aid, f, [.085, 0, 0], 'x', .016, .1, 'steel'); Kt.connector(aid, f, [.135, 0, 0], 'x', .009, { lead: 'y' }); }   // LVDT
           else { Kt.cyl(aid, f, [.035, .04, 0], 'y', .015, .03, 'steel'); Kt.hex(aid, f, [.035, .06, 0], 'y', .011, .01, 'steel'); Kt.cyl(aid, f, [.035, .068, 0], 'y', .008, .006, 'capBlack'); }   // manual drive unit
           const g = Kt.frame(sid, xm, h, ra); Kt.cyl(sid, g, [-.49, 0, 0], 'x', .016, .94, 'steel'); Kt.box(sid, g, [-.96, 0, 0], [.04, .05, .05], 'steel', { round: .006 }); }   // rod and rod end on the sleeve
-        const arc = (h0, h1, r, dx) => { const pts = [], n = Math.ceil(Math.abs(h1 - h0) / .2); for (let i = 0; i <= n; i++) pts.push(G.onRing(xm + dx, r, G.clock(h0 + (h1 - h0) * i / n))); return pts; };
-        const tube = (pts, r, mat) => { const tg = G.tube(pts, r, { radial: 8, tension: .3 }); PW.add(aid, tg, mat).userData.isLine = true; };
-        tube(arc(hU, hL, ra + .048, -.002), .009, 'blackHose'); tube(arc(hU, hL, ra + .03, -.03), .006, 'tube');                // flexible drive shaft and deploy tube
-        for (const [k, dr] of [[0, .0], [1, .018], [2, .036]]) tube(arc(sg > 0 ? .35 : 11.65, hU, ra + .02 + dr, -.06 - k * .012), .006, 'tube');   // stow, deploy and return lines from the hinge beam
-        const ft = Kt.frame(aid, -1.93, hBot - sg * .1, 1.08);                                                                  // track lock unit on the latch beam
+        const arc = (h0, h1, r, dx) => { const pts = [], n = Math.max(1, Math.ceil(Math.abs(h1 - h0) / .2)); for (let i = 0; i <= n; i++) pts.push(G.onRing(xm + dx, r, G.clock(h0 + (h1 - h0) * i / n))); return pts; };
+        /* a routed line on this door, tagged for the connection audit like build-external's (hydraulic tube or braided harness) */
+        const tube = (pts, r, mat, kind) => { const tg = G.tube(pts, r, { radial: 8, tension: .3 }), harn = kind === 'harness';
+          if (harn && tg.attributes.uv) { const L = tg.userData.curve.getLength(), uv = tg.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * L * 8); }
+          const m = PW.add(aid, tg, mat); m.userData.isLine = true; m.userData.lineKind = kind || 'tube'; return m; };
+        const hm = c => sg > 0 ? c : 12 - c, zh = -sg;                                                                          // clocks mirrored to this door; local z toward the hinge
+        /* a point in a unit's frame on the case (x0, clock h, radius r0) given in that frame's axes: x forward, y radially out, z toward
+           increasing clock */
+        const loc = (x0, h, r0, lx, ly, lz) => { const a = G.clock(h); return new THREE.Vector3(x0 + lx, (r0 + ly) * Math.cos(a) - lz * Math.sin(a), (r0 + ly) * Math.sin(a) + lz * Math.cos(a)); };
+        const U = (lx, ly, lz) => loc(xm, hU, ra, lx, ly, lz), Lw = (lx, ly, lz) => loc(xm, hL, ra, lx, ly, lz);
+        const hV = hBot - sg * .18, hT = hBot - sg * .1, V = (lx, ly, lz) => loc(-1.72, hV, 1.025, lx, ly, lz), T = (lx, ly, lz) => loc(-1.93, hT, 1.02, lx, ly, lz);
+        tube(arc(hU, hL, ra + .048, -.002), .009, 'blackHose');                                                                  // flexible drive shaft
+        /* p.347-349: the deploy tube leaves the upper actuator's head and runs down the torque box into the lower actuator's head */
+        tube([U(-.03, .02, -.03 * zh), U(-.03, .03, -.06 * zh)].concat(arc(hU + .12 * sg, hL - .15 * sg, ra + .03, -.03), [Lw(-.04, .045, .05 * zh), Lw(-.06, .0396, .03 * zh)]), .006, 'tube');
+        /* stow, deploy and return lines from the DCU come down from the hinge beam (p.347): deploy into the upper actuator's head, stow
+           along its body (the stow tube) to its rod end and on down the torque box to the lower actuator's rod end; return over the
+           actuators and along the latch beam to the track lock valve, which takes its pressure from the lower actuator's head */
+        tube(arc(hm(.35), hm(1.30), ra + .056, -.084).concat([U(-.10, .06, .07 * zh), U(-.20, .045, .05 * zh), U(-.42, .05, .05 * zh), U(-.44, .045, .035 * zh), U(-.44, .0396, .03 * zh)]), .006, 'tube');   // stow
+        tube(arc(hm(.35), hm(1.36), ra + .038, -.072).concat([U(-.07, .055, .05 * zh), U(-.06, .045, .035 * zh), U(-.06, .0396, .03 * zh)]), .006, 'tube');   // deploy
+        tube([U(-.44, .0396, .03 * zh), U(-.455, .055, .02 * zh), U(-.465, .055, -.03 * zh), U(-.47, .045, -.07 * zh)].concat(arc(hU + .25 * sg, hL - .25 * sg, ra + .04, -.47), [Lw(-.47, .045, .07 * zh), Lw(-.455, .045, .045 * zh), Lw(-.44, .0396, .03 * zh)]), .006, 'tube');   // stow on to the lower actuator
+        tube(arc(hm(.35), hm(1.2), ra + .02, -.06).concat([G.onRing(-1.09, 1.12, G.clock(hm(1.3)))], arc(hm(1.4), hm(5.2), ra + .085, -.04), [G.onRing(-1.25, 1.13, G.clock(hm(5.45))), G.onRing(-1.50, 1.10, G.clock(hm(5.60))), G.onRing(-1.62, 1.065, G.clock(hm(5.72))), V(.09, .03, -.012), V(.0387, 0, -.012)]), .006, 'tube');   // return
+        tube([Lw(-.06, .0396, .03 * zh), Lw(-.05, .07, 0), Lw(-.06, .065, -.06 * zh)].concat(arc(hL + .2 * sg, hm(5.0), ra + .05, -.06), [G.onRing(-1.30, 1.10, G.clock(hm(5.55))), G.onRing(-1.55, 1.075, G.clock(hm(5.70))), V(.09, .02, .012), V(.0387, 0, .012)]), .006, 'tube');   // track lock pressure
+        /* the reverser harness (EEC and CDC circuits, p.336) down the torque box from the hinge beam: LVDT and lock sensor on the upper
+           actuator, lock sensor on the lower, then along the latch beam to the track lock valve solenoid and the track lock unit sensor */
+        const tk = arc(hm(.36), hm(4.6), ra + .07, -.13).concat([G.onRing(-1.20, 1.125, G.clock(hm(5.0))), G.onRing(-1.30, 1.11, G.clock(hm(5.75))), G.onRing(-1.55, 1.09, G.clock(hm(5.83))), G.onRing(-1.70, 1.085, G.clock(hm(5.86))), G.onRing(-1.82, 1.075, G.clock(hT)), T(.0326, .0583, 0)]);
+        tube(tk, .005, 'harness', 'harness');
+        const onTk = h => G.onRing(xm - .13, ra + .07, G.clock(hm(h)));
+        { const lc = tube([U(.1521, .0162, 0), U(.1521, .03, 0), U(.12, .05, .025 * zh), U(.04, .055, .04 * zh), U(-.06, .06, .05 * zh), onTk(1.4)], .004, 'harness', 'harness').geometry.userData.curve;   // LVDT
+          let tb = 0, best = Infinity; for (let i = 0; i <= 200; i++) { const d = Math.abs(lc.getPointAt(i / 200).x + .996); if (d < best) { best = d; tb = i / 200; } }
+          PW.add(aid, G.alongCurve(lc, [tb], () => new THREE.CylinderGeometry(.009, .009, .05, 12)), 'silicone').userData.isLine = true; }   // grommet through the torque box's forward frame (x -0.967 to -1.025)
+        for (const [W, h] of [[U, 1.47], [Lw, 4.47]]) tube([W(-.0874, .0613, 0), W(-.07, .072, 0), W(-.085, .076, .02 * zh), onTk(h)], .004, 'harness', 'harness');   // lock sensors
+        tube([V(.0126, .0563, 0), V(.03, .06, 0), G.onRing(-1.68, 1.086, G.clock(hm(5.86)))], .004, 'harness', 'harness');            // track lock valve solenoid
+        const ft = Kt.frame(aid, -1.93, hT, 1.02);                                                                              // track lock unit on the latch beam
         Kt.box(aid, ft, [0, 0, 0], [.09, .05, .045], 'steel', { round: .006 }); Kt.cyl(aid, ft, [-.06, 0, 0], 'x', .008, .03, 'steel');
         Kt.cyl(aid, ft, [.02, .035, 0], 'y', .009, .02, 'steel'); Kt.connector(aid, ft, [.02, .045, 0], 'y', .007, { lead: 'x' });
-        const fv = Kt.frame(aid, -1.72, hBot - sg * .18, 1.07);                                                                 // track lock valve
+        const fv = Kt.frame(aid, -1.72, hV, 1.025);                                                                               // track lock valve
         Kt.box(aid, fv, [0, 0, 0], [.06, .04, .04], 'castAl', { round: .005 }); Kt.cyl(aid, fv, [0, .03, 0], 'y', .012, .025, 'darkBox'); Kt.connector(aid, fv, [0, .043, 0], 'y', .007, { lead: 'x' });
-        for (const z of [-.012, .012]) Kt.fitting(aid, fv, [-.03, 0, z], '-x', .006); }
+        for (const z of [-.012, .012]) Kt.fitting(aid, fv, [.03, 0, z], 'x', .006); }                                          // return and pressure, facing the lines
     }
     /* IFS features: oil tank access door (right, 3 o'clock), AOC window and pressure-relief door (left, 9 o'clock), ACC scoop (right, 1:30) */
     const ifsPanel = (pid, parentDoor, label, info, xx, h, l, w, mat) => { PW.part(pid, { parent: parentDoor, label, info, src: 'p.20-23', attach: PW.parts.get(parentDoor).obj.children[0] }); const a = G.clock(h);
