@@ -374,6 +374,24 @@
       line('tacc', [P(-1.702, 1.2, .40), P(-1.78, 1.2, .38), P(-1.85, 1.22, .36), P(-1.89, 1.25, .35)], .03, 'tube', { clamps: 1, ends: false });
       line('tacc', [P(-1.89, 1.25, .35), P(-1.92, 1.25, .32), P(-1.935, 1.25, .295)], .024, 'tube', { clamps: 0, ends: false });                      // to the HPT manifold
       line('tacc', [P(-1.89, 1.25, .35), P(-2.0, 1.28, .37), P(-2.08, 1.33, .45), P(-2.15, 1.4, .50), P(-2.21, 1.44, .515), P(-2.245, 1.45, .516)], .026, 'tube', { clamps: 1, ends: false }); }   // to the LPT manifold
+    /* p.278-281: the split buffer system. Each unit sits at the position the manual gives; the ducts between them are only stubs */
+    PW.part('buffer-air', { parent: 'air', label: 'Buffer air system', src: 'p.278-283',
+      info: 'Cooling and pressurizing air for the bearing compartment seals. At high power, 2.5 (LPC exit) air feeds the front compartment (No. 1, 1.5 and 2 bearings), No. 3 and No. 5/6 through the buffer air check valve (BACV). Below 75 percent N1 the 2.5 air is too weak, so the EEC energizes the buffer air valve solenoid (BAVS), which opens the buffer air shutoff valve (BASOV) and sends 4th-stage HPC air instead; the BACV then closes so the 4th-stage air cannot flow back. The No. 4 bearing compartment always gets 4th-stage air, cooled by 2.5 air in the buffer air heat exchanger (BAHX). The buffer air pressure sensor (BAPS) downstream of the BASOV tells both EEC channels whether the valve is where it should be for the power setting.\n\nPositions: BAHX on the fan intermediate case in the 2.5 bleed cavity at 12 o\'clock, BACV at 12 o\'clock on the FIC, BAPS below the BAHX at 2 o\'clock, BASOV at the rear of the HPC at 11 o\'clock, BAVS on the right of the HPC case at 1 o\'clock. The ducts joining them are not drawn yet.' });
+    { const f = Kt.frame('buffer-air', -.80, 12, .40);                                                                        // BAHX: plate-fin core in a cast frame, data plate on top
+      Kt.box('buffer-air', f, [0, 0, 0], [.12, .07, .18], 'castAl', { round: .008 }); Kt.box('buffer-air', f, [0, .0, .0], [.09, .072, .15], 'darkBox', { round: .002 });
+      for (let i = 0; i < 12; i++) Kt.box('buffer-air', f, [-.045 + i * .0082, .0365, 0], [.0025, .002, .14], 'nickel', { round: .0005 });
+      Kt.plate('buffer-air', f, [.0, .036, .062], 'y', 'x', .05, .025);
+      for (const s of [-1, 1]) { Kt.cyl('buffer-air', f, [s * .07, .01, s * .05], 'x', .016, .02, 'castAl'); Kt.flange('buffer-air', f, [s * .082, .01, s * .05], s > 0 ? 'x' : '-x', .016, .026, .005, 4, 'castAl'); } }
+    { const f = Kt.frame('buffer-air', -.70, 12, .385);                                                                       // BACV: flanged check valve on its elbow
+      Kt.cyl('buffer-air', f, [0, .012, 0], 'y', .03, .024, 'castAl'); Kt.flange('buffer-air', f, [0, .027, 0], 'y', .03, .045, .006, 6, 'castAl'); Kt.cyl('buffer-air', f, [0, .034, 0], 'y', .036, .006, 'nickel'); }
+    { const f = Kt.frame('buffer-air', -.80, 1.9, .40);                                                                       // BAPS
+      Kt.box('buffer-air', f, [0, .008, 0], [.03, .016, .03], 'steel', { round: .004 }); Kt.cyl('buffer-air', f, [0, .026, 0], 'y', .011, .022, 'steel'); Kt.connector('buffer-air', f, [0, .038, 0], 'y', .008, { lead: '-x' }); Kt.fitting('buffer-air', f, [.02, .008, 0], 'x', .006); }
+    { const f = Kt.frame('buffer-air', -1.25, .85, .30);                                                                       // BAVS: solenoid on its mounting base, pilot air ports
+      Kt.box('buffer-air', f, [0, .008, 0], [.06, .016, .045], 'steel', { round: .004 }); Kt.cyl('buffer-air', f, [-.01, .03, 0], 'x', .014, .06, 'steel', { edge: .003 });
+      Kt.connector('buffer-air', f, [-.045, .03, 0], '-x', .008, { lead: 'y' }); for (const z of [-.012, .012]) Kt.fitting('buffer-air', f, [.03, .02, z], 'x', .006); }
+    { const f = Kt.frame('buffer-air', -1.60, 10.8, .29);                                                                      // BASOV: in-line valve with V-bands and its pilot port
+      Kt.cyl('buffer-air', f, [0, 0, 0], 'x', .034, .12, 'castAl', { edge: .006 }); for (const s of [-1, 1]) Kt.vband('buffer-air', f, [s * .066, 0, 0], 'x', .024, { phase: 0 });
+      Kt.fitting('buffer-air', f, [.0, .034, 0], 'y', .007); }
     /* p.276-277: four tubes take 6th-stage HPC air to the HPT 2nd stage vanes and blade attachments, two on each side, arching over the
        case from the 6th-stage ports to the HPT case just ahead of the clearance control manifold, metered by plates at the case */
     PW.part('hpt-cooling', { parent: 'air', label: 'HPT cooling air tubes (6th stage)', src: 'p.276-277',
