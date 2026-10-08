@@ -74,7 +74,11 @@
       Kt.flange('agb', f, [-L * .46, -.01, 0], '-x', .028, .05, .012, 6, 'castTan');                                   // layshaft cover flange on the aft face
       Kt.fitting('agb', f, [.02, H * .2, .07], 'z', .007); Kt.fitting('agb', f, [-.03, H * .3, -.07], '-z', .007);       // oil feed and scavenge
       Kt.chip('agb', f, [.0, H * .43, .03], 'y', .009);
-      const t = GB.towershaftHousing; line('agb', [P(t[0][0], 8, t[0][1]), P(t[1][0], 8, t[1][1])], .035, 'tube', { clamps: 0, ends: false }); }
+      const t = GB.towershaftHousing; line('agb', [P(t[0][0], 8, t[0][1]), P(t[1][0], 8, t[1][1])], .035, 'tube', { clamps: 0, ends: false });
+      /* p.213: the angle gearbox's oil feed from the MGB and its scavenge back, two tubes aft beside the layshaft cover to bosses on the
+         MGB front face under the fuel/oil manifold, passing over the left core harness */
+      line('agb', [P(-1.045, 8.39, .391), P(-1.05, 8.47, .395), P(-1.15, 8.47, .40), P(-1.19, 8.47, .405), P(-1.26, 8.47, .37), P(-1.35, 8.45, .345), P(-1.45, 8.45, .335), P(-1.483, 8.45, .333)], .006, 'tube', { clamps: 2 });   // feed
+      line('agb', [P(-1.092, 7.63, .412), P(-1.10, 7.56, .415), P(-1.19, 7.56, .405), P(-1.26, 7.58, .37), P(-1.35, 7.6, .345), P(-1.45, 7.6, .335), P(-1.483, 7.6, .333)], .007, 'tube', { clamps: 2 }); }   // scavenge
     PW.part('layshaft', { parent: 'gearboxes', label: 'Layshaft and covers', src: 'p.66-67; p.53',
       info: 'Drive shaft from the angle gearbox aft to the main gearbox input, inside two concentric tubular covers that slide together at a flanged joint. It runs parallel to the axis at 8 o\'clock, close to the HPC case and under the IFPC and fuel/oil manifold, into the top layer of the main gearbox.' });
     { const ls = GB.layshaft, xmid = (ls.x_from + ls.x_to) / 2, f = Kt.frame('layshaft', 0, 8, ls.r_axis);
@@ -160,6 +164,10 @@
       for (const dx of [0, -.035]) line('edp', (dx ? [P(-1.358, 5.68, .482), P(-1.355, 5.6, .47)] : [P(-1.358, 5.92, .484), P(-1.35, 5.84, .49), P(-1.325, 5.66, .488)]).concat([P(-1.30 + dx, 5.42, .45), P(-1.275 + dx, 5.15, .462), P(-1.265 + dx, 4.95, .49), P(-1.258 + dx, 4.75, .505), P(-1.25 + dx, 4.4, .51), P(-1.25 + dx, 3.2, .51),
         P(-1.26 + dx, 1.9, .51), P(-1.262 + dx, 1.65, .44), P(-1.265 + dx, 1.35, .43), P(-1.27 + dx, 1.05, .495), P(-1.27 + dx, .6, .51), P(-1.275 + dx, .3, .52), P(-1.278 + dx, .15, .555), V(-1.28 + dx, .62, .078), V(-1.285 + dx, .70, .097),
         V(-1.29 + dx, .76, .107), V(-1.295 + dx, .85, .12), V(-1.30 + dx, 1.03, .125)]), .012, 'hose', { clamps: 5 }); }   // suction (forward) and pressure (aft) hoses, up between the fan-air duct and the right bifurcation wall
+    /* its case drain to the aircraft's hydraulic return, beside the two hoses all the way to the pylon: it crosses under the cowl anti-ice
+       duct at 5 o'clock, where the gap between the duct and the LSOP's chip collectors is widest */
+    line('edp', [P(-1.418, 5.42, .388), P(-1.405, 5.36, .40), P(-1.385, 5.3, .425), P(-1.35, 5.2, .455), P(-1.326, 5.05, .463), P(-1.322, 4.85, .482), P(-1.324, 4.7, .50), P(-1.32, 4.4, .51), P(-1.32, 3.2, .51), P(-1.33, 1.9, .51),
+      P(-1.332, 1.65, .44), P(-1.335, 1.35, .43), P(-1.34, 1.05, .495), P(-1.34, .6, .51), P(-1.345, .3, .52), P(-1.348, .15, .555), V(-1.35, .62, .078), V(-1.355, .70, .097), V(-1.36, .76, .107), V(-1.365, .85, .12), V(-1.37, 1.03, .125)], .006, 'hose', { clamps: 4 });
     acc('lsop', 'Lubrication and scavenge oil pump (LSOP)', 'Seven-stage pump at the right end of the MGB forward face, 5 o\'clock: one pressure stage and six scavenge stages. It slides onto the gearbox pad on two guide pins and is held by captive bolts. Each scavenge return has its own chip collector with a black bayonet cap along the pump body, so a debris message can be traced to the bearing compartment it came from. A low oil pressure indication with normal quantity often points here or to the oil control module.', 'p.212-235, p.231, p.69; photos');
     { const f = Kt.frame('lsop', mx0, 4.85, .40);
       Kt.box('lsop', f, [.008, 0, 0], [.016, .13, .13], 'castTan', { round: .008 });                                       // square mounting flange
@@ -275,7 +283,10 @@
         Kt.box('oil-tank', f, [-.006, .025, .022], [.01, .006, .03], 'steel', { round: .002 }); Kt.cyl('oil-tank', f, [-.034, .018, 0], 'z', .004, .022, 'steel');
         Kt.fitting('oil-tank', f, [0, -.004, .05], 'z', .007); }                                                                       // scupper drain, down toward the drain mast
       Kt.sight('oil-tank', Kt.frame('oil-tank', tx - .07, 2.22, .515), [0, .003, 0], 'y', '-z', .034, .09, 'qtsLts');
-      { const f = Kt.frame('oil-tank', tx - .02, 1.47, .465); Kt.cyl('oil-tank', f, [0, 0, -.012], '-z', .02, .02, 'castAl'); Kt.fitting('oil-tank', f, [.03, 0, -.012], 'x', .007); }   // pressurization valve
+      { const f = Kt.frame('oil-tank', tx - .02, 1.47, .465); Kt.cyl('oil-tank', f, [0, 0, -.012], '-z', .02, .02, 'castAl'); Kt.fitting('oil-tank', f, [-.03, 0, -.012], '-x', .007); }   // pressurization valve, its vent port aft
+      /* p.223: the vent from the pressurization valve runs aft over the top edge and down the tank's aft face to the bottom, where it joins
+         the breather forward to the deoiler */
+      line('oil-tank', [P(tx - .06, 1.42, .465), P(-2.02, 1.42, .47), P(-2.075, 1.5, .48), P(-2.10, 1.75, .482), P(-2.10, 2.4, .48), P(-2.10, 3.1, .478), P(-2.10, 3.8, .474), P(-2.09, 4.15, .468), P(-2.06, 4.27, .462)], .008, 'tube', { clamps: 3 });
       /* tank outlet over the oil control module and the end of the MGB to the pump; scavenge return beside it; vent under the sump
          forward to the deoiler */
       line('oil-tank', [P(tx + .025, 4.62, .47), P(-1.89, 4.45, .52), P(-1.75, 4.42, .52), P(-1.60, 4.44, .512), P(-1.50, 4.55, .505), P(-1.455, 4.68, .49), P(-1.43, 4.75, .44)], .016, 'tube', { clamps: 3 });   // to the lube and scavenge pump
@@ -577,6 +588,11 @@
       Kt.cyl('buffer-air', f, [0, .046, 0], 'y', .021, .066, 'castAl', { edge: .005 }); for (const y of [.018, .078]) Kt.vband('buffer-air', f, [0, y, 0], 'y', .017, { phase: Math.PI });
       Kt.fitting('buffer-air', f, [-.023, .05, 0], '-x', .006);                                                                  // pilot port from the solenoid
       Kt.cyl('buffer-air', f, [0, .1, 0], 'y', .017, .03, 'castAl'); Kt.flange('buffer-air', f, [0, .116, 0], 'y', .017, .027, .005, 4, 'castAl'); }   // outlet stub and flange
+    /* p.281: the solenoid valve (BAVS) takes pilot air from the 4th-stage collar and, when the EEC energizes it, sends it over the top of
+       the HPC to the BASOV's pilot port; the pressure sensor (BAPS) reads the buffer air at the heat exchanger's outlet */
+    line('buffer-air', [P(-1.211, .78, .32), P(-1.195, .74, .322), P(-1.19, .5, .315), P(-1.19, 12.0, .312), P(-1.19, 11.7, .31), P(-1.30, 11.7, .305), P(-1.42, 11.7, .30), P(-1.46, 11.45, .335), P(-1.50, 11.25, .355), P(-1.53, 11.12, .365), P(-1.552, 10.96, .345), P(-1.55, 10.88, .315), P(-1.53, 10.9, .30), P(-1.515, 10.97, .298), P(-1.505, 11.03, .298)], .004, 'tube', { clamps: 3 });   // pilot to the BASOV: over the top, across the left core harness aft of the fuel/oil cooler, then over the HPT cooling tube beside the valve and into its aft-facing port
+    line('buffer-air', [P(-1.211, .92, .32), P(-1.195, .95, .325), P(-1.25, .98, .328), P(-1.33, .98, .305), P(-1.395, .96, .287)], .004, 'tube', { clamps: 0 });   // pilot supply from the 4th-stage collar
+    line('buffer-air', [P(-.771, 1.9, .408), P(-.752, 1.9, .41), P(-.735, 1.5, .418), P(-.725, 1.0, .42), P(-.72, .55, .418), P(-.718, .28, .41)], .004, 'tube', { clamps: 1 });   // BAPS sense line
     /* p.276-277: four tubes take 6th-stage HPC air to the HPT 2nd stage vanes and blade attachments, two on each side, arching over the
        case from the 6th-stage ports to the HPT case just ahead of the clearance control manifold, metered by plates at the case */
     PW.part('hpt-cooling', { parent: 'air', label: 'HPT cooling air tubes (6th stage)', src: 'p.276-277',
@@ -646,7 +662,9 @@
       for (const x of [.18, .1, -.02, -.1]) for (const s of [1, -1]) Kt.connector('eec', f, [x, 0, s * .11], s > 0 ? 'z' : '-z', .017);
       Kt.placard('eec', f, [.02, .0485, 0], 'y', 'z', .06, .07, 'thisSideUp');
       Kt.label('eec', f, [.19, .0479, -.02], 'y', 'z', .05, .03, 'dataBlack'); Kt.label('eec', f, [.12, .0479, -.02], 'y', 'z', .04, .045, 'white');   // black data plate and white label (photo)
-      Kt.fitting('eec', f, [.262, 0, .04], 'x', .008); Kt.fitting('eec', f, [.262, 0, -.03], 'x', .008);
+      /* p.102: the Pamb sensor reads ambient pressure through a port on the EEC (screened, no line); the other port takes the P2 sense
+         line from the inlet's P2/T2 probe */
+      Kt.fitting('eec', f, [.262, 0, .04], 'x', .008); Kt.fitting('eec', f, [.262, 0, -.03], 'x', .008, { plugged: true }); Kt.cyl('eec', f, [.278, 0, -.03], 'x', .0075, .006, 'darkBox');
       PW.part('dsu', { parent: 'eec', label: 'Data storage unit (DSU)', src: 'p.90-91, p.104-105',
         info: 'Small round plug, a Hamilton Sundstrand DSU1230-1, in connector J99 on the face of the EEC, on a lanyard. It holds the engine serial number and the rating and trim data in flash memory, read by both channels\' protection processors. It stays with the engine: when an EEC is changed, the new EEC reads the engine\'s data from it.' });
       const g = Kt.frame('dsu', ex, eh, er); Kt.cyl('dsu', g, [-.07, .052, .07], 'y', .021, .012, 'steel', { edge: .003 }); Kt.cyl('dsu', g, [-.07, .061, .07], 'y', .018, .008, 'capBlack', { edge: .002 });
@@ -710,6 +728,11 @@
       /* the P2/T2 probe harness from the inlet's disconnect at flange A to WF02 (the inlet side is built with the probe) */
       { const g = Kt.frame('harnesses', .33, 11.1, rc); Kt.cyl('harnesses', g, [0, .046, 0], 'x', .011, .02, 'connector', { edge: .002 }); }
       harn([P(.32, 11.1, 1.016), P(.29, 11.1, 1.01), P(.22, 11.15, rh), P(.14, 11.25, rh), P(.105, 11.3, rh)], .008, { bands: [.1] });
+      /* the P2 sense line from the probe's pneumatic disconnect beside it at flange A down the case to the EEC's P2 port (p.102) */
+      { const g = Kt.frame('harnesses', .33, 10.95, rc); Kt.cyl('harnesses', g, [0, .046, 0], 'x', .007, .018, 'steel'); Kt.hex('harnesses', g, [-.01, .046, 0], 'x', .007, .006, 'steel'); }
+      line('harnesses', [P(.322, 10.95, 1.016), P(.315, 10.7, 1.015), P(.30, 10.25, 1.015), P(.275, 9.7, 1.022), P(.245, 9.25, 1.035), P(.215, 9.07, 1.046), P(.194, 9.07, 1.046)], .004, 'tube', { clamps: 2 });
+      /* the powerpack's second connector into the run that serves its motor connector */
+      harn([P(-.491, 2.26, 1.11), P(-.47, 2.26, 1.11), P(-.45, 2.15, 1.07), P(-.43, 2.06, 1.025)], .006);
       /* the left core harness from the junction at the bottom (p.105): up the left forward of the IFPC, over the layshaft, past the Pb
          sensor and over the HPC to the top; WC05 branches from it and runs aft along the top in the pylon gap, over the clearance control
          manifolds, to the EGT probe junctions behind the LPT */
