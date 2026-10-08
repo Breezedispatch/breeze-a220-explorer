@@ -208,21 +208,23 @@
       Kt.prof('pmag', f, [0, 0, 0], '-x', [[.012, 0], [.012, .05], [.02, .054], [.11, .054], [.125, .045], [.13, 0]], 'castAl');
       Kt.fins('pmag', f, [-.065, 0, 0], '-x', .052, 10, .005, .003, .08, 'castAl');
       Kt.connector('pmag', f, [-.13, .02, .0], '-x', .011, { lead: '-z' }); Kt.connector('pmag', f, [-.13, -.02, .0], '-x', .011, { lead: '-z' }); }   // backshells toward 6 o'clock, where their harness runs
-    acc('vfg', 'Variable frequency generator (VFG)', 'The engine\'s main AC generator on the MGB aft face: 115/200 V AC, 75 kVA, 380 to 760 Hz, the frequency following N2. Its power feeders bolt to the brass studs of the terminal block under the white cover on its underside. It has its own oil, cooled through the VFG oil/oil heat exchanger and a VFG air/oil cooler.\n\nThe crew can disconnect it from the gearbox with the L or R DISC switch on the electrical panel, which also shows its oil cautions (TTM ch. 24). Reconnection is done on the ground, following the AMM.', 'p.66-69; TTM ch. 24; photos');
+    acc('vfg', 'Variable frequency generator (VFG)', 'The engine\'s main AC generator on the MGB aft face: 115/200 V AC, 75 kVA, 380 to 760 Hz, the frequency following N2. Its grey-blue housing is in two bolted sections, with a round blue cap and a capped port underneath; its pad seal drains to the drain mast (tube 4, DR61). It has its own oil, cooled through the VFG oil/oil heat exchanger and a VFG air/oil cooler.\n\nThe crew can disconnect it from the gearbox with the L or R DISC switch on the electrical panel, which also shows its oil cautions (TTM ch. 24). Reconnection is done on the ground, following the AMM.', 'p.66-69; TTM ch. 24; photos');
     { const vr = .365, f = Kt.frame('vfg', mx1, 6.15, vr);
-      Kt.vband('vfg', f, [-.014, 0, 0], '-x', .108, { phase: 2.6 });
-      Kt.prof('vfg', f, [0, 0, 0], '-x', [[.022, 0], [.022, .1], [.03, .112], [.28, .112], [.292, .1], [.3, .06], [.3, 0]], 'vfgGrey', { seg: 56 });
-      Kt.fins('vfg', f, [-.15, 0, 0], '-x', .11, 20, .008, .004, .22, 'vfgGrey', { phase: .2 });                             // cooling ribs
-      Kt.bolts('vfg', f, [-.302, 0, 0], '-x', .075, 8, .005);
-      /* terminal block on the underside (photos): white cover disc, brown phenolic block, brass feeder studs */
-      const tb = Kt.sub(f, [-.17, .118, 0], 'y');
-      Kt.cyl('vfg', tb, [.004, 0, 0], 'x', .088, .012, 'termWhite', { edge: .004 });
-      Kt.box('vfg', tb, [.013, 0, 0], [.012, .055, .075], 'phenolic', { round: .004 });
-      for (let i = 0; i < 6; i++) { const p = [.028, (i % 2 ? -.012 : .012), -.025 + Math.floor(i / 2) * .025]; Kt.cyl('vfg', tb, p, 'x', .0055, .024, 'brass'); Kt.hex('vfg', tb, [.022, p[1], p[2]], 'x', .009, .006, 'brass'); }
-      Kt.box('vfg', f, [-.24, .02, .112], [.08, .03, .006], 'labelBlue', { round: .003 });                                   // the blue data label
+      /* Brian's photos from below: a grey-blue housing, boxy with rounded corners rather than a finned drum, in two bolted sections, with
+         a round blue cap and a capped port on its underside. The white disc of tube ends near it in the same photos is the drain mast's
+         end plate, not part of the VFG: until 2026-10-08 the model put it here as a feeder terminal cover */
+      Kt.cyl('vfg', f, [-.012, 0, 0], 'x', .1, .024, 'vfgGrey', { edge: .004 }); Kt.vband('vfg', f, [-.014, 0, 0], '-x', .102, { phase: 2.6 });   // adapter on the pad
+      Kt.box('vfg', f, [-.115, 0, 0], [.17, .21, .18], 'vfgGrey', { round: .035 });                                         // forward section
+      Kt.box('vfg', f, [-.2, 0, 0], [.014, .218, .188], 'vfgGrey', { round: .036 });                                        // the bolted joint
+      Kt.box('vfg', f, [-.255, 0, 0], [.1, .2, .17], 'vfgGrey', { round: .032 });                                           // aft section
+      for (const [y, z] of [[.096, -.06], [.096, 0], [.096, .06], [-.096, -.06], [-.096, 0], [-.096, .06], [-.05, .084], [.05, .084], [-.05, -.084], [.05, -.084]])
+        Kt.hex('vfg', f, [-.208, y, z], '-x', .0045, .004, 'steel');
+      Kt.cyl('vfg', f, [-.12, .107, .025], 'y', .017, .006, 'labelBlue'); Kt.hex('vfg', f, [-.12, .113, .025], 'y', .006, .006, 'steel');   // round blue cap
+      Kt.cyl('vfg', f, [-.26, .102, -.035], 'y', .016, .012, 'castAl'); Kt.cyl('vfg', f, [-.26, .111, -.035], 'y', .013, .006, 'capBlack');   // capped port
+      Kt.box('vfg', f, [-.24, .02, .093], [.08, .03, .006], 'labelBlue', { round: .003 });                                   // the blue data label
       Kt.connector('vfg', f, [-.1, .07, .085], [0, .6, .8], .012, { lead: '-x' }); Kt.connector('vfg', f, [-.1, .07, -.085], [0, .6, -.8], .012, { lead: '-x' });
       Kt.fitting('vfg', f, [-.04, .06, .095], [0, .53, .85], .009); Kt.fitting('vfg', f, [-.11, .065, .09], [0, .53, .85], .009);   // oil to and from its oil/oil cooler, both toward it
-      Kt.fitting('vfg', f, [-.03, .108, -.03], 'y', .006); }                                                                       // pad seal drain, to the drain mast
+      Kt.fitting('vfg', f, [-.05, .105, -.03], 'y', .006); }                                                                       // pad seal drain, to the drain mast
     acc('ocm', 'Oil control module (OCM)', 'Cast module at the right end of the MGB aft face. Under the round thermal blanket cap on its outboard face is the main oil filter: a primary and a secondary element behind a bolted cover with a vent plug and a drain plug, with a bypass valve that opens at 55 psid. It also carries the filter differential pressure sensor, the oil debris monitor, the main oil pressure and temperature sensors, the active oil damper valve and the variable oil reduction valve with the journal oil shuttle valve for the FDGS.\n\nA filter impending-bypass or debris message is worked from here.', 'p.226-249, p.229, p.235; photos');
     { const f = Kt.frame('ocm', mx1, 4.9, .40);
       Kt.box('ocm', f, [-.06, 0, 0], [.12, .13, .17], 'castAl', { round: .015 });
@@ -983,8 +985,8 @@
 
     /* ============================== DRAINS ============================== */
     PW.part('drain-mast', { label: 'Drain lines and drain mast', explode: [0, -.5, 0], src: 'p.50-51',
-      info: 'Eight drain lines from the LPC and HPC vane actuators, the 2.5 bleed valve, the IFPC and FOM, the hydraulic pump, the VFG, the oil tank scupper and the starter run to the drain mast, which exits through the latch access door at 6 o\'clock. A drain map placard inside the door identifies each tube, so the source of a leak can be found from which tube drips.' });
-    /* p.50: each drain runs from its source to the collector under the core at 6 o'clock; the mast carries them down the lower
+      info: 'Eight drain lines, from the 2.5 bleed valve actuator, the HPC and LPC vane actuators, the VFG, the starter, the fuel/oil manifold and IFPC, the oil tank scupper and the hydraulic pump, gather into the drain mast. The mast drops between the reverser doors at 6 o\'clock and ends in a round plate of tube ends at the latch access panel. The drain tube map inside the panel numbers them: 1 DR11 2.5 bleed, 2 DR21 HPC SVA, 3 DR01 LPC SVA, 4 DR61 VFG, 5 DR91 starter, 6 DR41 FOM fuel, 7 DR71 oil tank, 8 DR51 hydraulic pump. Which tube drips points to the leaking unit. The nacelle also drains through the gaps round the latch access panel and through holes in the lower bifurcation panels.' });
+    /* p.50: each drain runs from its source to the top of the mast under the core at 6 o'clock; the mast carries them down the lower
        bifurcation and through the reverser to the latch access panel at the bottom of the nacelle */
     { const xm2 = -1.48, runs = [
         /* the three actuator drains cross under the cowl anti-ice duct on their way down the right side */
@@ -995,18 +997,26 @@
         [P(-1.40, 7.15, .46), P(-1.40, 6.6, .50), P(-1.43, 6.1, .515)],                                                             // fuel/oil manifold and IFPC
         [P(-1.685, 7.95, .43), P(-1.70, 7.75, .47), P(-1.72, 7.45, .52), P(-1.68, 7.1, .545), P(-1.60, 6.8, .545), P(-1.52, 6.45, .54), P(-1.47, 6.2, .535)],   // starter pad seal, under the gearbox and the VFG oil line
         /* the VFG and oil tank drains come forward from aft into the back of the collector */
-        [P(-1.684, 6.03, .482), P(-1.672, 6.05, .515), P(-1.60, 6.08, .54), P(-1.54, 6.09, .58), P(-1.515, 6.09, .612)],          // VFG pad seal
+        [P(-1.704, 6.03, .479), P(-1.69, 6.05, .515), P(-1.60, 6.08, .54), P(-1.54, 6.09, .58), P(-1.515, 6.09, .612)],          // VFG pad seal
         [P(-1.875, 2.345, .516), P(-1.877, 2.45, .52), P(-1.88, 2.7, .535), P(-1.89, 3.1, .54), P(-1.90, 3.5, .54), P(-1.91, 3.9, .54), P(-1.92, 4.3, .54), P(-1.92, 4.8, .54), P(-1.90, 5.15, .542), P(-1.88, 5.5, .545), P(-1.75, 5.95, .545),
           P(-1.62, 6.02, .56), P(-1.54, 6.03, .59), P(-1.515, 6.03, .612)]];                                                        // oil tank scupper, from the fitting below the fill port
       /* the six forward drains keep their own lanes, 1 cm apart, into the top of the collector block on the mast, all to the left of the
          igniter cables; the right-side drains take the lanes in the order they arrive, so none crosses another */
       const lanes = [6.025, 5.99, 5.955, 6.055, 6.105, 6.145];
-      runs.forEach((pts, i) => { if (i > 5) { line('drain-mast', pts, .004, 'tube', { clamps: 1, ends: false }); return; }
-        const h = lanes[i], q = pts[pts.length - 1]; pts[pts.length - 1] = P(q.x, h, Math.hypot(q.y, q.z));
-        line('drain-mast', pts.concat([P(xm2 + .03, h, .56), P(xm2 + .01, h, .604)]), .004, 'tube', { clamps: 1, ends: false }); });
-      box('drain-mast', xm2, 6.04, .617, .045, .022, .07, 'steel');                                                                    // collector block
-      line('drain-mast', [P(xm2, 6, .62), P(xm2, 6, .85), P(xm2 - .01, 6, 1.13)], .016, 'tube', { clamps: 2, tension: 0 });            // the mast, down the bifurcation and through the reverser
-      box('drain-mast', xm2 - .01, 6, 1.155, .07, .04, .045, 'steel'); }                                                             // its outlet, standing just proud of the latch access panel
+      /* p.51: the tubes gather into the mast, a bundle held in clamp blocks, and end side by side in a round end plate at the latch
+         access panel, each in its place on the drain tube map (1 DR11 2.5 bleed, 2 DR21 HPC SVA, 3 DR01 LPC SVA, 4 DR61 VFG, 5 DR91
+         starter, 6 DR41 FOM, 7 DR71 oil tank, 8 DR51 hydraulic pump; tube 1 taken as forward). Brian's photos from below, reverser doors
+         open, show the plate as the white disc of tube ends under the core. The bundle drops between the reverser doors' latch beams,
+         which leave a 50 mm gap at 6 o'clock, so it is packed four tubes across there and the plate hangs just below them */
+      const rP = 1.15, map = [[.012, .01], [.03, 0], [.012, -.01], [-.028, .009], [-.008, .015], [-.008, 0], [-.008, -.015], [-.028, -.009]];   // by run: LPC, 2.5, HPC, pump, FOM, starter, VFG, oil tank
+      const xB = xm2 - .02, inB = (i, r, k) => { const [a, t] = map[i]; return P(xB + a * k, 6 + t * k / r / (Math.PI / 6), r); };   // aft of the reverser latch at x -1.40
+      runs.forEach((pts, i) => { let lead = pts;
+        if (i <= 5) { const h = lanes[i], q = pts[pts.length - 1]; pts[pts.length - 1] = P(q.x, h, Math.hypot(q.y, q.z)); lead = pts.concat([P(xm2 + .03, h, .56), P(xm2 + .01, h, .604)]); }
+        line('drain-mast', lead.concat([inB(i, .66, .6), inB(i, .80, .9), inB(i, .95, 1), inB(i, rP - .03, 1), inB(i, rP - .006, 1)]), .004, 'tube', { clamps: 0, ends: false }); });
+      for (const r of [.76, .935]) box('drain-mast', xB - .002, 6, r, .08, .02, .06, 'steel');                                     // clamp blocks round the bundle
+      { const g = Kt.frame('drain-mast', xB, 6, rP);                                                                               // the end plate, facing down
+        Kt.cyl('drain-mast', g, [0, -.002, 0], 'y', .046, .014, 'termWhite', { edge: .004 });
+        map.forEach(([a, t]) => { Kt.cyl('drain-mast', g, [a, .0065, t], 'y', .0062, .007, 'phenolic'); Kt.cyl('drain-mast', g, [a, .012, t], 'y', .0043, .005, 'brass'); }); } }
   }
   /* a small circle profile (tori for manifolds) */
   function circ(x, r, rad, n) { const out = []; for (let i = 0; i < n; i++) { const a = i / n * TAU; out.push([x + rad * Math.cos(a), r + rad * Math.sin(a)]); } return out; }
