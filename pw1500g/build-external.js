@@ -267,31 +267,66 @@
     /* ============================== OIL SYSTEM ============================== */
     PW.part('oil', { label: 'Oil system', explode: [0, 0, .45], src: 'p.212-255; TTM ch. 79',
       info: 'Dry-sump system: the tank on the right of the core feeds the pressure stage of the lube and scavenge pump, the oil control module filters and monitors it, and part of the flow is cooled in the fuel/oil heat exchanger and the air/oil cooler before going to the bearings, gearboxes and the FDGS journals. Six scavenge stages return it to the tank through chip collectors.' });
-    PW.part('oil-tank', { parent: 'oil', label: 'Oil tank', src: 'p.222-225; TTM ch. 79; photos',
-      info: 'Engine-mounted tank on the right side of the core, 27.3 L (28.8 qt), with a de-aerator inside and a pressurization valve on top. Service it through the oil tank access door on the right reverser door at about 2:30, within the AMM time after shutdown so the level means something.\n\nThe oval sight glass reads in quarts and litres below full: FULL, 1, 2, 3 and LOW, so it tells you how much to add. The fill port beside it has a hinged cap marked OIL with a spring-loaded lock and a flapper valve; the scupper round it drains spills to the drain mast. The drain plug is at the bottom of the cone.' });
-    /* p.223, 225: a tall tank curved to the core on the right, from about 1:30 down to 4:45 o'clock, its lower part narrowing into a cone
-       to the drain plug. The fill port and the oval sight glass sit side by side near its top, under the oil tank access door */
-    { const tx = -1.93;
-      Kt.arcLoft('oil-tank', [{ h: 1.42, x: tx, w: .25, ri: .428, ro: .498, n: 3 }, { h: 1.5, x: tx, w: .3, ri: .41, ro: .515, n: 5 }, { h: 3.9, x: tx, w: .3, ri: .41, ro: .515, n: 5 },
-        { h: 4.25, x: tx + .005, w: .22, ri: .42, ro: .505, n: 4 }, { h: 4.6, x: tx + .01, w: .11, ri: .435, ro: .49, n: 3 }, { h: 4.8, x: tx + .01, w: .045, ri: .446, ro: .479, n: 2.4 }], 'tankAl', { seg: 32 });
-      for (const xs of [tx + .09, tx - .09]) PW.add('oil-tank', G.revolve([[xs + .01, .515], [xs - .01, .515], [xs - .01, .521], [xs + .01, .521]], { seg: 24, thetaStart: G.clock(1.65), thetaLength: G.clock(3.7) - G.clock(1.65) }), 'steel');   // mounting straps
-      { const f = Kt.frame('oil-tank', tx + .01, 4.83, .462); Kt.plug('oil-tank', f, [0, 0, .004], 'z', .01); }                               // drain plug
-      /* fill port (p.225): scupper cup, hinged cap marked OIL with its spring-loaded lock, scupper drain fitting */
-      { const f = Kt.frame('oil-tank', tx + .055, 2.12, .515);
-        Kt.prof('oil-tank', f, [0, .004, 0], 'y', [[.012, 0], [.012, .046], [.008, .05], [-.008, .05], [-.008, .038], [.006, .038], [.006, 0]], 'castAl', { seg: 32 });
-        Kt.cyl('oil-tank', f, [0, .018, 0], 'y', .032, .007, 'castAl', { edge: .002 }); Kt.decal('oil-tank', f, [.004, .0222, 0], 'y', 'x', .03, .014, 'OIL');
-        Kt.box('oil-tank', f, [-.006, .025, .022], [.01, .006, .03], 'steel', { round: .002 }); Kt.cyl('oil-tank', f, [-.034, .018, 0], 'z', .004, .022, 'steel');
-        Kt.fitting('oil-tank', f, [0, -.004, .05], 'z', .007); }                                                                       // scupper drain, down toward the drain mast
-      Kt.sight('oil-tank', Kt.frame('oil-tank', tx - .07, 2.22, .515), [0, .003, 0], 'y', '-z', .034, .09, 'qtsLts');
-      { const f = Kt.frame('oil-tank', tx - .02, 1.47, .465); Kt.cyl('oil-tank', f, [0, 0, -.012], '-z', .02, .02, 'castAl'); Kt.fitting('oil-tank', f, [-.03, 0, -.012], '-x', .007); }   // pressurization valve, its vent port aft
-      /* p.223: the vent from the pressurization valve runs aft over the top edge and down the tank's aft face to the bottom, where it joins
-         the breather forward to the deoiler */
-      line('oil-tank', [P(tx - .06, 1.42, .465), P(-2.02, 1.42, .47), P(-2.075, 1.5, .48), P(-2.10, 1.75, .482), P(-2.10, 2.4, .48), P(-2.10, 3.1, .478), P(-2.10, 3.8, .474), P(-2.09, 4.15, .468), P(-2.06, 4.27, .462)], .008, 'tube', { clamps: 3 });
-      /* tank outlet over the oil control module and the end of the MGB to the pump; scavenge return beside it; vent under the sump
-         forward to the deoiler */
-      line('oil-tank', [P(tx + .025, 4.62, .47), P(-1.89, 4.45, .52), P(-1.75, 4.42, .52), P(-1.60, 4.44, .512), P(-1.50, 4.55, .505), P(-1.455, 4.68, .49), P(-1.43, 4.75, .44)], .016, 'tube', { clamps: 3 });   // to the lube and scavenge pump
-      line('oil-tank', [P(mx0 + .07, 4.6, .45), P(-1.50, 4.2, .47), P(-1.62, 3.7, .47), P(-1.74, 3.5, .465), P(tx + .14, 3.5, .46)], .014, 'tube', { clamps: 2 });                                     // scavenge return
-      line('oil-tank', [P(tx - .12, 4.3, .46), P(-2.06, 4.3, .40), P(-1.95, 4.35, .375), P(-1.82, 4.38, .365), P(-1.75, 4.3, .36), P(-1.715, 4.2, .355), P(-1.695, 4.14, .345), P(mx1 - .033, 4.12, .338)], .012, 'tube', { clamps: 2 }); }   // vent forward into the aft end of the deoiler, clear of igniter A
+    PW.part('oil-tank', { parent: 'oil', label: 'Oil tank', src: 'p.222-225, p.249; TTM 79-00 fig. 2 and 4; photos',
+      info: 'Aluminium tank on the right of the core, just forward of the turbine intermediate case, curved to the core from its lid at about 2:20 o\'clock down to a cone and the outlet at 5 o\'clock. It holds 27.3 L (28.8 qt): 21.8 L (23 qt) fully serviced, 9.3 L (9.8 qt) minimum. A stainless steel heat shield held together by springs wraps the body. On the lid are the quantity sensor (to the EEC), the pressurization valve, which holds about 12 psi in the tank and vents the excess to the deoiler, and the inlet to the swirl de-aerator.\n\nService it through the oil tank access door on the right IFS. Wait at least 5 minutes after shutdown before opening the cap, and read the level between 5 and 60 minutes after shutdown; outside that window the sight glass is not accurate. The sight glass reads in quarts and litres below full (FULL, 1, 2, 3, LOW), so it shows how much to add. Under the hinged cap a strainer keeps debris out and a flapper valve stops the oil being lost if the cap is left open; if the flapper is stuck shut, hold it open with a small screwdriver through a hole in the screen. Fill until oil starts to run into the scupper, which drains to the drain mast. The drain plug is at the bottom of the cone.' });
+    /* p.223, 225, 249 and TTM 79-00 fig. 2 and 4, with Brian's photo from aft on the right: a tall tank curved to the core just forward of
+       the turbine intermediate case. Its flat lid, with a rim proud of the body, is at about 2:20 o'clock; the forward side starts to
+       taper into the cone below 3:30 and the cone ends in the outlet boss at 5 o'clock, nearer the aft side. The fill port (upper aft) and
+       the sight glass (upper forward) are on the outboard face under the access door; the quantity sensor, the pressurization valve and
+       the de-aerator inlet are on the lid. The body wears the embossed stainless heat shield; the lid and the castings are bare */
+    { const xa = -2.08, xf = -1.755, sec = (h, a, f, ri, ro, n) => ({ h, x: (a + f) / 2, w: f - a, ri, ro, n });
+      Kt.arcLoft('oil-tank', [sec(2.345, xa, xf, .375, .527, 4), sec(3.5, xa, xf, .375, .527, 4), sec(3.75, xa, -1.765, .375, .527, 4), sec(4.0, xa, -1.80, .376, .526, 3.8),
+        sec(4.3, xa, -1.86, .385, .522, 3.4), sec(4.6, -2.076, -1.93, .40, .512, 3), sec(4.85, -2.064, -1.975, .418, .498, 2.6), sec(5.0, -2.05, -1.995, .43, .487, 2.3),
+        sec(5.1, -2.04, -2.004, .44, .476, 2)], 'heatShield', { seg: 48, uv: 1 / .06 });
+      Kt.arcLoft('oil-tank', [sec(2.29, xa - .006, xf + .006, .37, .532, 5), sec(2.35, xa - .006, xf + .006, .37, .532, 5)], 'tankAl', { seg: 48 });   // the lid
+      const lid = (x, r) => Kt.frame('oil-tank', x, 2.29, r);                                                                       // on the lid, local -z is up out of the tank
+      /* quantity sensor (p.249): the probe hangs inside nearly the full height; on the lid, its five-bolt flange and the connector */
+      { const f = lid(-1.86, .435); Kt.box('oil-tank', f, [0, 0, -.004], [.064, .056, .008], 'castAl', { round: .008 }); Kt.bolts('oil-tank', f, [0, 0, -.008], '-z', .025, 5, .0035);
+        Kt.cyl('oil-tank', f, [0, 0, -.02], '-z', .016, .025, 'castAl'); Kt.connector('oil-tank', f, [0, 0, -.036], '-z', .009, { lead: 'x' }); }
+      /* pressurization valve (p.222-223): the round valve on the lid at the aft side, under the elbow that turns its vent aft into the
+         breather tube */
+      { const f = lid(-2.035, .405); Kt.box('oil-tank', f, [0, 0, -.003], [.056, .03, .006], 'castAl', { round: .004 });
+        for (const s of [-1, 1]) Kt.hex('oil-tank', f, [s * .021, 0, -.0065], '-z', .0035, .003, 'steel');
+        Kt.cyl('oil-tank', f, [0, 0, -.012], '-z', .019, .012, 'castAl', { edge: .002 }); Kt.cyl('oil-tank', f, [-.004, 0, -.022], 'x', .013, .03, 'castAl');
+        Kt.fitting('oil-tank', f, [-.022, 0, -.022], '-x', .012); }
+      /* the de-aerator inlet on the lid: a block on a four-bolt cross flange, the scavenge return coming in from aft */
+      { const f = lid(-1.975, .49); Kt.box('oil-tank', f, [0, 0, -.004], [.072, .02, .008], 'castAl', { round: .003 }); Kt.box('oil-tank', f, [0, 0, -.004], [.02, .058, .008], 'castAl', { round: .003 });
+        for (const [a, b] of [[-.03, 0], [.03, 0], [0, -.023], [0, .023]]) Kt.hex('oil-tank', f, [a, b, -.0085], '-z', .0035, .003, 'steel');
+        Kt.box('oil-tank', f, [0, 0, -.021], [.04, .032, .026], 'castAl', { round: .005 }); Kt.fitting('oil-tank', f, [-.022, 0, -.024], '-x', .014); }
+      /* fill port (p.223, 225; photo): the casting sits down in a pocket cut in the heat shield, whose edge stands proud round it; the
+         hinged cap marked OIL with the spring-loaded lock across it, the strainer and flapper valve under the cap, and the scupper drain
+         fitting at the bottom of the pocket */
+      { const f = Kt.frame('oil-tank', -1.99, 2.57, .526);
+        Kt.prof('oil-tank', f, [0, -.003, 0], 'y', [[0, .051], [0, .064], [.011, .064], [.011, .051]], 'heatShield', { seg: 8 });       // the shield's raised edge
+        Kt.cyl('oil-tank', f, [0, -.003, 0], 'y', .052, .003, 'darkBox');                                                           // floor of the pocket
+        Kt.box('oil-tank', f, [0, -.001, -.012], [.088, .007, .044], 'accGrey', { round: .003 }); Kt.cyl('oil-tank', f, [0, -.001, .008], 'y', .041, .007, 'accGrey', { edge: .002 });   // casting
+        Kt.cyl('oil-tank', f, [0, .0055, .0], 'y', .031, .006, 'castAl', { edge: .002 }); Kt.decal('oil-tank', f, [.004, .0087, .009], 'y', '-z', .026, .012, 'OIL');   // hinged cap
+        Kt.cyl('oil-tank', f, [-.034, .006, 0], 'z', .004, .022, 'steel');                                                       // hinge
+        Kt.box('oil-tank', f, [.004, .0105, -.006], [.052, .003, .01], 'steel', { round: .0012 }); Kt.cyl('oil-tank', f, [.004, .013, -.006], 'y', .004, .006, 'steel');   // lock bar and its T-handle
+        for (const [a, b] of [[-.038, -.028], [.038, -.028], [-.026, .036], [.026, .036]]) Kt.hex('oil-tank', f, [a, .003, b], 'y', .0032, .0025, 'steel');
+        Kt.fitting('oil-tank', f, [0, .004, .05], 'z', .007); }                                                                       // scupper drain
+      /* sight glass (p.225; photo): QTS and LTS scales in a raised stadium boss on the forward part of the outboard face */
+      { const f = Kt.frame('oil-tank', -1.842, 2.71, .526);
+        Kt.box('oil-tank', f, [0, -.002, 0], [.064, .01, .09], 'castAl', { round: .004 }); for (const s of [-1, 1]) Kt.cyl('oil-tank', f, [0, -.002, s * .045], 'y', .032, .01, 'castAl');
+        Kt.sight('oil-tank', f, [0, .003, 0], 'y', '-z', .034, .12, 'qtsLts'); }
+      /* outlet boss at the apex: the supply leaves forward to the LSOP; the drain plug is in the bottom */
+      { const f = Kt.frame('oil-tank', -2.022, 5.1, .458); Kt.cyl('oil-tank', f, [0, 0, .011], 'z', .021, .022, 'castAl', { edge: .003 });
+        Kt.plug('oil-tank', f, [-.004, 0, .023], 'z', .009); Kt.fitting('oil-tank', f, [.019, 0, .011], 'x', .016); }
+      /* two brackets from the aft face to the turbine intermediate case flange, between the breather and the scavenge return */
+      for (const h of [2.85, 3.85]) { const f = Kt.frame('oil-tank', -2.105, h, .44); Kt.box('oil-tank', f, [0, 0, 0], [.052, .022, .03], 'steel', { round: .003 });
+        Kt.cyl('oil-tank', f, [-.02, 0, 0], 'z', .005, .04, 'steel'); }
+      /* p.223: the breather leaves the valve's elbow aft over the lid, runs down the aft face and forward under the tank, over the TIC
+         cooling tube where it lies lowest, into the aft end of the deoiler, clear of igniter A */
+      line('oil-tank', [P(-2.0744, 2.186, .405), P(-2.094, 2.19, .405), P(-2.106, 2.29, .405), P(-2.106, 2.8, .405), P(-2.106, 3.4, .40), P(-2.10, 3.62, .385), P(-2.07, 3.72, .36),
+        P(-2.0, 3.78, .35), P(-1.90, 3.8, .35), P(-1.81, 3.82, .352), P(-1.74, 3.95, .35), P(-1.71, 4.06, .345), P(-1.695, 4.11, .341), P(mx1 - .033, 4.12, .338)], .012, 'tube', { clamps: 3 });
+      /* p.223: the scavenge return comes aft from the pump past the tank's forward face, in under the tip of the cone, up the aft face and
+         in over the lid to the de-aerator */
+      line('oil-tank', [P(mx0 + .07, 4.6, .45), P(-1.50, 4.2, .47), P(-1.58, 4.05, .478), P(-1.70, 4.0, .487), P(-1.79, 4.08, .487), P(-1.83, 4.3, .48), P(-1.885, 4.55, .465),
+        P(-1.935, 4.78, .44), P(-1.99, 4.97, .40), P(-2.05, 4.99, .398), P(-2.095, 4.86, .41), P(-2.104, 4.6, .45), P(-2.104, 4.3, .48), P(-2.104, 4.0, .49), P(-2.104, 3.2, .49),
+        P(-2.104, 2.5, .49), P(-2.104, 2.32, .49), P(-2.09, 2.2, .49), P(-2.05, 2.196, .49), P(-2.0173, 2.1965, .49)], .014, 'tube', { clamps: 3 });
+      /* p.223: the supply leaves the outlet boss forward, up the cone's forward side, over igniter A's lead and on to the pump inlet */
+      line('oil-tank', [P(-1.98, 5.146, .458), P(-1.96, 5.13, .468), P(-1.93, 5.0, .50), P(-1.90, 4.76, .522), P(-1.87, 4.56, .527), P(-1.80, 4.45, .525), P(-1.75, 4.42, .52),
+        P(-1.60, 4.44, .512), P(-1.50, 4.55, .505), P(-1.455, 4.68, .49), P(-1.43, 4.75, .44)], .016, 'tube', { clamps: 3 }); }
     /* thermal management (p.212-217, 232-233): three heat exchangers on the upper left of the core. The EEC's bypass valve splits the
        cooled oil between the fuel/oil and air/oil coolers on fuel temperature, normally about 75 / 25 */
     /* p.233, measured against the HPC vane lever rows: FOHX x -1.05 to -1.41 with its bypass valve at the forward end, VFGOOHX -1.43 to
@@ -767,6 +802,7 @@
         leg([P(-1.762, 5.40, .477), P(-1.735, 5.43, .48), T6]);                                                                 // MOT sensor
         leg([T7, P(-1.795, 5.25, .41), P(-1.775, 5.5, .43), P(-1.735, 5.5, .455), T6], .008);
         leg([P(-1.704, 4.34, .443), P(-1.74, 4.4, .45), P(-1.785, 4.55, .45), P(-1.797, 4.8, .435), P(-1.795, 5.0, .415), T7]);   // MOP sensor
+        leg([P(-1.8438, 2.057, .435), P(-1.82, 2.05, .44), P(-1.765, 2.15, .45), P(-1.737, 2.4, .455), P(-1.735, 3.0, .455), P(-1.736, 3.6, .455), P(-1.738, 4.0, .454), P(-1.74, 4.25, .452), P(-1.742, 4.385, .45)]);   // oil quantity sensor, down the tank's forward face into the MOP leg
         leg([P(-1.7525, 4.81, .33), P(-1.78, 4.88, .345), P(-1.79, 5.0, .375), T7]);                                           // active oil damper valve
         leg([P(-1.7985, 4.66, .36), P(-1.80, 4.8, .37), P(-1.797, 4.95, .385), T7]);                                           // OFDP sensor
         leg([P(-1.7935, 4.72, .405), P(-1.797, 4.9, .41), T7]); }                                                               // oil debris monitor
@@ -1057,8 +1093,8 @@
         [P(-1.685, 7.95, .43), P(-1.70, 7.75, .47), P(-1.72, 7.45, .52), P(-1.68, 7.1, .545), P(-1.60, 6.8, .545), P(-1.52, 6.45, .54), P(-1.47, 6.2, .535)],   // starter pad seal, under the gearbox and the VFG oil line
         /* the VFG and oil tank drains come forward from aft into the back of the collector */
         [P(-1.704, 6.03, .479), P(-1.69, 6.05, .515), P(-1.60, 6.08, .54), P(-1.54, 6.09, .58), P(-1.515, 6.09, .612)],          // VFG pad seal
-        [P(-1.875, 2.345, .516), P(-1.877, 2.45, .52), P(-1.88, 2.7, .535), P(-1.89, 3.1, .54), P(-1.90, 3.5, .54), P(-1.91, 3.9, .54), P(-1.92, 4.3, .54), P(-1.92, 4.8, .54), P(-1.90, 5.15, .542), P(-1.88, 5.5, .545), P(-1.75, 5.95, .545),
-          P(-1.62, 6.02, .56), P(-1.54, 6.03, .59), P(-1.515, 6.03, .612)]];                                                        // oil tank scupper, from the fitting below the fill port
+        [P(-1.99, 2.787, .530), P(-1.99, 2.88, .537), P(-1.993, 3.4, .537), P(-2.0, 3.9, .536), P(-2.01, 4.3, .533), P(-2.022, 4.6, .526), P(-2.03, 4.85, .513), P(-2.03, 5.08, .50), P(-2.0, 5.3, .512), P(-1.95, 5.45, .53), P(-1.88, 5.55, .545), P(-1.75, 5.95, .545),
+          P(-1.62, 6.02, .56), P(-1.54, 6.03, .59), P(-1.515, 6.03, .612)]];                                                        // oil tank scupper, from the fitting at the bottom of the fill port pocket, down the outboard face and round the cone
       /* the six forward drains keep their own lanes, 1 cm apart, into the top of the collector block on the mast, all to the left of the
          igniter cables; the right-side drains take the lanes in the order they arrive, so none crosses another */
       const lanes = [6.025, 5.99, 5.955, 6.055, 6.105, 6.145];

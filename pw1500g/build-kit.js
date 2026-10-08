@@ -26,6 +26,7 @@
     quilt:      () => new THREE.MeshStandardMaterial({ color: col('#c9cbc8'), roughness: .42, metalness: .75, bumpMap: quiltTex(), bumpScale: .002, roughnessMap: quiltTex() }),
     silicone:   () => new THREE.MeshStandardMaterial({ color: col('#c9531f'), roughness: .6, metalness: 0 }),
     tankAl:     () => new THREE.MeshStandardMaterial({ color: col('#c6cacb'), roughness: .5, metalness: .32, roughnessMap: PW.tex.noise('fine', 256, 40, .6, 1) }),   // formed and welded aluminium (oil tank)
+    heatShield: () => new THREE.MeshStandardMaterial({ color: col('#c3c6c7'), roughness: .36, metalness: .72, bumpMap: shieldTex(), bumpScale: .0012, roughnessMap: shieldTex() }),   // embossed stainless heat shield round the oil tank (photo)
     exciterBlack: () => new THREE.MeshStandardMaterial({ color: col('#17181a'), roughness: .62, metalness: .2 }),                 // ignition exciter case (photo)
     braidSteel: () => new THREE.MeshStandardMaterial({ color: col('#ffffff'), map: steelBraidTex(), roughness: .38, metalness: .8, bumpMap: steelBraidTex(), bumpScale: .0004 }),   // ignition cable overbraid
   });
@@ -38,6 +39,9 @@
     for (let i = 0; i <= 4; i++) { c.beginPath(); c.moveTo(0, i * 32); c.lineTo(w, i * 32); c.stroke(); c.beginPath(); c.moveTo(i * 32, 0); c.lineTo(i * 32, h); c.stroke(); }
     c.fillStyle = '#d8d8d8'; for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) { c.beginPath(); c.arc(x * 32 + 16, y * 32 + 16, 9, 0, TAU); c.fill(); } }); }
   K.quiltTex = quiltTex;
+  /* embossed stainless foil of the oil tank's heat shield: a fine diamond quilting, about 15 mm cells at the arc loft's 1/0.06 m tiling */
+  let shTex; function shieldTex() { return shTex || (shTex = PW.tex.canvas(64, 64, (c, w, h) => { c.fillStyle = '#bdbdbd'; c.fillRect(0, 0, w, h); c.strokeStyle = '#575757'; c.lineWidth = 2.5;
+    for (let i = -w; i <= 2 * w; i += 16) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i + h, h); c.stroke(); c.beginPath(); c.moveTo(i, 0); c.lineTo(i - h, h); c.stroke(); } })); }
 
   /* ---------------- frames ---------------- */
   /* a frame on the case at (x, clock h, radius r), optionally turned about its own axes (radians) */
@@ -72,17 +76,28 @@
 
   /* a body swept round the engine axis, for tanks and ducts shaped to the core: each section is a rounded rectangle in the (x, r)
      plane, { h: clock, x: centre, w: axial width, ri, ro: inner and outer radius, n: squareness (2 round .. 6 square) }, joined in
-     order and capped at both ends. Built in the part's own frame (engine coordinates) */
-  K.arcLoft = (pid, secs, mat, o) => { o = o || {}; const M = o.seg || 28, pos = [], idx = [], ring = s => { const out = [], n = s.n || 4, a = s.w / 2, b = (s.ro - s.ri) / 2, rc = (s.ro + s.ri) / 2, th = G.clock(s.h);
-      for (let i = 0; i < M; i++) { const t = i / M * TAU, c = Math.cos(t), sn = Math.sin(t), px = s.x + a * Math.sign(c) * Math.pow(Math.abs(c), 2 / n), pr = rc + b * Math.sign(sn) * Math.pow(Math.abs(sn), 2 / n);
-        out.push([px, pr * Math.cos(th), pr * Math.sin(th)]); } return out; };
-    const rings = secs.map(ring);
-    rings.forEach(r => r.forEach(p => pos.push(...p)));
-    for (let k = 0; k < rings.length - 1; k++) for (let i = 0; i < M; i++) { const a = k * M + i, b = k * M + (i + 1) % M, c = (k + 1) * M + i, d = (k + 1) * M + (i + 1) % M; idx.push(a, c, b, b, c, d); }
-    for (const [k, flip] of [[0, true], [rings.length - 1, false]]) { const s = secs[k], th = G.clock(s.h), rc = (s.ro + s.ri) / 2, ci = pos.length / 3; pos.push(s.x, rc * Math.cos(th), rc * Math.sin(th));
-      const base = pos.length / 3; rings[k].forEach(p => pos.push(...p)); for (let i = 0; i < M; i++) { const a = base + i, b = base + (i + 1) % M; if (flip) idx.push(ci, b, a); else idx.push(ci, a, b); } }
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
-    G.orientOutward && G.orientOutward(g); g.userData.solid = true;
+     order and capped at both ends. Built in the part's own frame (engine coordinates). Sections are filled in every o.step hours of
+     clock (default 0.06) so the surface follows the arc between them instead of cutting straight across; texture coordinates run in
+     metres times o.uv (tiles per metre) round each section and along the arc */
+  K.arcLoft = (pid, secs, mat, o) => { o = o || {}; const M = o.seg || 28, step = o.step || .06, U = o.uv || 1, pos = [], uv = [], idx = [], R = M + 1;
+    const all = []; secs.forEach((s, k) => { if (k) { const p = secs[k - 1], m = Math.ceil(Math.abs(s.h - p.h) / step);
+        for (let j = 1; j < m; j++) { const t = j / m, q = { n: (p.n || 4) + ((s.n || 4) - (p.n || 4)) * t }; for (const key of ['h', 'x', 'w', 'ri', 'ro']) q[key] = p[key] + (s[key] - p[key]) * t; all.push(q); } }
+      all.push(s); });
+    const ring = s => { const out = [], n = s.n || 4, a = s.w / 2, b = (s.ro - s.ri) / 2, rc = (s.ro + s.ri) / 2, th = G.clock(s.h);
+      for (let i = 0; i <= M; i++) { const t = i / M * TAU, c = Math.cos(t), sn = Math.sin(t), px = s.x + a * Math.sign(c) * Math.pow(Math.abs(c), 2 / n), pr = rc + b * Math.sign(sn) * Math.pow(Math.abs(sn), 2 / n);
+        out.push([px, pr * Math.cos(th), pr * Math.sin(th)]); } return out; };   // M + 1 points: the last repeats the first, for the texture seam
+    const rings = all.map(ring); let v = 0;
+    rings.forEach((r, k) => { if (k) { const s0 = all[k - 1], s1 = all[k]; v += Math.abs(G.clock(s1.h) - G.clock(s0.h)) * (s0.ri + s0.ro + s1.ri + s1.ro) / 4; }
+      let u = 0; r.forEach((p, i) => { if (i) u += Math.hypot(p[0] - r[i - 1][0], p[1] - r[i - 1][1], p[2] - r[i - 1][2]); pos.push(...p); uv.push(u * U, v * U); }); });
+    for (let k = 0; k < rings.length - 1; k++) for (let i = 0; i < M; i++) { const a = k * R + i, b = a + 1, c = a + R, d = c + 1; idx.push(a, c, b, b, c, d); }
+    for (const [k, flip] of [[0, true], [rings.length - 1, false]]) { const s = all[k], th = G.clock(s.h), rc = (s.ro + s.ri) / 2, ci = pos.length / 3; pos.push(s.x, rc * Math.cos(th), rc * Math.sin(th)); uv.push(0, 0);
+      const base = pos.length / 3; for (let i = 0; i < M; i++) { const p = rings[k][i]; pos.push(...p); uv.push((p[0] - s.x) * U, (Math.hypot(p[1], p[2]) - rc) * U); }
+      for (let i = 0; i < M; i++) { const a = base + i, b = base + (i + 1) % M; if (flip) idx.push(ci, b, a); else idx.push(ci, a, b); } }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx);
+    G.orientOutward && G.orientOutward(g); g.computeVertexNormals();
+    const nr = g.attributes.normal; for (let k = 0; k < rings.length; k++) { const a = k * R, b = a + M, x = nr.getX(a) + nr.getX(b), y = nr.getY(a) + nr.getY(b), z = nr.getZ(a) + nr.getZ(b), l = Math.hypot(x, y, z) || 1;
+      nr.setXYZ(a, x / l, y / l, z / l); nr.setXYZ(b, x / l, y / l, z / l); }   // smooth across the seam
+    g.userData.solid = true;
     return PW.add(pid, g, mat, { solid: true, into: o.into }); };
 
   /* ---------------- fasteners and fittings ---------------- */

@@ -187,11 +187,12 @@
         PW.add(iid, G.revolve(G.shellProfile(ifo, ifo.map(([xx, r]) => [xx, r - .02])), { seg: 72, thetaStart: a0, thetaLength: al }), 'cowlWhite');
         PW.add(iid, G.revolve(G.shellProfile(ifo.map(([xx, r]) => [xx, r - .02]), ifo.map(([xx, r]) => [xx, r - .032])), { seg: 72, thetaStart: a0 + deg(1), thetaLength: al - deg(2) }), 'blanket', { mat: { bumpMap: quiltTex(), roughnessMap: quiltTex() } }); }
       /* TTM p.268-269: two fire detection elements on each core cowl, forward and aft, each a pair of sensing tubes (loops A and B)
-         clipped to the blanket and running round the core; they open with the door */
+         clipped to the blanket and running round the core; they open with the door. On the right the aft pair runs just aft of the oil
+         tank, clear of the oil tank access door */
       if (PW.parts.has('fire')) { const fid = `fire-${side}`;
         PW.part(fid, { parent: 'fire', label: `Fire detection elements, ${side} core cowl`, attach: hinge, src: 'TTM ch. 26 (p.268-269)',
           info: 'Two sensing elements of fire loops A and B on the inside of this core cowl, one forward and one aft, each a pair of tubes running round the core on clips. They are part of the reverser door and open with it.' });
-        for (const xx of [-1.43, -1.98]) for (const dx of [-.011, .011]) { const pts = []; for (let i = 0; i <= 18; i++) pts.push(G.onRing(xx + dx, rIFS(xx) - .042, it0 + deg(6) + (itl - deg(12)) * i / 18));
+        for (const xx of [-1.43, side === 'right' ? -2.115 : -1.98]) for (const dx of [-.011, .011]) { const pts = []; for (let i = 0; i <= 18; i++) pts.push(G.onRing(xx + dx, rIFS(xx) - .042, it0 + deg(6) + (itl - deg(12)) * i / 18));
           const g = G.tube(pts, .0035, { radial: 6 }), m = PW.add(fid, g, 'steel'); m.userData.isLine = true;
           if (dx < 0) { const c = PW.add(fid, G.alongCurve(g.userData.curve, [.1, .3, .5, .7, .9], () => new THREE.BoxGeometry(.035, .008, .012)), 'steel'); c.userData.isLine = true; } } }
       const ac = []; for (let i = 0; i <= 10; i++) { const xx = xTE - .02 + (xCN + .004 - (xTE - .02)) * i / 10; ac.push([xx, rIFS(xx)]); }
@@ -311,7 +312,7 @@
     const ifsPanel = (pid, parentDoor, label, info, xx, h, l, w, mat) => { PW.part(pid, { parent: parentDoor, label, info, src: 'p.20-23', attach: PW.parts.get(parentDoor).obj.children[0] }); const a = G.clock(h);
       const m = new THREE.Mesh(G.roundedBox(l, .008, w, .012)); m.position.copy(G.onRing(xx, rIFS(xx) + .002, a)); m.rotation.x = a;
       PW.add(pid, m, mat || 'cowlWhite', { solid: true }); };
-    ifsPanel('ifs-otad', 'tr-right', 'Oil tank access door (OTAD)', 'Door in the right IFS at about 2:30, over the oil tank, that gives access to its fill port and sight glass without opening the reverser door (p.21, p.223). Service within the AMM time after shutdown and check the level in the sight glass.', -1.92, 2.4, .26, .22, 'cowlWhite');
+    ifsPanel('ifs-otad', 'tr-right', 'Oil tank access door (OTAD)', 'Door in the right IFS at about 2:30, over the oil tank, that gives access to its fill port and sight glass without opening the reverser door (p.21, p.223-224). Wait at least 5 minutes after shutdown before servicing, and check the level between 5 and 60 minutes after shutdown.', -1.93, 2.62, .28, .27, 'cowlWhite');
     ifsPanel('ifs-pce', 'tr-right', 'Precooler exhaust (PCE) door', 'Door aft of the oil tank access door on the right IFS (p.21).', -2.30, 2.4, .2, .18, 'cowlWhite');
     /* the AOC window sits over the air/oil cooler: ZS 748-779 and 9 to 10:30 o'clock on p.5, mid-length of the IFS on p.23. Curved to the IFS, in three sections */
     { PW.part('ifs-aoc-window', { parent: 'tr-left', label: 'Air/oil cooler window', src: 'p.5, p.20-23', attach: PW.parts.get('tr-left').obj.children[0],
