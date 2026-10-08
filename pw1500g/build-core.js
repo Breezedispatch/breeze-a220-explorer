@@ -278,15 +278,9 @@
     {
       wall('cic', 'coreCase', -.90, -1.17, .012, 'nickel', { n: 16 });
       wall('cic', 'coreHub', -.88, -1.17, -.012, 'nickel', { n: 16 });
-      /* the CIC's outer wall: a conical disc from the bypass inner wall down to the HPC case (p.55 render). Where the angle gearbox sits
-         right behind the case (p.53; built at 7:18, beside the IFPC), the wall steps forward round it into a pocket: a radial wall ahead
-         of the gearbox and flat sides, with the core case as its floor. The pocket's shape is inferred: the manual draws the gearbox on
-         the case but not the case round it */
-      const pa = G.clock(6.75), pb = G.clock(7.85);
-      PW.add('cic', G.revolve([[-.95, .515], [-1.16, .262], [-1.17, .262], [-1.17, .245], [-1.155, .245], [-.94, .50]], { seg: 120, thetaStart: pb, thetaLength: TAU - (pb - pa) }), 'nickel');
-      for (const prof of [[[-.949, .515], [-.961, .515], [-.961, .27], [-.949, .27]], [[-1.137, .29], [-1.16, .262], [-1.17, .262], [-1.17, .245], [-1.155, .245], [-1.127, .278]]])
-        PW.add('cic', G.revolve(prof, { seg: 12, thetaStart: pa, thetaLength: pb - pa }), 'nickel');
-      for (const a of [pa, pb - .012]) PW.add('cic', G.revolve([[-.95, .515], [-.955, .27], [-1.153, .27]], { seg: 1, thetaStart: a, thetaLength: .012 }), 'nickel');   // the pocket's sides
+      /* the CIC's outer wall: a conical disc from the bypass inner wall down to the HPC case (p.55 render). The angle gearbox is bolted
+         to its aft face at 7:18 (p.66); until 2026-10-08 the gearbox sat in a pocket cut into the cone, now filled in */
+      PW.add('cic', G.revolve([[-.95, .515], [-1.16, .262], [-1.17, .262], [-1.17, .245], [-1.155, .245], [-.94, .50]], { seg: 120 }), 'nickel');
       for (const re of ['LPC exit guide vane', 'CIC strut', 'CIC rear vane']) { const r = R(re); if (r && !/exit guide/.test(re)) statorRow('cic', r, { role: 'stator', s: 1, count: re === 'CIC strut' ? 10 : 0, gHub: re === 'CIC strut' ? 0 : 20, gTip: re === 'CIC strut' ? 0 : 24, camHub: re === 'CIC strut' ? 0 : .08, camTip: .06, tHub: re === 'CIC strut' ? .25 : .1, tTip: re === 'CIC strut' ? .25 : .08, mat: 'nickel', bands: re !== 'CIC strut' }); }
     }
 
