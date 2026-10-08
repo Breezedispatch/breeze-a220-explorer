@@ -389,7 +389,7 @@
         const fm = Kt.frame('oil-front', m0 + .005, h, rb); Kt.cyl('oil-front', fm, [.002, 0, 0], 'x', s * 1.6, .014, 'castTan', { edge: .002 }); Kt.fitting('oil-front', fm, [.008, 0, 0], 'x', s);
         line('oil-front', [P(m0 + .013 + s * 1.45, h, rb), P(-1.42, h, rb), P(-1.30, h, rb), P(-1.20, h, rb), P(xb - .016 - s * 1.45, h, rb)], tr, 'tube', { clamps: 0 }); });
       /* multi-tube clamp blocks holding the six together */
-      for (const xx of [-1.21, -1.36]) { const f = Kt.frame('oil-front', xx, 6.425, rb); Kt.box('oil-front', f, [0, 0, 0], [.018, .022, .2], 'clampOrange', { round: .006 }); }
+      for (const xx of [-1.21, -1.36]) { const f = Kt.frame('oil-front', xx, 6.425, rb); Kt.box('oil-front', f, [0, 0, 0], [.018, .024, .116], 'clampOrange', { round: .006 }); }
       /* the auxiliary oil pressure sensor on a tee in the fan oil pump's return, its lead into the core harness junction below the gearbox */
       const fa = Kt.frame('oil-front', -1.30, 6.48, rb), La = FLa(-1.30, 6.48, rb);
       Kt.cyl('oil-front', fa, [0, 0, 0], 'x', .0095, .03, 'steel', { edge: .002 }); Kt.cyl('oil-front', fa, [0, .018, 0], 'y', .008, .024, 'steel');

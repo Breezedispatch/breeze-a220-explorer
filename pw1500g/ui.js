@@ -15,7 +15,8 @@
   function showInfo() {
     if (!sel) { info.innerHTML = `<h2>PW1500G geared turbofan</h2><div class="sub">A220-300 &middot; drag to turn, right-drag to pan, scroll to zoom</div>
       <p>Click any part, or pick it from the list, to see what it is, where it sits and what maintenance does with it. Use Section to cut the engine open and Explode to pull the modules apart.</p>
-      <p>To look inside one part, select it and press Inspect: it is shown on its own and cut in half facing you. With Move parts on, drag any part out of the engine; select a module in the list first to move it whole.</p>`; return; }
+      <p>To look inside one part, select it and press Inspect: it is shown on its own and cut in half facing you. With Move parts on, drag any part out of the engine; select a module in the list first to move it whole.</p>
+      <p>Run at Idle or Takeoff to see the ground run hazard areas on the floor: the intake suction and exhaust danger areas for that power, and at idle the entry corridor for approaching a running engine.</p>`; return; }
     const p = PW.parts.get(sel), solo = cutSolo === sel, moved = PW.isDragged(sel);
     info.innerHTML = `<h2>${esc(p.label)}</h2><div class="sub">${esc(path(sel).slice(0, -1).join(' › '))}</div>${(p.info || '').split('\n\n').map(t => `<p>${esc(t)}</p>`).join('')}
       <div class="acts"><button class="b" id="iInspect" title="Show this part on its own, cut in half facing you">Inspect</button><button class="b" id="iCut" aria-pressed="${solo}" title="Cut only this part, through its middle">${solo ? 'Whole again' : 'Cut in half'}</button><button class="b" id="iIso">Isolate</button><button class="b" id="iHide">Hide</button><button class="b" id="iFocus">Zoom to</button>${moved ? '<button class="b" id="iBack">Put back</button>' : ''}<button class="b" id="iAll">Show all</button></div>
@@ -132,7 +133,48 @@
   let nacMode = 'on';
   function setNacelle(m) { nacMode = m; const ids = PW.NACELLE_IDS || []; for (const id of ids) { PW.setHidden(id, m === 'off'); PW.setGhost(id, m === 'ghost'); } syncTree(); PW.applyCut(); }
   document.querySelectorAll('[data-nac]').forEach(b => b.onclick = () => { press('[data-nac]', b); setNacelle(b.dataset.nac); });
-  document.querySelectorAll('[data-run]').forEach(b => b.onclick = () => { press('[data-run]', b); PW.speed = +b.dataset.run; });
+  /* p.6-7: the engine ground run hazard areas, laid on the floor while the engine runs. The intake suction danger area reaches 2.74 m
+     (9 ft) round the inlet and 0.91 m (3 ft) back along the nacelle at ground idle, 6.10 m (20 ft) and 1.83 m (6 ft) at takeoff power;
+     the exhaust danger area is a 30 deg wedge aft of the exhaust nozzle, 61 m (200 ft) long at idle and 183 m (600 ft) at takeoff
+     (it runs on into the fog). At idle the entry corridor shows the way in: between the intake area and the wing leading edge,
+     drawn on this (right) engine's outboard side, the wing's sweep taken from the figure */
+  const hazards = (() => {
+    const D = PW.D, xHL = D.zsToX(D.ZS.inletHighlight), xN = D.zsToX(D.ZS.sleeveTE), yF = PW.floor ? PW.floor.position.y : -1.75, TAU = Math.PI * 2;
+    const root = new THREE.Group(); root.visible = false; PW.scene.add(root);
+    const lin = c => new THREE.Color(c).convertSRGBToLinear();
+    const mat = (c, o) => new THREE.MeshBasicMaterial({ color: lin(c), transparent: true, opacity: o, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    /* a flat region on the floor from [x, z] points (x forward, z to the engine's right), with its outline */
+    const flat = (grp, pts, c, o, dy) => { const s = new THREE.Shape(pts.map(([x, z]) => new THREE.Vector2(x, -z))), g = new THREE.ShapeGeometry(s); g.rotateX(-Math.PI / 2);
+      const m = new THREE.Mesh(g, mat(c, o)); m.position.y = yF + dy; m.renderOrder = 2; m.userData.noPick = true; grp.add(m);
+      const lg = new THREE.BufferGeometry().setFromPoints(pts.concat([pts[0]]).map(([x, z]) => new THREE.Vector3(x, yF + dy + .002, z)));
+      const ln = new THREE.Line(lg, new THREE.LineBasicMaterial({ color: lin(c), transparent: true, opacity: .95 })); ln.userData.noPick = true; grp.add(ln); };
+    /* a label that always faces the viewer, a little above the floor; each line is shrunk to fit if it would run past the edge */
+    const label = (grp, lines, x, z, w) => { const cv = document.createElement('canvas'); cv.width = 640; cv.height = 60 * lines.length + 20; const c = cv.getContext('2d');
+      c.fillStyle = 'rgba(16,22,30,.8)'; c.fillRect(0, 0, cv.width, cv.height); c.textAlign = 'center';
+      lines.forEach((t, i) => { let px = i ? 30 : 34; c.font = (i ? '' : 'bold ') + px + 'px Arial, sans-serif';
+        const tw = c.measureText(t).width; if (tw > cv.width - 40) { px = Math.floor(px * (cv.width - 40) / tw); c.font = (i ? '' : 'bold ') + px + 'px Arial, sans-serif'; }
+        c.fillStyle = i ? '#e8edf3' : '#ffb347'; c.fillText(t, cv.width / 2, 48 + i * 58); });
+      const tx = new THREE.CanvasTexture(cv); tx.encoding = THREE.sRGBEncoding;
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, transparent: true, fog: false, depthWrite: false })); sp.scale.set(w, w * cv.height / cv.width, 1);
+      sp.position.set(x, yF + .06 + sp.scale.y / 2, z); sp.userData.noPick = true; sp.renderOrder = 3; grp.add(sp); };
+    const make = (R, d, L, run) => { const grp = new THREE.Group(); root.add(grp);
+      const inlet = [[xHL - d, -R]]; for (let i = 0; i <= 32; i++) { const a = -Math.PI / 2 + Math.PI * i / 32; inlet.push([xHL + R * Math.cos(a), R * Math.sin(a)]); } inlet.push([xHL - d, R]);
+      flat(grp, inlet, 0xf28a1e, .55, .004);
+      const w0 = .85, a0 = w0 / Math.tan(Math.PI / 12), ex = [[xN, w0]]; for (let i = 0; i <= 24; i++) { const t = Math.PI / 12 - Math.PI / 6 * i / 24; ex.push([xN + a0 - (L + a0) * Math.cos(t), (L + a0) * Math.sin(t)]); } ex.push([xN, -w0]);
+      flat(grp, ex, 0xfcbf4f, .45, .003);
+      const ft = Math.round(R / .3048), fd = Math.round(d / .3048), fL = Math.round(L / .3048);
+      label(grp, ['INTAKE SUCTION DANGER AREA', `${R.toFixed(2)} m (${ft} ft) at ${run}`, `and ${d.toFixed(2)} m (${fd} ft) back along the nacelle`], xHL + R * .55, -R * .35 - .4, 2.2);
+      label(grp, ['EXHAUST DANGER AREA', `aft of the nozzle, 30 deg wide`, `${Math.round(L)} m (${fL} ft) at ${run}`], xN - 7, 0, 2.6);
+      return grp; };
+    const idle = make(2.74, .91, 61, 'ground idle'), to = make(6.10, 1.83, 183, 'takeoff power');
+    /* the entry corridor at idle: aft of the intake area, forward of the wing's leading edge (x = -0.9 - 0.6 z on this side) */
+    const zIn = (-.9 - (xHL - .91)) / .6, zOut = 13;
+    flat(idle, [[xHL - .91, zIn], [xHL - .91, zOut], [-.9 - .6 * zOut, zOut]], 0x9aa0a6, .4, .002);
+    label(idle, ['ENTRY CORRIDOR', 'approach a running engine here'], xHL - 2.2, 6.0, 2.2);
+    return s => { root.visible = s > 0; idle.visible = s > 0 && s < .5; to.visible = s >= .5; };
+  })();
+  document.querySelectorAll('[data-run]').forEach(b => { if (+b.dataset.run > 0) b.title = 'Also shows the ground run hazard areas for this power (p.6-7)';
+    b.onclick = () => { press('[data-run]', b); PW.speed = +b.dataset.run; hazards(PW.speed); }; });
   PW.speed = 0;
   /* controls the builders asked for (cowls, reverser) */
   for (const c of PW.controls || []) {
@@ -168,7 +210,7 @@
   if (Q.get('nacelle')) { setNacelle(Q.get('nacelle')); press('[data-nac]', document.querySelector(`[data-nac="${Q.get('nacelle')}"]`)); }
   if (Q.get('view') && VIEWS[Q.get('view')]) { const v = VIEWS[Q.get('view')]; PW.look(v[0], v[1], v[2], [PW.CENTER_X || -.8, 0, 0]); }
   if (Q.get('cut')) { PW.cut.on = true; PW.setCutPlane(Q.get('cut'), 0); PW.applyCut(); press('[data-cut]', document.querySelector(`[data-cut="${Q.get('cut')}"]`)); }
-  if (Q.get('run')) PW.speed = +Q.get('run');
+  if (Q.get('run')) { PW.speed = +Q.get('run'); hazards(PW.speed); }
   if (Q.get('explode')) { PW.setExplode(+Q.get('explode')); document.getElementById('explode').value = Q.get('explode'); }
   if (Q.get('part') && PW.parts.has(Q.get('part'))) { isolate(Q.get('part')); select(Q.get('part')); }
 })();
