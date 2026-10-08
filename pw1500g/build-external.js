@@ -64,24 +64,28 @@
     const Kt = PW.kit;
     PW.part('gearboxes', { label: 'Angle and main gearboxes', explode: [0, -.55, 0], src: 'p.66-69; TTM ch. 72',
       info: 'The N2 rotor drives a towershaft to the angle gearbox on the CIC at 8 o\'clock. A layshaft runs aft from there to the main gearbox, a cast aluminium housing slung under the core from about 4:30 to 9 o\'clock. Accessories mount on its forward and aft faces.\n\nThe gearboxes turn at N2 speed, which is why the starter cranks the core through them and why the generators and the hydraulic pump stop when the engine does.' });
-    PW.part('agb', { parent: 'gearboxes', label: 'Angle gearbox (AGB)', src: 'p.66-67; p.53',
-      info: 'Bevel gearbox on the compressor intermediate case at 8 o\'clock. The towershaft from the N2 rotor comes into it through the square flange on top, and its bevel gears turn the drive aft into the layshaft to the main gearbox.' });
+    PW.part('agb', { parent: 'gearboxes', label: 'Angle gearbox (AGB)', src: 'p.66-67, p.69; p.53',
+      info: 'Bevel gearbox on the compressor intermediate case at the 8 o\'clock position, beside the IFPC. The towershaft from the N2 rotor comes into it through the square flange on top, and its bevel gears turn the drive aft into the layshaft to the main gearbox.' });
+    /* p.66 puts it on the CIC at 8 o'clock and p.53 at x -0.99 to -1.15; p.67 and p.69 show the layshaft entering the MGB between the IFPC
+       and hydraulic pump pads, beside the IFPC (which p.170 also puts at 8 o'clock). Built at 7:18, so the IFPC (7:42 to 8:24) sits beside it */
     { const ag = GB.angleGearboxBody, xa = (ag.x_from + ag.x_to) / 2, ra = (ag.r_in + ag.r_out) / 2, L = ag.x_from - ag.x_to, H = ag.r_out - ag.r_in;
-      const f = Kt.frame('agb', xa, 8, ra, { rz: deg(-12) });                                                          // leans aft with radius (p.53)
+      const f = Kt.frame('agb', xa, 7.3, ra, { rz: deg(-12) });                                                        // leans aft with radius (p.53)
       Kt.box('agb', f, [0, 0, 0], [L * .92, H * .85, .14], 'castTan', { round: .02 });
       Kt.box('agb', f, [.01, -H * .45, 0], [.11, .014, .11], 'castTan', { round: .004 });                              // square towershaft flange toward the core
       for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) Kt.hex('agb', f, [.01 + a * .045, -H * .45 - .009, b * .045], '-y', .005, .004, 'steel');
       Kt.flange('agb', f, [-L * .46, -.01, 0], '-x', .028, .05, .012, 6, 'castTan');                                   // layshaft cover flange on the aft face
       Kt.fitting('agb', f, [.02, H * .2, .07], 'z', .007); Kt.fitting('agb', f, [-.03, H * .3, -.07], '-z', .007);       // oil feed and scavenge
       Kt.chip('agb', f, [.0, H * .43, .03], 'y', .009);
-      const t = GB.towershaftHousing; line('agb', [P(t[0][0], 8, t[0][1]), P(t[1][0], 8, t[1][1])], .035, 'tube', { clamps: 0, ends: false });
-      /* p.213: the angle gearbox's oil feed from the MGB and its scavenge back, two tubes aft beside the layshaft cover to bosses on the
-         MGB front face under the fuel/oil manifold, passing over the left core harness */
-      line('agb', [P(-1.045, 8.39, .391), P(-1.05, 8.47, .395), P(-1.15, 8.47, .40), P(-1.19, 8.47, .405), P(-1.26, 8.47, .37), P(-1.35, 8.45, .345), P(-1.45, 8.45, .335), P(-1.483, 8.45, .333)], .006, 'tube', { clamps: 2 });   // feed
-      line('agb', [P(-1.092, 7.63, .412), P(-1.10, 7.56, .415), P(-1.19, 7.56, .405), P(-1.26, 7.58, .37), P(-1.35, 7.6, .345), P(-1.45, 7.6, .335), P(-1.483, 7.6, .333)], .007, 'tube', { clamps: 2 }); }   // scavenge
+      const t = GB.towershaftHousing; line('agb', [P(t[0][0], 7.3, t[0][1]), P(t[1][0], 7.3, t[1][1])], .035, 'tube', { clamps: 0, ends: false });
+      /* p.213: the angle gearbox's oil feed from the MGB and its scavenge back, two tubes aft to bosses on the MGB front face: the feed
+         round ahead of the IFPC and along its left edge, under the fuel/oil manifold, passing over the left core harness; the scavenge
+         beside the layshaft cover on the other side, under the servo fuel lines */
+      line('agb', [P(-1.045, 7.69, .391), P(-1.05, 7.75, .40), P(-1.09, 8.1, .41), P(-1.12, 8.4, .405), P(-1.15, 8.47, .40), P(-1.19, 8.47, .405), P(-1.26, 8.47, .37), P(-1.35, 8.45, .345),
+        P(-1.45, 8.45, .335), P(-1.483, 8.45, .333)], .006, 'tube', { clamps: 2 });   // feed
+      line('agb', [P(-1.092, 6.93, .412), P(-1.10, 6.86, .405), P(-1.12, 6.84, .37), P(-1.15, 6.86, .348), P(-1.26, 6.88, .345), P(-1.35, 6.9, .345), P(-1.45, 6.9, .335), P(-1.483, 6.9, .333)], .007, 'tube', { clamps: 2 }); }   // scavenge
     PW.part('layshaft', { parent: 'gearboxes', label: 'Layshaft and covers', src: 'p.66-67; p.53',
-      info: 'Drive shaft from the angle gearbox aft to the main gearbox input, inside two concentric tubular covers that slide together at a flanged joint. It runs parallel to the axis at 8 o\'clock, close to the HPC case and under the IFPC and fuel/oil manifold, into the top layer of the main gearbox.' });
-    { const ls = GB.layshaft, xmid = (ls.x_from + ls.x_to) / 2, f = Kt.frame('layshaft', 0, 8, ls.r_axis);
+      info: 'Drive shaft from the angle gearbox aft to the main gearbox input, inside two concentric tubular covers that slide together at a flanged joint. It runs parallel to the axis beside the IFPC, close to the HPC case and under the fuel/oil manifold, into the top layer of the main gearbox between the IFPC and hydraulic pump pads (p.67).' });
+    { const ls = GB.layshaft, xmid = (ls.x_from + ls.x_to) / 2, f = Kt.frame('layshaft', 0, 7.3, ls.r_axis);
       Kt.cyl('layshaft', f, [(ls.x_from + xmid) / 2, 0, 0], 'x', .034, ls.x_from - xmid, 'tube', { edge: .004 });        // forward cover
       Kt.cyl('layshaft', f, [(xmid + ls.x_to) / 2, 0, 0], 'x', .030, xmid - ls.x_to, 'tube', { edge: .004 });           // aft cover, sliding into it
       Kt.flange('layshaft', f, [xmid, 0, 0], 'x', .034, .046, .01, 6, 'steel'); Kt.vband('layshaft', f, [ls.x_from - .03, 0, 0], 'x', .034, { phase: 1.2 }); }

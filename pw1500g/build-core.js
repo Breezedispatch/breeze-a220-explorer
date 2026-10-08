@@ -278,10 +278,11 @@
     {
       wall('cic', 'coreCase', -.90, -1.17, .012, 'nickel', { n: 16 });
       wall('cic', 'coreHub', -.88, -1.17, -.012, 'nickel', { n: 16 });
-      /* the CIC's outer wall: a conical disc from the bypass inner wall down to the HPC case (p.55 render). At 8 o'clock the angle
-         gearbox sits right behind the case (p.53), so there the wall steps forward round it into a pocket: a radial wall ahead of the
-         gearbox and flat sides, with the core case as its floor */
-      const pa = G.clock(7.45), pb = G.clock(8.55);
+      /* the CIC's outer wall: a conical disc from the bypass inner wall down to the HPC case (p.55 render). Where the angle gearbox sits
+         right behind the case (p.53; built at 7:18, beside the IFPC), the wall steps forward round it into a pocket: a radial wall ahead
+         of the gearbox and flat sides, with the core case as its floor. The pocket's shape is inferred: the manual draws the gearbox on
+         the case but not the case round it */
+      const pa = G.clock(6.75), pb = G.clock(7.85);
       PW.add('cic', G.revolve([[-.95, .515], [-1.16, .262], [-1.17, .262], [-1.17, .245], [-1.155, .245], [-.94, .50]], { seg: 120, thetaStart: pb, thetaLength: TAU - (pb - pa) }), 'nickel');
       for (const prof of [[[-.949, .515], [-.961, .515], [-.961, .27], [-.949, .27]], [[-1.137, .29], [-1.16, .262], [-1.17, .262], [-1.17, .245], [-1.155, .245], [-1.127, .278]]])
         PW.add('cic', G.revolve(prof, { seg: 12, thetaStart: pa, thetaLength: pb - pa }), 'nickel');
