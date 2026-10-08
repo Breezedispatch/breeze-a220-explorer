@@ -395,7 +395,7 @@
     const ign = radial('ignition', .45, 8), igs = radial('igniters', .3, 4.5);
     stage('ignition', ign, S2); stage('igniters', [0, igs[1] - ign[1], igs[2] - ign[2]], S2);    // the plugs leave the core, not the fan case
     stage('harnesses', [0, .25, -.3], S2); stage('drain-mast', [0, -.35, 0], S2); stage('fuel', radial('fuel', .3), S2);
-    for (const id of ['hpc-bleed-valve', 'bleed-hp', 'buffer-air', 'hpt-cooling', 'tacc', 'cai']) stage(id, radial(id, .3), S2);
+    for (const id of ['hpc-bleed-valve', 'bleed-hp', 'buffer-air', 'hpt-cooling', 'tic-cooling', 'tacc', 'cai']) stage(id, radial(id, .3), S2);
     for (const id of P('sensors').children) stage(id, radial(id, .3), S2);
     for (const id of P('borescope').children) stage(id, radial(id, .25), S2);
 
@@ -406,7 +406,7 @@
 
     /* layer 4: dressing and accessories follow the module they sit on; the anti-ice duct, harnesses and fan case units stay */
     stage('gearboxes', [off.hpc, 0, 0], S4); stage('oil', [off.combustor, 0, 0], S4); stage('fuel', [off.combustor, 0, 0], S4); stage('igniters', [off.combustor, 0, 0], S4);
-    for (const id of ['hpc-sva', 'lpc-sva', 'bleed-25', 'hpc-bleed-valve', 'bleed-hp', 'buffer-air', 'hpt-cooling', 'tacc', 'drain-mast'].concat(P('sensors').children, P('borescope').children))
+    for (const id of ['hpc-sva', 'lpc-sva', 'bleed-25', 'hpc-bleed-valve', 'bleed-hp', 'buffer-air', 'hpt-cooling', 'tic-cooling', 'tacc', 'drain-mast'].concat(P('sensors').children, P('borescope').children))
       stage(id, [carrier(id), 0, 0], S4);
     PW.EXPLODE_SPAN = cur;
   });

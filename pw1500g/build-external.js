@@ -393,16 +393,50 @@
     { const f = Kt.frame('buffer-air', -1.25, .85, .30);                                                                       // BAVS: solenoid on its mounting base, pilot air ports
       Kt.box('buffer-air', f, [0, .008, 0], [.06, .016, .045], 'steel', { round: .004 }); Kt.cyl('buffer-air', f, [-.01, .03, 0], 'x', .014, .06, 'steel', { edge: .003 });
       Kt.connector('buffer-air', f, [-.045, .03, 0], '-x', .008, { lead: 'y' }); for (const z of [-.012, .012]) Kt.fitting('buffer-air', f, [.03, .02, z], 'x', .006); }
-    { const f = Kt.frame('buffer-air', -1.60, 10.8, .29);                                                                      // BASOV: in-line valve with V-bands and its pilot port
-      Kt.cyl('buffer-air', f, [0, 0, 0], 'x', .034, .12, 'castAl', { edge: .006 }); for (const s of [-1, 1]) Kt.vband('buffer-air', f, [s * .066, 0, 0], 'x', .024, { phase: 0 });
-      Kt.fitting('buffer-air', f, [.0, .034, 0], 'y', .007); }
+    { const f = Kt.frame('buffer-air', -1.47, 11.03, .248);                                                                    // BASOV (p.281): upright on the rear HPC case, V-bands top and bottom
+      Kt.box('buffer-air', f, [0, .006, 0], [.03, .012, .036], 'castAl', { round: .004 });                                      // mounting pad
+      Kt.cyl('buffer-air', f, [0, .046, 0], 'y', .021, .066, 'castAl', { edge: .005 }); for (const y of [.018, .078]) Kt.vband('buffer-air', f, [0, y, 0], 'y', .017, { phase: Math.PI });
+      Kt.fitting('buffer-air', f, [-.023, .05, 0], '-x', .006);                                                                  // pilot port from the solenoid
+      Kt.cyl('buffer-air', f, [0, .1, 0], 'y', .017, .03, 'castAl'); Kt.flange('buffer-air', f, [0, .116, 0], 'y', .017, .027, .005, 4, 'castAl'); }   // outlet stub and flange
     /* p.276-277: four tubes take 6th-stage HPC air to the HPT 2nd stage vanes and blade attachments, two on each side, arching over the
        case from the 6th-stage ports to the HPT case just ahead of the clearance control manifold, metered by plates at the case */
     PW.part('hpt-cooling', { parent: 'air', label: 'HPT cooling air tubes (6th stage)', src: 'p.276-277',
-      info: 'Four tubes carry 6th-stage HPC air to the HPT 2nd stage vanes and blade attachments. Metering plates between the tubes and the HPT case set the flow; the air passes through the hollow vanes and leaves at their trailing edges. The 4th-stage air that cools the TIC fairings, the LPT case and the LPT rotor and blade attachments goes through seven more tubes (four supply, three jumpers) and three further jumpers (not drawn yet).' });
+      info: 'Four tubes carry 6th-stage HPC air to the HPT 2nd stage vanes and blade attachments. Metering plates between the tubes and the HPT case set the flow; the air passes through the hollow vanes and leaves at their trailing edges. The 4th-stage air that cools the TIC fairings, the LPT case and the LPT rotor and blade attachments goes through its own tubes (TIC and LPT cooling air tubes).' });
     for (const h of [10.45, 11.15, .85, 1.6]) {
       line('hpt-cooling', [P(-1.515, h, .251), P(-1.53, h, .30), P(-1.56, h, .345), P(-1.70, h, .357), P(-1.85, h, .357), P(-1.88, h, .32), P(-1.893, h, .27), P(-1.895, h, .245)], .015, 'tube', { clamps: 2, ends: false });
       for (const [xx, rr] of [[-1.515, .251], [-1.895, .245]]) { const g = Kt.frame('hpt-cooling', xx, h, rr); Kt.box('hpt-cooling', g, [0, .006, 0], [.04, .012, .04], 'nickel', { round: .006 }); Kt.bolts('hpt-cooling', g, [0, .013, 0], 'y', .02, 4, .0035, { phase: Math.PI / 4 }); } }
+    /* p.276-277: 4th-stage air for the TIC fairings and transition ducts, the LPT case and the LPT rotor. Four supply tubes leave bolted
+       bosses on the 4th-stage collar, two each side, and run aft through the gaps the gearbox, starter, coolers and oil tank leave to
+       bosses on the TIC's forward face; two jumpers run round the TIC's aft cone, and four short ones arch over the TIC/LPT flange onto
+       the LPT case. The figure's lower left tube is routed high on the left here, beside the upper one and under the air/oil cooler,
+       since the gearbox arm, its mount link and the fuel feeds fill the space lower down; it drops to its TIC boss behind the starter
+       air valve, where the figure has it */
+    PW.part('tic-cooling', { parent: 'air', label: 'TIC and LPT cooling air tubes (4th stage)', src: 'p.276-277',
+      info: 'HPC 4th-stage air cools the turbine intermediate case (TIC) fairings and its inner and outer walls (the transition ducts), the LPT case, and the LPT rotor and blade attachments. Four supply tubes take it from the 4th-stage ports to the TIC. Three jumper tubes carry it on through the TIC fairings to the LPT rotor and blade attachments, and three more feed the space between the LPT case and the 2nd stage vanes.\n\nThe manual\'s figure shows two supply tubes on each side; their exact clock positions here are approximate, routed through the space the accessories leave.' });
+    { const r4 = D.GEN.rows.find(r => r.name.startsWith('HPC rotor 4')), x4 = (r4.x_le + r4.x_te) / 2, rc = rCase(x4) + .035;
+      /* a bolted boss: s square, on the surface at (x, clock h, radius r), turned by rz to sit on a cone */
+      const pad = (xx, h, rr, rz, s) => { s = s || .03; const g = Kt.frame('tic-cooling', xx, h, rr, { rz }); Kt.box('tic-cooling', g, [0, .004, 0], [s, .008, s], 'nickel', { round: .004 });
+        Kt.bolts('tic-cooling', g, [0, .0095, 0], 'y', s * .45, 4, .0028, { phase: Math.PI / 4 }); };
+      /* supply tubes: [clock at the collar, the route, clock at the TIC] */
+      for (const [h0, mid, h1] of [
+        [10.6, [P(x4 - .05, 10.68, .312), P(-1.53, 10.7, .32), P(-1.60, 10.7, .32), P(-1.66, 10.7, .33), P(-1.72, 10.7, .352), P(-1.78, 10.7, .345), P(-1.84, 10.7, .325), P(-1.92, 10.72, .325),
+          P(-2.02, 10.77, .335), P(-2.06, 10.78, .352), P(-2.09, 10.8, .366)], 10.8],
+        [10.25, [P(x4 - .048, 10.27, .30), P(-1.53, 10.25, .315), P(-1.62, 10.27, .33), P(-1.72, 10.3, .352), P(-1.80, 10.3, .345), P(-1.88, 10.25, .33), P(-1.94, 10.0, .32), P(-1.99, 9.4, .32),
+          P(-2.03, 8.8, .32), P(-2.065, 8.4, .352), P(-2.09, 8.22, .372)], 8.2],
+        [2.3, [P(x4 - .05, 2.28, .31), P(-1.55, 2.25, .322), P(-1.64, 2.22, .335), P(-1.72, 2.18, .352), P(-1.76, 2.16, .335), P(-1.80, 2.14, .322), P(-1.86, 2.12, .318), P(-1.92, 2.08, .32), P(-2.02, 1.92, .335),
+          P(-2.075, 1.8, .368)], 1.8],
+        [3.0, [P(x4 - .05, 3.0, .305), P(-1.55, 3.0, .318), P(-1.64, 3.0, .335), P(-1.72, 3.02, .352), P(-1.76, 3.04, .335), P(-1.80, 3.06, .32), P(-1.86, 3.15, .316), P(-1.92, 3.3, .315), P(-1.99, 3.8, .318),
+          P(-2.04, 4.25, .338), P(-2.085, 4.55, .37)], 4.6]]) {
+        pad(x4, h0, rc, 0);
+        line('tic-cooling', [P(x4, h0, rc + .006), P(x4 - .012, h0 + (h0 > 10 ? .03 : 0), rc + .02)].concat(mid, [P(-2.106, h1, .374), P(-2.116, h1, .379)]), .010, 'tube', { clamps: 2, ends: false });
+        pad(-2.1225, h1, .372, -.93); }
+      /* the jumpers, from bosses on the TIC's aft cone */
+      const xt = -2.165, rt = .463;
+      for (const [ha, hb] of [[2.3, 4.3], [7.9, 9.6]]) { pad(xt, ha, rt, -.72, .024); pad(xt, hb, rt, -.72, .024);
+        const pts = [P(xt + .006, ha, rt + .01), P(xt + .003, ha + (hb - ha) * .05, .484)]; for (let i = 1; i < 8; i++) pts.push(P(xt, ha + (hb - ha) * i / 8, .489));
+        pts.push(P(xt + .003, hb - (hb - ha) * .05, .484), P(xt + .006, hb, rt + .01)); line('tic-cooling', pts, .007, 'tube', { clamps: 1, ends: false }); }
+      for (const h of [.9, 5.1, 6.9, 11.1]) { pad(xt, h, rt, -.72, .024); pad(-2.224, h, .49, 0, .02);
+        line('tic-cooling', [P(xt + .006, h, rt + .01), P(-2.166, h, .495), P(-2.19, h, .513), P(-2.214, h, .51), P(-2.224, h, .499)], .007, 'tube', { clamps: 0, ends: false }); } }
     PW.part('cai', { parent: 'air', label: 'Cowl anti-ice duct and valves', src: 'p.10-11; TTM ch. 30; photos',
       info: 'HPC 6th-stage bleed for the inlet lip. It passes two cowl anti-ice valves in series (two for redundancy), controlled and monitored by the EEC from the L and R COWL switches (OFF, AUTO, ON), crosses the fan duct in the lower bifurcation and runs forward along the bottom right of the fan case into the inlet at 5 o\'clock, where its access panel is. The air leaves through the exhaust louvres at the bottom of the inlet. The valves also open during the start to help the HPC bleed valve unload the compressor.\n\nThe black hose with orange fittings along the fan case in the photos.' });
     { /* 6th-stage port on the right of the HPC, the two valves on the right of the core, down into the lower bifurcation at 6 o'clock,

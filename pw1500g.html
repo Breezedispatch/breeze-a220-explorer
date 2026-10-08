@@ -79,7 +79,7 @@
 /* load the model scripts in order. BUILD changes with every commit so a browser never runs stale scripts; ?v=N on the page URL
    overrides it while editing */
 (function () {
-  const BUILD = '2026-10-08b';
+  const BUILD = '2026-10-08c';
   const v = new URLSearchParams(location.search).get('v') || BUILD;
   const files = ['geo', 'core', 'data', 'build-kit', 'build-core', 'build-external', 'build-nacelle', 'ui'];
   const next = i => { if (i >= files.length) return; const s = document.createElement('script'); s.src = `pw1500g/${files[i]}.js?v=${encodeURIComponent(v)}`;
