@@ -102,9 +102,14 @@
     const p = add(pos, out, r + .016); K.box(pid, f, p, [w * .9, .014, .03], 'steel', { round: .003, rot: rotFor(D, out) });
     K.cyl(pid, f, add(p, out, .002), side, .0035, .045, 'steel'); };                                   // the T-bolt
   function rotFor(D, out) { const m = new THREE.Matrix4().makeBasis(D, out, new THREE.Vector3().crossVectors(D, out)); return new THREE.Euler().setFromRotationMatrix(m).toArray().slice(0, 3); }
+  /* every fitting and connector registers its outer end as a port (frame, local end point, direction), so the connection audit
+     can list ports with nothing attached; `o.plugged` marks a port that is capped or tested only on the ground */
+  PW.ports = PW.ports || [];
+  const port = (pid, f, kind, end, D, size, o) => PW.ports.push({ pid, f, kind, end: end.slice(), dir: [D.x, D.y, D.z], size, plugged: !!(o && o.plugged) });
   /* B-nut fitting: hex nut on a short nipple, pointing along d (the tube leaves from its far end) */
   K.fitting = (pid, f, pos, d, s, o) => { s = s || .009; const D = dir(d); K.cyl(pid, f, add(pos, D, -s * .3), d, s * .75, s * 1.2, 'steel');
-    K.hex(pid, f, add(pos, D, s * .8), d, s, s * 1.3, 'steel'); if (o && o.stub) K.cyl(pid, f, add(pos, D, s * 1.6 + o.stub / 2), d, s * .45, o.stub, 'tube'); };
+    K.hex(pid, f, add(pos, D, s * .8), d, s, s * 1.3, 'steel'); if (o && o.stub) K.cyl(pid, f, add(pos, D, s * 1.6 + o.stub / 2), d, s * .45, o.stub, 'tube');
+    port(pid, f, 'fitting', add(pos, D, s * 1.45 + (o && o.stub ? o.stub + s * .15 : 0)), D, s, o); };
   /* hex-head plug (drain, overfill, core drain) */
   K.plug = (pid, f, pos, d, s, mat) => { const D = dir(d); K.cyl(pid, f, pos, d, s * 1.05, s * .3, 'steel'); K.hex(pid, f, add(pos, D, s * .55), d, s * .8, s * .8, mat || 'steel'); };
   /* chip collector / magnetic plug: hex body with a black bayonet cap and a lockwire tab */
@@ -116,7 +121,8 @@
     K.cyl(pid, f, add(pos, D, r * 1.3), d, r * 1.05, r * 1.1, o.nut || 'connector', { edge: r * .2 });           // coupling nut
     const L = o.lead ? dir(o.lead) : D, e = add(pos, D, r * 1.9);
     K.cyl(pid, f, add(e, L, r * .9), L, r * .78, r * 1.8, 'steel', { edge: r * .2 });                           // backshell
-    if (o.boot) K.cyl(pid, f, add(e, L, r * 2.1), L, r * .72, r * .9, 'silicone', { edge: r * .25 }); };
+    if (o.boot) K.cyl(pid, f, add(e, L, r * 2.1), L, r * .72, r * .9, 'silicone', { edge: r * .25 });
+    port(pid, f, 'connector', add(e, L, r * (o.boot ? 2.55 : 1.8)), L, r, o); };
 
   /* ---------------- labels and gauges ----------------
      Each is a thin backing piece with its printing on a flat quad in front (a box's own UVs do not map a picture onto a face) */
