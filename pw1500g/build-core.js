@@ -179,13 +179,39 @@
       for (const dz of [-.06, .06]) { const lug = new THREE.Mesh(G.roundedBox(ml.x_from - ml.x_to + .02, ml.r_top - ml.r_base + .02, .035, .008));
         lug.position.set((ml.x_from + ml.x_to) / 2, (ml.r_top + ml.r_base) / 2, dz); PW.add('mount-ring', lug, 'titanium', { solid: true }); }
       /* precooler duct inlet: four-piece titanium casting at 12 o'clock behind the FEGVs, taking fan air up into the pylon precooler (p.60) */
-      PW.part('precooler-inlet', { parent: 'fan-case', label: 'Precooler duct inlet', src: 'p.60-61; p.53',
-        info: 'Four-piece titanium casting at the top of the fan case, behind the exit guide vanes. It takes fan air into the precooler in the pylon and gives the seal lands for the thrust reverser door fire seals at the upper bifurcation.' });
+      PW.part('precooler-inlet', { parent: 'fan-case', label: 'Precooler duct inlet', src: 'p.60-61; p.45; p.297',
+        info: 'Four-piece titanium casting at 12 o\'clock behind the fan exit guide vanes. It is the leading edge of the upper bifurcation across the fan duct: fan air enters the tall mouth in its nose and turns aft inside it into the round outlet, where the bellows, the fan air valve and the duct to the pylon-mounted precooler follow. Its aft edges are the seal lands for the thrust reverser doors at the upper bifurcation, and a flange on top ties it to the fan case structure under the pylon.' });
       const pc = D.GEN.externals.precoolerDuctInletBox12oclock;
-      /* p.45 shows it as an inverted U of duct rising from the FIC to the fan case top at 12 o'clock */
-      { const xf = pc.x_from - .02, xa = pc.x_to + .03, rb = pc.r_in + .02, rt = pc.r_out - .03;
-        PW.add('precooler-inlet', G.tube([[xf, rb, 0], [xf, rt - .08, 0], [xf - .03, rt, 0], [xa + .03, rt, 0], [xa, rt - .08, 0], [xa, rb, 0]], .042, { radial: 14, tension: .15 }), 'titanium');
-        PW.add('precooler-inlet', G.tube([[(xf + xa) / 2, rt, 0], [(xf + xa) / 2, pc.r_out + .06, 0]], .05, { radial: 14 }), 'titanium'); }
+      /* p.60-61, p.45, p.297: the casting spans the fan duct at 12 o'clock from the inner wall to the outer, x -0.926 to -1.01 where the
+         reverser doors' bifurcation walls take over. A rounded nose carries the intake mouth; inside the bifurcation a funnel turns the
+         air aft into the round outlet at x -1.148, on the duct axis, where the bellows bolts on. The fuel supply hose comes down the
+         bifurcation just aft of the nose, beside the funnel */
+      { const Kt = PW.kit, y0 = .506, y1 = .955, yc = (y0 + y1) / 2;
+        const loft = (st, M) => { const pos = [], idx = [], R = M + 1;                                                     // rings across x, each a superellipse in y and z
+          const ring = s => { const out = []; for (let i = 0; i <= M; i++) { const t = (i % M) / M * TAU, c = Math.cos(t), sn = Math.sin(t), w = s.hw * (1 + (s.flare || 0) * sn);   // flare widens the top, narrows the bottom
+            out.push([s.x, s.cy + s.hh * Math.sign(sn) * Math.pow(Math.abs(sn), 2 / s.n), w * Math.sign(c) * Math.pow(Math.abs(c), 2 / s.n)]); } return out; };
+          const rings = st.map(ring); rings.forEach(r => r.forEach(p => pos.push(...p)));
+          for (let k = 0; k < st.length - 1; k++) for (let i = 0; i < M; i++) { const a = k * R + i, b = a + 1, c = a + R, d = c + 1; idx.push(a, b, c, b, d, c); }
+          for (const k of [0, st.length - 1]) { const ci = pos.length / 3; pos.push(st[k].x, st[k].cy, 0); const base = pos.length / 3; rings[k].forEach(p => pos.push(...p));
+            for (let i = 0; i < M; i++) idx.push(ci, base + i, base + i + 1); }
+          const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx);
+          G.orientOutward(g); g.computeVertexNormals(); g.userData.solid = true; return g; };
+        /* the nose: rounded at the front, widening to the bifurcation walls at its aft edge */
+        PW.add('precooler-inlet', loft([{ x: pc.x_from, hw: .05, hh: .2, cy: yc, n: 4 }, { x: -.935, hw: .075, hh: .214, cy: yc, n: 5 }, { x: -.955, hw: .095, hh: .222, cy: yc, n: 6, flare: .1 },
+          { x: -.982, hw: .108, hh: .2245, cy: yc, n: 7, flare: .14 }, { x: -1.012, hw: .114, hh: .2245, cy: yc, n: 8, flare: .14 }], 40), 'titanium', { solid: true });
+        const f = Kt.frame('precooler-inlet', pc.x_from, 12, yc);
+        Kt.box('precooler-inlet', f, [.0012, 0, 0], [.004, .36, .07], 'darkBox', { round: .02 });                          // the intake mouth, the nose's rim round it
+        for (const s of [-1, 1]) for (const [yy, w] of [[-.14, .102], [0, .114], [.14, .126]]) {                            // seal lands for the reverser doors, following the flare
+          Kt.box('precooler-inlet', f, [-.084, yy, s * (w + .0015)], [.012, .15, .006], 'titanium', { round: .002 });
+          for (const dy of [-.05, 0, .05]) Kt.hex('precooler-inlet', f, [-.084, yy + dy, s * (w + .0048)], s > 0 ? 'z' : '-z', .0035, .0025, 'steel'); }
+        Kt.box('precooler-inlet', f, [-.045, .2345, 0], [.1, .012, .2], 'titanium', { round: .004 });                       // mounting flange on top
+        for (const [a, b] of [[-.01, -.07], [-.01, .07], [-.08, -.07], [-.08, .07]]) Kt.hex('precooler-inlet', f, [a, .2415, b], 'y', .005, .004, 'steel');
+        /* the funnel inside the bifurcation, from the tall section behind the nose to the round outlet on the duct axis */
+        const st = []; for (let k = 0; k <= 8; k++) { const t = k / 8, s = t * t * (3 - 2 * t);
+          st.push({ x: -1.006 - .142 * t, hw: .036 + .049 * s, hh: .175 - .09 * s, cy: .735 + .033 * s, n: 5 - 3 * s }); }
+        PW.add('precooler-inlet', loft(st, 40), 'titanium', { solid: true });
+        const fo = Kt.frame('precooler-inlet', -1.148, 12, .768, { rz: .156 });
+        Kt.flange('precooler-inlet', fo, [.004, 0, 0], '-x', .084, .1, .008, 12, 'titanium'); }                            // outlet flange for the bellows
       /* fan exit guide vanes: 44, swept, hollow aluminium with a dark polyurethane coat (p.60; photos), from the measured hub and tip corners */
       PW.part('fegv', { parent: 'fan-case', label: 'Fan exit guide vanes (44)', src: 'p.60-61, p.53; photos',
         info: '44 hollow aluminium vanes behind the fan that take the swirl out of the fan air and carry structural load between the fan intermediate case and the fan case. Polyurethane coated against erosion.\n\nInspect from the bypass exit with the reversers open: look for FOD damage, coating loss and cracks at the platforms.' });

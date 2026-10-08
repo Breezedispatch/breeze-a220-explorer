@@ -84,7 +84,7 @@
         for (let j = 1; j < m; j++) { const t = j / m, q = { n: (p.n || 4) + ((s.n || 4) - (p.n || 4)) * t }; for (const key of ['h', 'x', 'w', 'ri', 'ro']) q[key] = p[key] + (s[key] - p[key]) * t; all.push(q); } }
       all.push(s); });
     const ring = s => { const out = [], n = s.n || 4, a = s.w / 2, b = (s.ro - s.ri) / 2, rc = (s.ro + s.ri) / 2, th = G.clock(s.h);
-      for (let i = 0; i <= M; i++) { const t = i / M * TAU, c = Math.cos(t), sn = Math.sin(t), px = s.x + a * Math.sign(c) * Math.pow(Math.abs(c), 2 / n), pr = rc + b * Math.sign(sn) * Math.pow(Math.abs(sn), 2 / n);
+      for (let i = 0; i <= M; i++) { const t = (i % M) / M * TAU, c = Math.cos(t), sn = Math.sin(t), px = s.x + a * Math.sign(c) * Math.pow(Math.abs(c), 2 / n), pr = rc + b * Math.sign(sn) * Math.pow(Math.abs(sn), 2 / n);
         out.push([px, pr * Math.cos(th), pr * Math.sin(th)]); } return out; };   // M + 1 points: the last repeats the first, for the texture seam
     const rings = all.map(ring); let v = 0;
     rings.forEach((r, k) => { if (k) { const s0 = all[k - 1], s1 = all[k]; v += Math.abs(G.clock(s1.h) - G.clock(s0.h)) * (s0.ri + s0.ro + s1.ri + s1.ro) / 4; }
