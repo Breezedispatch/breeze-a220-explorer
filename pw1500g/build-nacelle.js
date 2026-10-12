@@ -354,9 +354,15 @@
          fairing forms the bottom of the nacelle (p.29-31). Stations: torque box to xTB, cascades xC0 to xC1, the sleeve's inner wall from
          xSI, the aft wall of the sleeve's cascade cavity at xBH (where the actuator rods attach) */
       const xTB = xJ2 - .062, xC0 = xTB - .006, xC1 = xC0 - .46, xSI = xTB - .008, xBH = xTB - .758, xSk = x(Z.sleeveSeam), STROKE = S.stroke;
-      /* the fan duct outer wall under the torque box, and the torque box itself (the forward frame with the V-blade): fixed */
-      const dw = []; for (let i = 0; i <= 4; i++) { const xx = -.93 + (xTB + .003 + .93) * i / 4; dw.push([xx, rDuct(xx)]); }
+      /* the fan duct outer wall under the torque box, from the end of the fan case's duct ring at x -0.862 (it began at -0.93 until
+         2026-10-12, leaving a 7 cm slot into the fan compartment), and the torque box itself: fixed */
+      const dw = []; for (let i = 0; i <= 6; i++) { const xx = -.862 + (xTB + .003 + .862) * i / 6; dw.push([xx, rDuct(xx)]); }
       rev(G.shellProfile(dw.map(([xx, r]) => [xx, r + .012]), dw), 'cowlWhite', { inner: true });
+      /* p.18, p.42, p.60: the forward frame's V-blade. A web rises from the duct wall behind the mount ring, a lip runs forward over the
+         ring's aft edge, and the blade drops into the V-groove (flange D, x -0.833), which aligns and supports the closed door. It stops
+         at 5:36 and 6:24, where the cowl anti-ice duct and the harnesses cross the flange into the lower bifurcation */
+      PW.add(pid, G.revolve([[-.806, 1.008], [-.806, 1.0], [-.815, .982], [-.824, 1.0], [-.848, 1.0], [-.848, .958], [-.862, .958], [-.862, 1.008]],
+        { seg: 72, thetaStart: sg > 0 ? it0 : deg(192), thetaLength: sg > 0 ? deg(168) - it0 : it0 + itl - deg(192) }), 'titanium', { into: hinge });
       rev([[xJ2 - .002, rDuct(xJ2) + .012], [xTB, rDuct(xJ2) + .012], [xTB, rOut(xJ2) - .025], [xJ2 - .002, rOut(xJ2) - .025]], 'lime', { inner: true });
       /* p.330-333: sixteen carbon fibre cascade boxes, eight per door, bolted between the torque box and the aft cascade ring. Each is a
          grid of curved vanes that turn the air forward, with strongbacks across them; gaps where the two actuators pass; a flow blocker
