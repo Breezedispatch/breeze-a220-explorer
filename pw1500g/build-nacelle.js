@@ -512,9 +512,10 @@
           Kt.box(lb, fh, [0, -.008, 0], [.014, .016, .014], 'steel', { round: .003, mat: { color: '#b3191f', metalness: .15, roughness: .5 } });
           Kt.box(lb, fh, [.035, -.008, 0], [.07, .012, .014], 'steel', { round: .004, mat: { color: '#b3191f', metalness: .15, roughness: .5 } }); }   // the red L-handle
         else Kt.tube(lb, fI, [0, -.012, .028], 'z', .0068, .013, .016, 'steel');
-        /* bumpers: lower on the bottom IFS edge, upper on the top edge (where the compression strut bridges the wider gap) */
+        /* bumpers: lower on the bottom IFS edge, upper on the top edge (where the compression strut bridges the wider gap). p.21: the
+           lower aft pair sits well forward of the upper aft pair, at about 45% of the IFS's length against 59% */
         const hT = (sg > 0 ? it0 : it0 + itl) / (Math.PI / 6);
-        for (const [xx, h] of [[-1.08, hI], [-1.86, hI], [-1.08, hT], [-1.86, hT]]) { const f = Kt.frame(lb, xx, h, rIFS(xx) - .03), tw = h === hI ? (sg > 0 ? 'z' : '-z') : (sg > 0 ? '-z' : 'z');
+        for (const [xx, h] of [[-1.08, hI], [-1.70, hI], [-1.08, hT], [-1.86, hT]]) { const f = Kt.frame(lb, xx, h, rIFS(xx) - .03), tw = h === hI ? (sg > 0 ? 'z' : '-z') : (sg > 0 ? '-z' : 'z');
           Kt.box(lb, f, [0, 0, 0], [.04, .024, .02], 'steel', { round: .004 }); Kt.cyl(lb, f, [0, 0, Kt.dir(tw).z * .016], tw, .011, .012, 'rubber', { edge: .003 }); }
         /* closure assist assembly, stowed along the left web in the bay: a turnbuckle with a hook at its forward end */
         if (sg < 0) { const fc = Kt.frame(lb, -1.34, hB + .08, rOut(-1.34) - .09);

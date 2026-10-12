@@ -1506,7 +1506,12 @@
         for (const s of [-1, 1]) { Kt.box('mount-fwd', f, [0, .055, s * .18], [.06, .06, .03], 'titanium', { round: .008 });                               // lug on the ring
           Kt.box('mount-fwd', f, [.035, .1, s * .18], [.014, .11, .045], 'titanium', { round: .01 }); Kt.box('mount-fwd', f, [-.035, .1, s * .18], [.014, .11, .045], 'titanium', { round: .01 });   // side link
           for (const y of [.065, .14]) { Kt.cyl('mount-fwd', f, [0, y, s * .18], 'x', .007, .1, 'steel'); for (const e of [-1, 1]) Kt.hex('mount-fwd', f, [e * .05, y, s * .18], 'x', .011, .007, 'steel'); } }
-        Kt.cyl('mount-fwd', f, [0, .085, 0], 'z', .009, .17, 'steel'); for (const e of [-1, 1]) Kt.hex('mount-fwd', f, [0, .085, e * .088], 'z', .013, .008, 'steel'); }   // fail-safe bolt
+        /* p.47: the fail-safe bolt runs fore and aft, its head facing the same way as the side link bolts, through the beam's centre
+           clevis and a centre lug on the ring; the two shear pins stand on the beam's top face to locate it in the pylon */
+        Kt.box('mount-fwd', f, [0, .07, 0], [.05, .06, .035], 'titanium', { round: .008 });                                          // centre lug on the ring
+        for (const s of [-1, 1]) Kt.box('mount-fwd', f, [s * .034, .098, 0], [.012, .05, .05], 'titanium', { round: .005 });         // the clevis cheeks under the beam
+        Kt.cyl('mount-fwd', f, [0, .085, 0], 'x', .009, .1, 'steel'); for (const e of [-1, 1]) Kt.hex('mount-fwd', f, [e * .052, .085, 0], 'x', .013, .008, 'steel');   // fail-safe bolt
+        for (const z of [-.09, .05]) { Kt.cyl('mount-fwd', f, [0, .17, z], 'y', .008, .02, 'steel'); Kt.cone('mount-fwd', f, [0, .185, z], 'y', .003, .008, .01, 'steel'); } }   // shear pins
       /* aft mount (p.48-49): main beam under the pylon's aft fitting, two outer links down to lugs on the turbine exhaust case, the centre
          fail-safe link, and the balance beam ahead of it carrying the thrust links */
       PW.part('mount-aft', { parent: 'mounts', label: 'Aft engine mount and balance beam', src: 'p.44-45, p.48-49',
@@ -1514,6 +1519,7 @@
       { const f = Kt.frame('mount-aft', xa, 12, .40);
         Kt.box('mount-aft', f, [0, .22, 0], [.12, .04, .38], 'titanium', { round: .008 });
         for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) Kt.hex('mount-aft', f, [a * .035, .244, b * .14], 'y', .009, .007, 'steel');
+        for (const z of [-.07, .07]) { Kt.cyl('mount-aft', f, [0, .25, z], 'y', .008, .02, 'steel'); Kt.cone('mount-aft', f, [0, .265, z], 'y', .003, .008, .01, 'steel'); }   // the two shear pins (p.48-49)
         for (const s of [-1, 1]) { const ly = .4 * Math.cos(.49) - .4, lz = .4 * Math.sin(.49);                                                       // case lugs at 28 deg either side
           const g = Kt.frame('mount-aft', xa, 12 + s * .936, .40); Kt.box('mount-aft', g, [0, .02, 0], [.05, .04, .03], 'nickel', { round: .006 });
           Kt.rod('mount-aft', f, [0, .205, s * .165], [0, ly + .035, s * lz], .015, 'titanium');                                                         // outer link
