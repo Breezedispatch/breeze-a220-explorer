@@ -536,6 +536,36 @@
     /* p.258-267. The CIC firewall is the cone from the fan duct inner wall down to the HPC case (r .515 at x -.95 to .262 at -1.16).
        The 2.5 bleed and LPC vane actuators sit on its aft face in the core compartment, with their rods running forward through it */
     const rFire = x => .515 - (-.95 - x) / .21 * .253;
+    /* a unit's own frame at pos: x along its axis, y toward `up` (squared to x), z across */
+    const vframe = (pid, pos, ax, up) => { const X = ax.clone().normalize(), Y = up.clone().addScaledVector(X, -up.dot(X)).normalize(), Z = new THREE.Vector3().crossVectors(X, Y);
+      const g = new THREE.Group(); g.position.copy(pos); g.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, Y, Z)); PW.parts.get(pid).obj.add(g); g.updateMatrixWorld(true); return g; };
+    const lastPort = () => { const p = PW.ports[PW.ports.length - 1]; p.f.updateMatrixWorld(true); return p.f.localToWorld(V(...p.end)); };   // the end of the fitting or connector just built
+    const radAt = p => V(0, p.y, p.z).normalize(), tanAt = p => V(0, -p.z, p.y).normalize();                                // radially out, and toward increasing clock
+    const actDrain = {};                                                                                                // the actuators' drain fittings, for the drain mast
+    /* WC08 runs round the right of the core at x -1.115, r .34, just aft of the fire seal (harnesses below): the actuators' torque
+       motor and LVDT leads drop into it */
+    const toWC08 = (pid, pts) => line(pid, pts, .005, 'harness', { clamps: 0, ends: false });
+    /* the fire-seal actuators (2.5 bleed, LPC vanes), from p.267's render, p.261 and Brian's photo of the 2.5 bleed actuator: a long grey
+       casting lying fore and aft on the seal's aft face, bolted to it by a square flange on spacers, its rod housing passing forward
+       through the seal; a stepped body with a collar by the flange and the LVDT's domed cap aft; on its side (toward 12 o'clock on the
+       2.5 bleed actuator) the servo valve housing with the servo fuel fittings and the torque motor canister; the torque motor and LVDT
+       connectors underneath, wired down into WC08; a data plate on top and the drain fitting under the cap */
+    const sealAct = (pid, h, hs, rs, side) => { const g = Kt.frame(pid, -1.12, h, .455), A = FLa(-1.12, h, .455);
+      Kt.prof(pid, g, [0, 0, 0], 'x', [[.078, 0], [.078, .028], [.074, .035], [.06, .038], [.058, .042], [.044, .042], [.042, .038], [-.062, .038], [-.065, .033], [-.08, .033], [-.08, 0]], 'castAl', { seg: 40 });
+      Kt.prof(pid, g, [-.08, 0, 0], '-x', [[.02, 0], [.02, .013], [.016, .021], [.008, .027], [0, .029], [0, 0]], 'castAl', { seg: 32 });   // LVDT cap
+      Kt.box(pid, g, [.064, 0, 0], [.01, .088, .088], 'castAl', { round: .008 }); Kt.bolts(pid, g, [.0695, 0, 0], 'x', .044, 4, .004, { phase: Math.PI / 4 });   // mounting flange
+      Kt.cyl(pid, g, [.1, 0, 0], 'x', .02, .06, 'castAl');                                                                        // rod housing through the seal
+      Kt.box(pid, g, [.105, 0, 0], [.07, .07, .07], 'castAl', { round: .01 });                                                   // the seal's mounting boss
+      Kt.plate(pid, g, [-.012, .0385, .012 * side], 'y', 'x', .03, .02);                                                           // data plate
+      for (const x of [-.045, .03]) Kt.hex(pid, g, [x, .02, .033 * side], [0, .5, .866 * side], .006, .006, 'steel');                 // plugged ports
+      const f2 = Kt.frame(pid, -1.15, hs, rs);                                                                                    // the servo side, where the fittings always were
+      Kt.box(pid, f2, [-.022, -.006, .004 * side], [.105, .048, .042], 'castAl', { round: .008 });                                // servo valve housing
+      for (const x of [-.035, .005]) Kt.fitting(pid, f2, [x, 0, .025 * side], side > 0 ? 'z' : '-z', .006);                      // servo fuel in and out (p.167)
+      Kt.cyl(pid, f2, [-.058, .026, .006 * side], [-.45, .55, .70 * side], .019, .048, 'castAl', { edge: .004 });                 // torque motor canister
+      Kt.hex(pid, f2, [.022, .019, -.004 * side], 'y', .006, .006, 'steel');                                                      // servo filter plug
+      Kt.connector(pid, g, [.03, -.036, 0], '-y', .008, { lead: 'x' }); toWC08(pid, [lastPort(), A(.03, -.07, 0), A(.008, -.098, 0)]);           // torque motor
+      Kt.connector(pid, g, [-.02, -.036, 0], '-y', .008, { lead: 'x' }); toWC08(pid, [lastPort(), A(-.002, -.075, .004), A(.004, -.099, .006)]);   // LVDT
+      Kt.fitting(pid, g, [-.09, -.025, 0], '-y', .005); return lastPort(); };                                                      // drain
     PW.part('hpc-sva', { parent: 'air', label: 'HPC stator vane actuator and synchronizing rings', src: 'p.258-261',
       info: 'Fuel-powered actuator on the HPC case on the right side at 4 o\'clock. Through a bellcrank it turns four synchronizing rings, which move the HPC inlet guide vanes and the first three stator rows together. The EEC positions it on N2 from the PMAG through a dual-coil torque motor and servovalve, and reads the piston back from a dual-coil LVDT.\n\nThe vanes are closed for start and idle and fully open at takeoff. With no power the actuator drives the vanes open, for maximum airflow. It needs no rigging when it is installed.' });
     { const rows = ['HPC variable inlet guide vane', 'HPC stator 1', 'HPC stator 2', 'HPC stator 3'].map(n => D.GEN.rows.find(r => r.name.startsWith(n)));
@@ -543,26 +573,54 @@
       rows.forEach(rw => { if (!rw) return; const xx = (rw.x_le + rw.x_te) / 2, rr = Math.max(rCase(xx), .245) + .016;
         PW.add('hpc-sva', G.revolve([[xx + .007, rr], [xx - .007, rr], [xx - .007, rr + .014], [xx + .007, rr + .014]], { seg: 128 }), 'steel');
         PW.add('hpc-sva', G.ringInstances(new THREE.BoxGeometry(.034, .026, .010).translate(-.004, rr - .006, 0), PW.partMat('hpc-sva', 'darkBox'), 44, { x: xx + .006 }), null); });
-      const x0 = rows[0] ? (rows[0].x_le + rows[0].x_te) / 2 : -1.15, x3 = rows[3] ? (rows[3].x_le + rows[3].x_te) / 2 : -1.39, xa = (x0 + x3) / 2 - .02;
-      can('hpc-sva', xa, 4.0, rCase(xa) + .08, .032, .26, 'steel'); box('hpc-sva', xa, 4.0, rCase(xa) + .125, .2, .04, .08, 'darkBox');    // actuator and its torque motor/LVDT housing
-      { const g = Kt.frame('hpc-sva', xa, 4.0, rCase(xa) + .125); for (const z of [-.015, .015]) Kt.fitting('hpc-sva', g, [.07, .02, z], 'y', .006); }   // servo fuel in and out (p.167)
-      box('hpc-sva', x3 - .04, 4.25, rCase(x3) + .05, .05, .09, .035, 'steel'); }                                                           // bellcrank
+      const xs = rows.map(rw => rw ? (rw.x_le + rw.x_te) / 2 : null), x0 = xs[0] || -1.15, x3 = xs[3] || -1.39, xa = (x0 + x3) / 2 - .02, ra = rCase(xa) + .08, W = PW.parts.get('hpc-sva').obj;
+      /* the actuator (p.261, A Nahas photo): a stepped grey body lying fore and aft over the vane rings at 4 o'clock, its rod forward to
+         the bellcrank, the LVDT cap aft; on top the servo valve and torque motor housing with the servo fuel fittings (p.167), the drain
+         fitting on one side and the torque motor connector on the other, wired forward under the servo fuel rings into WC08 */
+      const g = Kt.frame('hpc-sva', xa, 4.0, ra), t = Kt.frame('hpc-sva', xa, 4.0, ra + .045);
+      Kt.prof('hpc-sva', g, [0, 0, 0], 'x', [[.125, 0], [.125, .016], [.12, .026], [.105, .033], [.1, .036], [-.1, .036], [-.104, .031], [-.122, .031], [-.122, 0]], 'castAl', { seg: 40 });
+      Kt.prof('hpc-sva', g, [-.122, 0, 0], '-x', [[.026, 0], [.026, .014], [.02, .022], [.01, .026], [0, .026], [0, 0]], 'castAl', { seg: 32 });   // LVDT cap
+      Kt.box('hpc-sva', t, [0, 0, 0], [.17, .04, .07], 'castAl', { round: .008 });                                                   // servo valve and torque motor housing
+      Kt.box('hpc-sva', t, [-.02, .0215, 0], [.1, .003, .055], 'castAl', { round: .002 });                                           // its cover
+      for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) Kt.hex('hpc-sva', t, [-.02 + a * .044, .024, b * .022], 'y', .003, .003, 'steel');
+      for (const z of [-.015, .015]) Kt.fitting('hpc-sva', t, [.07, .02, z], 'y', .006);                                            // servo fuel in and out (p.167)
+      Kt.plate('hpc-sva', g, [-.06, 0, .0365], 'z', 'x', .03, .02);                                                                 // data plate
+      Kt.fitting('hpc-sva', t, [-.02, 0, .035], 'z', .005); actDrain.hpc = lastPort();                                              // drain
+      Kt.connector('hpc-sva', t, [.03, 0, -.035], '-z', .008, { lead: 'x' });                                                       // torque motor
+      toWC08('hpc-sva', [lastPort(), P(-1.22, 3.72, .375), P(-1.17, 3.72, .355), P(-1.13, 3.75, .35), P(-1.118, 3.78, .352)]);
+      Kt.connector('hpc-sva', g, [-.13, 0, -.02], '-z', .007, { lead: 'x' });                                                       // LVDT, into the torque motor's lead
+      toWC08('hpc-sva', [lastPort(), P(-1.40, 3.72, .345), P(-1.32, 3.7, .35), P(-1.26, 3.72, .37)]);
+      /* the bellcrank (p.261): a shaft along the rings at 4:30 on two brackets from the case, an arm and a link to a clevis on each ring,
+         and a crank at its forward end taking the actuator's rod */
+      const hb = 4.5, rb = .318, xf = x0 + .012, xr = x3 - .012;
+      Kt.cyl('hpc-sva', W, P((xf + xr) / 2, hb, rb).toArray(), 'x', .008, xf - xr, 'steel');
+      for (const xb of [-1.2, (xs[2] + xs[3]) / 2]) { const rc = rCase(xb); Kt.box('hpc-sva', Kt.frame('hpc-sva', xb, hb, (rc + rb) / 2), [0, 0, 0], [.012, rb - rc + .008, .022], 'castAl', { round: .003 }); }
+      xs.forEach(xx => { if (xx == null) return; const rr = Math.max(rCase(xx), .245) + .016;
+        Kt.box('hpc-sva', Kt.frame('hpc-sva', xx, hb, rb), [0, 0, -.017], [.01, .014, .04], 'steel', { round: .003 });            // arm
+        Kt.rod('hpc-sva', W, FLa(xx, hb, rb)(0, 0, -.034).toArray(), P(xx, hb - .2, rr + .018).toArray(), .004, 'steel');         // link
+        Kt.box('hpc-sva', Kt.frame('hpc-sva', xx, hb - .2, rr + .017), [0, 0, 0], [.012, .01, .016], 'steel', { round: .002 }); });   // clevis on the ring
+      Kt.box('hpc-sva', Kt.frame('hpc-sva', xf - .004, 4.28, .326), [0, 0, 0], [.012, .014, .056], 'steel', { round: .003 });      // crank
+      Kt.rod('hpc-sva', W, P(xa + .118, 4.0, ra).toArray(), P(xf - .004, 4.1, .328).toArray(), .006, 'steel'); }                   // actuator rod
     PW.part('lpc-sva', { parent: 'air', label: 'LPC stator vane actuator and synchronizing ring', src: 'p.258-261',
       info: 'Fuel-powered actuator at 5 o\'clock on the CIC firewall. Its rod runs forward through the firewall to a bellcrank on the synchronizing ring round the LPC inlet, which turns the LPC inlet guide vanes together. The EEC positions it on N1 through a dual-coil torque motor and servovalve, with a dual-coil LVDT reporting to each channel.\n\nThe manual\'s text has the vanes moving toward closed for start and idle, modulating in transients and open above idle (its table differs for the start case). With no power the actuator drives the vanes open.' });
     { const rw = D.GEN.rows.find(r => r.name.startsWith('LPC variable')); const xx = (rw.x_le + rw.x_te) / 2, rr = .392;
       PW.add('lpc-sva', G.revolve([[xx + .007, rr], [xx - .007, rr], [xx - .007, rr + .014], [xx + .007, rr + .014]], { seg: 128 }), 'steel');
       PW.add('lpc-sva', G.ringInstances(new THREE.BoxGeometry(.03, .022, .009).translate(-.004, rr - .005, 0), PW.partMat('lpc-sva', 'darkBox'), 40, { x: xx + .006 }), null);
-      can('lpc-sva', -1.12, 5.0, .455, .028, .18, 'steel'); box('lpc-sva', -1.15, 5.15, .468, .08, .04, .05, 'darkBox');
-      { const g = Kt.frame('lpc-sva', -1.15, 5.15, .468); for (const x of [-.035, .005]) Kt.fitting('lpc-sva', g, [x, 0, .025], 'z', .006); }   // servo fuel in and out (p.167), on the side away from the actuator body
+      actDrain.lpc = sealAct('lpc-sva', 5.0, 5.15, .468, 1);
       line('lpc-sva', [P(-1.03, 5.0, .455), P(-.95, 5.0, .466), P(-.80, 5.0, .468), P(xx - .02, 5.0, .43)], .007, 'tube', { clamps: 0, ends: false });
       box('lpc-sva', xx - .025, 5.0, .425, .04, .06, .03, 'steel'); }                                                                       // bellcrank on the ring
     PW.part('bleed-25', { parent: 'air', label: '2.5 bleed valve and actuator', src: 'p.264-267',
       info: 'Ring valve round the LPC case just forward of the CIC, at station 2.5. Opened, it dumps LPC exit air into the fan stream, giving the LPC surge margin during starts, low power and transients and throwing out dirt, rain and ice on the ground. Its actuator is horizontal on the right side, on the aft face of the CIC firewall, and works the ring through a bellcrank. It runs on IFPC servo fuel through an integral torque motor.\n\nThe EEC schedules it on N1, biased with altitude and Mach: open for start and idle, modulating in transients, closed at takeoff. It fails open. On a surge the EEC opens it, selects continuous ignition on both igniters and resets the variable vanes.' });
     { PW.add('bleed-25', G.ring(-.895, -.93, .425, .455, { seg: 128 }), 'nickel'); PW.add('bleed-25', G.boltCircle(PW.partMat('bleed-25', 'steel'), -.893, .44, 48, .004), null);
-      can('bleed-25', -1.12, 3.0, .455, .03, .18, 'steel'); box('bleed-25', -1.15, 2.85, .47, .08, .04, .05, 'darkBox');                   // actuator with its torque motor
-      { const g = Kt.frame('bleed-25', -1.15, 2.85, .47); for (const x of [-.035, .005]) Kt.fitting('bleed-25', g, [x, 0, -.025], '-z', .006); }   // servo fuel in and out (p.167), on the side away from the actuator body
-      line('bleed-25', [P(-1.03, 3.0, .455), P(-.95, 3.0, .462), P(-.86, 3.0, .466)], .007, 'tube', { clamps: 0, ends: false });
-      box('bleed-25', -.85, 3.0, .468, .05, .05, .03, 'steel'); }                                                                            // bellcrank ahead of the ring
+      actDrain.b25 = sealAct('bleed-25', 3.0, 2.85, .47, -1);
+      line('bleed-25', [P(-1.03, 3.0, .455), P(-.95, 3.0, .462), P(-.866, 3.0, .466)], .007, 'tube', { clamps: 0, ends: false });
+      /* p.267: the rod's clevis on the upper arm of a triangular bellcrank pivoting on a bracket ahead of the ring; its lower arm's link
+         runs back to a clevis on the ring */
+      { const f = Kt.frame('bleed-25', -.852, 3.0, .45);
+        Kt.box('bleed-25', f, [0, .016, 0], [.03, .022, .014], 'steel', { round: .004 }); Kt.box('bleed-25', f, [-.01, -.004, 0], [.026, .03, .014], 'steel', { round: .004 });   // the two arms
+        Kt.cyl('bleed-25', f, [0, 0, 0], 'z', .009, .03, 'steel'); Kt.box('bleed-25', f, [.008, -.012, 0], [.02, .02, .036], 'castAl', { round: .003 });   // pivot and its bracket
+        Kt.rod('bleed-25', PW.parts.get('bleed-25').obj, FLa(-.852, 3.0, .45)(-.016, -.014, 0).toArray(), P(-.888, 3.0, .452).toArray(), .004, 'steel');   // link to the ring
+        Kt.box('bleed-25', Kt.frame('bleed-25', -.892, 3.0, .458), [0, 0, 0], [.012, .008, .016], 'steel', { round: .002 }); } }   // its clevis
     PW.part('hpc-bleed-valve', { parent: 'air', label: 'HPC bleed valve and pressure sensor', src: 'p.264-267',
       info: 'Two-position poppet valve on the HPC case at 1 o\'clock, on the 6th-stage bleed port. It is spring-loaded open for the start, dumping 6th-stage air through the slots round its base into the core compartment, and HPC pressure (station 2.9) closes it; it is fully closed by idle. The cowl anti-ice valves open during the start as well, adding bleed through the anti-ice ducting.\n\nA sense line from its cap runs forward over the vane rings to the pressure sensor on the CIC fire seal at 2 o\'clock. The EEC uses the sensor to detect a valve that fails open after the start, putting hot air into the core compartment, or one that stays closed during the start, which can stall the HPC.' });
     /* p.266: "on the HPC case at the 1 o'clock position"; p.267 draws it on a pad on the rear HPC case: a slotted discharge body, a
@@ -607,11 +665,6 @@
     const rowX = n => { const rw = D.GEN.rows.find(r => r.name.startsWith(n)); return (rw.x_le + rw.x_te) / 2; };
     const BL = (() => { const x4 = rowX('HPC rotor 4'), TE = P(x4, 1.9, .395), Pout = P(-1.255, 1.62, .40), E2 = P(-1.570, 2.57, .392), B5 = P(-1.45, .46, .405), M = V(-1.665, .395, 0);
       return { x4, TE, dP: Pout.clone().sub(TE).normalize(), dH: E2.clone().sub(TE).normalize(), E2, B5, M, dM: B5.clone().sub(M).normalize() }; })();   // the tee, the PRSOV and HPV axes, the precooler inlet
-    /* a valve's own frame at pos: x along its duct, y toward `up` (squared to x), z across */
-    const vframe = (pid, pos, ax, up) => { const X = ax.clone().normalize(), Y = up.clone().addScaledVector(X, -up.dot(X)).normalize(), Z = new THREE.Vector3().crossVectors(X, Y);
-      const g = new THREE.Group(); g.position.copy(pos); g.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, Y, Z)); PW.parts.get(pid).obj.add(g); g.updateMatrixWorld(true); return g; };
-    const lastPort = () => { const p = PW.ports[PW.ports.length - 1]; p.f.updateMatrixWorld(true); return p.f.localToWorld(V(...p.end)); };   // the end of the fitting or connector just built
-    const radAt = p => V(0, p.y, p.z).normalize(), tanAt = p => V(0, -p.z, p.y).normalize();                                // radially out, and toward increasing clock
     { const { x4, TE, dP, dH, E2, B5, M, dM } = BL, W = PW.parts.get('bleed-hp').obj, rc4 = rCase(x4) + .035, leads = {};
       PW.add('bleed-hp', G.revolve([[x4 + .03, rCase(x4)], [x4 - .03, rCase(x4)], [x4 - .03, rc4], [x4 + .03, rc4]], { seg: 96 }), 'nickel');     // 4th-stage manifold collar
       /* the tee: a cast body with three branches, down to the 4th-stage port, aft to the HPV and forward to the PRSOV */
@@ -1451,9 +1504,9 @@
        bifurcation and through the reverser to the latch access panel at the bottom of the nacelle */
     { const xm2 = -1.48, runs = [
         /* the three actuator drains cross under the cowl anti-ice duct on their way down the right side */
-        [P(-1.21, 5.0, .455), P(-1.222, 5.35, .448), P(-1.255, 5.7, .46), P(-1.29, 6.0, .50)],                                    // LPC stator vane actuator
-        [P(-1.21, 3.0, .455), P(-1.22, 3.5, .47), P(-1.215, 4.5, .485), P(-1.232, 5.0, .46), P(-1.24, 5.35, .448), P(-1.27, 5.7, .462), P(-1.31, 6.0, .505)],   // 2.5 bleed valve actuator
-        [P(-1.30, 4.05, .37), P(-1.23, 4.2, .46), P(-1.232, 4.5, .478), P(-1.246, 5.0, .458), P(-1.256, 5.35, .448), P(-1.285, 5.7, .464), P(-1.33, 5.98, .50)],   // HPC stator vane actuator
+        [actDrain.lpc, P(-1.23, 5.1, .418), P(-1.235, 5.35, .44), P(-1.255, 5.7, .46), P(-1.29, 6.0, .50)],                       // LPC stator vane actuator
+        [actDrain.b25, P(-1.228, 3.2, .425), P(-1.225, 3.5, .465), P(-1.215, 4.5, .485), P(-1.232, 5.0, .46), P(-1.24, 5.35, .448), P(-1.27, 5.7, .462), P(-1.31, 6.0, .505)],   // 2.5 bleed valve actuator
+        [actDrain.hpc, P(-1.29, 4.26, .41), P(-1.245, 4.3, .455), P(-1.232, 4.5, .478), P(-1.246, 5.0, .458), P(-1.256, 5.35, .448), P(-1.285, 5.7, .464), P(-1.33, 5.98, .50)],   // HPC stator vane actuator
         [P(-1.40, 5.95, .455), P(-1.41, 6.0, .50)],                                                                               // hydraulic pump
         [P(-1.40, 7.15, .46), P(-1.40, 6.6, .50), P(-1.43, 6.1, .515)],                                                             // fuel/oil manifold and IFPC
         [P(-1.685, 7.95, .43), P(-1.70, 7.75, .47), P(-1.72, 7.45, .52), P(-1.68, 7.1, .545), P(-1.60, 6.8, .545), P(-1.52, 6.45, .54), P(-1.47, 6.2, .535)],   // starter pad seal, under the gearbox and the VFG oil line
