@@ -6,12 +6,18 @@
   const PW = window.PW, G = window.PWGeo, D = PW.D, TAU = Math.PI * 2;
   (PW.builders = PW.builders || []).push(build);
   const deg = d => d * Math.PI / 180, V = (x, y, z) => new THREE.Vector3(x, y, z);
+  /* a heat-shrink identification sleeve: two lines of small dark print running along the hose on a light ground */
+  const printTex = bg => { const k = 'print' + bg; return PW.tex[k] || (PW.tex[k] = PW.tex.canvas(128, 128, (c, w, h) => {
+    c.fillStyle = bg; c.fillRect(0, 0, w, h); c.fillStyle = '#1e1e22';
+    for (const u of [.22, .72]) for (let y = 14; y < h - 14; y += 9) if ((y * 7) % 5 !== 0) c.fillRect(u * w + ((y * 13) % 3), y, 5 + (y * 11) % 4, 6); }, { srgb: true })); };
 
   Object.assign(PW.MAT, {
     gearboxCast: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#a69e8b'), roughness: .62, metalness: .5, roughnessMap: PW.tex.noise('cast', 256, 14, .55, 1), bumpMap: PW.tex.noise('cast', 256, 14, .55, 1), bumpScale: .0008 }),
     accGrey: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#8b9197'), roughness: .5, metalness: .35 }),
     eecGrey: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#9aa0a6'), roughness: .55, metalness: .2 }),
-    fireSleeve: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#6a2c26'), roughness: .85, metalness: 0, bumpMap: PW.tex.noise('weave', 256, 30, .6, 1), bumpScale: .0008 }),
+    fireSleeve: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#5e3238'), roughness: .85, metalness: 0, bumpMap: PW.tex.noise('weave', 256, 30, .6, 1), bumpScale: .0008 }),   // the dark maroon fire sleeves on the core hoses (photos; brick red until 2026-10-12)
+    labelWhite: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#ffffff'), map: printTex('#ecebe6'), roughness: .6, metalness: 0 }),        // printed identification sleeves on the hoses (photos)
+    labelPrintBlue: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#ffffff'), map: printTex('#7fa3cf'), roughness: .55, metalness: 0 }),
     blackHose: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#222426'), roughness: .8, metalness: .05, bumpMap: PW.tex.noise('weave', 256, 30, .6, 1), bumpScale: .0008 }),
     clampOrange: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#c8642c'), roughness: .6, metalness: .1 }),
     labelBlue: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#2f62b8'), roughness: .5, metalness: .1 }),
@@ -50,6 +56,7 @@
       tag(PW.add(pid, G.alongCurve(curve, ts, () => new THREE.CylinderGeometry(r + Math.min(.008, r * .35), r + Math.min(.008, r * .35), band, 16)), big ? 'steel' : kind === 'harness' ? 'connector' : 'clampOrange', { shadow: false })); }
     if (o.ends !== false && kind !== 'duct') tag(PW.add(pid, G.alongCurve(curve, [0.012, .988], () => new THREE.CylinderGeometry(r * 1.6, r * 1.6, r * 2.2, 6)), kind === 'harness' ? 'connector' : 'steel', { shadow: false }));
     if (o.bands) tag(PW.add(pid, G.alongCurve(curve, o.bands, () => new THREE.CylinderGeometry(r + .0018, r + .0018, .012, 14)), 'clampOrange', { shadow: false }));   // orange identification sleeves (photos)
+    if (o.labels) for (const [t, m] of o.labels) tag(PW.add(pid, G.alongCurve(curve, [t], () => new THREE.CylinderGeometry(r + .0015, r + .0015, Math.max(.035, r * 3.2), 20)), m || 'labelWhite', { shadow: false }));   // printed ID sleeves (photos: white and blue on the core hoses)
     return curve;
   }
   /* where along a routed line (0..1 by length) it reaches station x: for sleeves and boots where it passes through a panel */
@@ -196,7 +203,7 @@
          thrust link at 1:30, just inside the IFS */
       for (const dx of [0, -.035]) line('edp', (dx ? [P(-1.358, 5.68, .482), P(-1.355, 5.6, .47)] : [P(-1.358, 5.92, .484), P(-1.35, 5.84, .49), P(-1.325, 5.66, .488)]).concat([P(-1.30 + dx, 5.42, .45), P(-1.275 + dx, 5.15, .462), P(-1.265 + dx, 4.95, .49), P(-1.258 + dx, 4.75, .505), P(-1.25 + dx, 4.4, .51), P(-1.25 + dx, 3.2, .51),
         P(-1.26 + dx, 1.9, .512), P(-1.264 + dx, 1.62, .515), P(-1.27 + dx, 1.35, .515), P(-1.29 + dx, 1.05, .51), P(-1.35 + dx, .6, .51), P(-1.39 + dx, .3, .52), P(-1.398 + dx, .15, .555), V(-1.40 + dx, .62, .08), V(-1.405 + dx, .70, .101),
-        V(-1.41 + dx, .76, .108), V(-1.415 + dx, .85, .12), V(-1.42 + dx, 1.03, .125)]), .012, 'hose', { clamps: 5 }); }   // suction (forward) and pressure (aft) hoses, up between the fan-air duct and the right bifurcation wall, aft of the fan air valve
+        V(-1.41 + dx, .76, .108), V(-1.415 + dx, .85, .12), V(-1.42 + dx, 1.03, .125)]), .012, 'hose', { clamps: 5, labels: [[.1, 'labelWhite']] }); }   // suction (forward) and pressure (aft) hoses, up between the fan-air duct and the right bifurcation wall, aft of the fan air valve
     /* its case drain to the aircraft's hydraulic return, beside the two hoses all the way to the pylon: it crosses under the cowl anti-ice
        duct at 5 o'clock, where the gap between the duct and the LSOP's chip collectors is widest */
     line('edp', [P(-1.418, 5.42, .388), P(-1.405, 5.36, .40), P(-1.385, 5.3, .425), P(-1.35, 5.2, .455), P(-1.326, 5.05, .463), P(-1.322, 4.85, .482), P(-1.324, 4.7, .50), P(-1.32, 4.4, .51), P(-1.32, 3.2, .51), P(-1.33, 1.9, .512),
@@ -472,7 +479,7 @@
     { const vx = -1.46, vh = 10.0; box('vfgoohx', vx, vh, .40, .085, .07, .11, 'steel'); for (const dx of [.05, -.05]) box('vfgoohx', vx + dx, vh, .405, .025, .09, .12, 'castAl', { round: .008 });
       /* VFG oil on from here forward along the left of the core, under the fuel supply hose and through the compressor intermediate
          case's outer cone (a bulkhead nut where it passes), to the VFG air/oil cooler under the fan exit liner */
-      { const c = line('vfgoohx', [P(vx, 9.72, .43), P(-1.40, 9.72, .44), P(-1.30, 9.55, .43), P(-1.20, 9.38, .424), P(-1.10, 9.28, .444), P(-1.03, 9.28, .468), P(-.99, 9.22, .47), P(-.96, 9.05, .468), P(-.93, 8.75, .468), P(-.895, 8.5, .468), FLa(-.855, 8.4, .467)(-.01595, 0, 0)], .011, 'hose', { clamps: 3 });   // above the forward vibration sensor
+      { const c = line('vfgoohx', [P(vx, 9.72, .43), P(-1.40, 9.72, .44), P(-1.30, 9.55, .43), P(-1.20, 9.38, .424), P(-1.10, 9.28, .444), P(-1.03, 9.28, .468), P(-.99, 9.22, .47), P(-.96, 9.05, .468), P(-.93, 8.75, .468), P(-.895, 8.5, .468), FLa(-.855, 8.4, .467)(-.01595, 0, 0)], .011, 'hose', { clamps: 3, labels: [[.3, 'labelWhite']] });   // above the forward vibration sensor
         PW.add('vfgoohx', G.alongCurve(c, [tAt(c, -.976)], () => new THREE.CylinderGeometry(.018, .018, .016, 6)), 'steel').userData.isLine = true; }
       /* and back (p.213 draws the VFG oil circuit as a pair, to and from the VFG): beside the first, aft of and outboard of it, between the fuel/oil manifold and the air/oil cooler's plenum */
       line('vfgoohx', [P(vx - .045, 9.74, .44), P(-1.512, 9.62, .485), P(-1.515, 9.5, .525), P(-1.515, 9.3, .53), P(-1.51, 9.1, .53), P(-1.545, 8.55, .512), P(-1.605, 8.0, .505), P(-1.67, 7.45, .515), P(-1.712, 7.0, .518), P(-1.745, 6.78, .532), FLa(mx1, 6.15, VFG_R)(-.11, .0825, .1181), FLa(mx1, 6.15, VFG_R)(-.11, .07192, .10109)], .014, 'tube', { clamps: 3 }); }
@@ -511,7 +518,7 @@
       info: 'Fuel comes down from the pylon to the IFPC on the MGB. Its boost pump sends the fuel through the fuel/oil manifold to the fuel/oil heat exchanger and back, then through the filter to the high-pressure pump. Metered fuel passes the flow meter and leaves the manifold in two tubes for the primary and secondary manifolds round the combustor, which feed the 16 nozzles: 10 duplex and 6 simplex (secondary only), in a pattern of 4 duplex, 4 simplex, 6 duplex, 2 simplex. Every nozzle has check valves that keep the manifolds full after shutdown.\n\nServo fuel from the high-pressure pump drives the vane and bleed actuators and the turbine active clearance control valve, and returns upstream of the filter (p.166). The IFPC\'s motive flow pump sends fuel back up a small tube beside the supply to the aircraft: it drives the engine feed ejector pump in the collector tank, which normally feeds the engine. If an ejector pump fails, both AC boost pumps run instead (TTM 28-00).' });
     /* the supply crosses under the left thrust link close to its CIC end, where it is lowest; the FOHX boost lines cross over it */
     line('fuel', [P(-1.03, 11.8, 1.06), P(-1.035, 11.8, .90), P(-1.04, 11.79, .70), P(-1.042, 11.74, .50), P(-1.045, 11.55, .455), P(-1.048, 11.2, .455), P(-1.06, 10.75, .43), P(-1.078, 10.43, .397), P(-1.10, 10.05, .452),
-      P(-1.16, 9.4, .47), P(-1.25, 8.75, .49), P(-1.262, 8.58, .44), P(-1.267, 8.505, .416)], .02, 'hose', { clamps: 4 });   // supply from the pylon, beside the precooler duct, into the IFPC's boost pump inlet
+      P(-1.16, 9.4, .47), P(-1.25, 8.75, .49), P(-1.262, 8.58, .44), P(-1.267, 8.505, .416)], .02, 'hose', { clamps: 4, labels: [[.36, 'labelWhite'], [.44, 'labelPrintBlue']] });   // supply from the pylon, beside the precooler duct, into the IFPC's boost pump inlet
     /* motive flow (TTM 73-00 fig. 2): from the port beside the IFPC's fuel inlet back up to the pylon, following the supply aft of it:
        under the left thrust link with it, between it and the fuel/oil cooler, over the FOC manifold and up the upper bifurcation */
     line('fuel', [P(-1.358, 8.467, .3995), P(-1.358, 8.576, .405), P(-1.345, 8.66, .43), P(-1.315, 8.76, .465), P(-1.27, 8.9, .50), P(-1.22, 9.3, .495), P(-1.19, 9.6, .478), P(-1.16, 9.95, .458),
