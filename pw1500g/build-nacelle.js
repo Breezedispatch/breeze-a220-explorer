@@ -22,6 +22,9 @@
     siliconeSeal: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#b8553a'), roughness: .7, metalness: 0 }),
     cascadeGrey: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#4b5056'), roughness: .5, metalness: .5 }),
     bareCowl: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#a9a59b'), roughness: .45, metalness: .85, roughnessMap: PW.tex.noise('cast', 256, 14, .55, 1) }),
+    horGrey: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#4b5157'), roughness: .42, metalness: .55 }),   // the dark grey hold-open rods (photos)
+    horRed: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#c8261e'), roughness: .5, metalness: .1 }),       // a hold-open rod's collar band: unlocked
+    horGreen: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#2f9a3c'), roughness: .5, metalness: .1 }),     // and locked (p.41)
   });
 
   /* ---- nacelle state, driven from the toolbar: fan cowls 0..1 (55 deg), reverser doors 0..1 (45 deg), sleeves 0..1 (deployed) ---- */
@@ -46,25 +49,48 @@
     const yA = Aw.clone().sub(F).normalize(), zA = new THREE.Vector3(0, -Math.sin(b.a), Math.cos(b.a)), xA = new THREE.Vector3().crossVectors(yA, zA).normalize();
     zA.crossVectors(xA, yA); b.link.position.copy(F).add(Aw).multiplyScalar(.5); b.link.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(xA, yA, zA));
   }
-  /* rods between a door and the engine that follow the door (opening actuators, hold-open rods): straight sections re-aimed every frame
-     between two ends, telescoping as the distance changes; the first section starts at end a, the last finishes at end b. ends()
-     returns both ends in the group's own frame. Optional eyes: a ball of that radius at each end */
-  function strut(pid, into, secs, ends, eyes) {
-    const g = new THREE.Group(), Y = new THREE.Vector3(0, 1, 0); into.add(g);
-    const ms = secs.map(([r, len, mat]) => { const m = PW.add(pid, new THREE.CylinderGeometry(r, r, len, 14), mat, { into: g, solid: true }); m.userData.len = len; return m; });
-    const es = eyes ? [0, 1].map(() => PW.add(pid, new THREE.SphereGeometry(eyes, 14, 10), 'steel', { into: g, solid: true })) : [];
-    const st = { g, ms, ends, update() { const [a, b] = st.ends(), d = b.clone().sub(a), L = d.length() || 1; d.multiplyScalar(1 / L);
-      const q = new THREE.Quaternion().setFromUnitVectors(Y, d), n = ms.length;
-      ms.forEach((m, i) => { const l = m.userData.len, t = n === 1 ? .5 : i / (n - 1); m.position.copy(a).addScaledVector(d, l / 2 + (L - l) * t); m.quaternion.copy(q); });
-      if (es.length) { es[0].position.copy(a); es[1].position.copy(b); } } };
+  /* a member between two ends that move with the doors (opening actuators, hold-open rods), built of pieces re-aimed every frame: each
+     piece is anchored at end a (offset s along the member) or at end b (offset s back toward a), its geometry's own +y along the
+     member. Tubes anchored at opposite ends slide over each other, so the member telescopes; fittings ride on either end. ends()
+     returns both ends in the group's own frame */
+  function member(pid, into, pieces, ends) {
+    const g = new THREE.Group(), Y = new THREE.Vector3(0, 1, 0), q = new THREE.Quaternion(); into.add(g);
+    for (const p of pieces) p.m = PW.add(pid, p.geo, p.mat, { into: g, solid: true });
+    const st = { g, ms: pieces.map(p => p.m), ends, update() { const [a, b] = st.ends(), d = b.clone().sub(a), L = d.length() || 1; d.multiplyScalar(1 / L);
+      q.setFromUnitVectors(Y, d);
+      for (const p of pieces) { p.m.quaternion.copy(q); p.m.position.copy(p.at === 'b' ? b : a).addScaledVector(d, p.at === 'b' ? -(p.s || 0) : (p.s || 0)); }
+      if (st.after) st.after(); } };
     S.struts.push(st); st.update(); return st;
   }
+  const tubeY = (r, l) => new THREE.CylinderGeometry(r, r, l, 16), crossX = (r, l) => new THREE.CylinderGeometry(r, r, l, 10).rotateZ(Math.PI / 2);
+  /* a telescopic hold-open rod (p.13, p.41, the hangar photos): dark grey outer and inner tubes with the extend/retract collar between
+     them, lime-green end fittings, the pivot end at a and the quick-release fitting with its pin at the free end b. o.ls is its stowed
+     (retracted) length. o.unlocked() true shows the collar's red band, otherwise the green one (p.41) */
+  function hor(pid, into, ends, o) {
+    const r = o.r || .0125, lo = o.ls * .96, li = o.ls * .9, pcs = [
+      { geo: tubeY(r, lo), mat: 'horGrey', at: 'a', s: lo / 2 }, { geo: tubeY(r * .72, li), mat: 'horGrey', at: 'b', s: li / 2 },
+      { geo: tubeY(r * 1.3, .036), mat: 'steel', at: 'a', s: lo - .018 },
+      { geo: G.roundedBox(.026, .03, .024, .004), mat: 'lime', at: 'a', s: .002 }, { geo: crossX(.0045, .034), mat: 'steel', at: 'a', s: 0 },
+      { geo: G.roundedBox(.026, .044, .022, .004), mat: 'lime', at: 'b', s: .018 }, { geo: crossX(.004, .036), mat: 'steel', at: 'b', s: .006 }];
+    if (o.unlocked) pcs.push({ geo: tubeY(r * 1.36, .012), mat: 'horRed', at: 'a', s: lo - .044 }, { geo: tubeY(r * 1.36, .012), mat: 'horGreen', at: 'a', s: lo - .044 });
+    const st = member(pid, into, pcs, ends);
+    if (o.unlocked) st.after = () => { const u = !!o.unlocked(); pcs[pcs.length - 2].m.visible = u; pcs[pcs.length - 1].m.visible = !u; };
+    st.update(); return st;
+  }
   /* a point given in a door's closed position, turned with the door about its hinge line (y, z = h.py, h.pz), and back. Explode offsets
-     are left out, so a strut on the engine side stays with the engine when the doors lift away */
+     are left out, so a member on the engine side stays with the engine when the doors lift away */
   const rotX = (v, ang, py, pz) => { const c = Math.cos(ang), s = Math.sin(ang), y = v.y - py, z = v.z - pz; return new THREE.Vector3(v.x, py + y * c - z * s, pz + y * s + z * c); };
   const doorOut = (h, p) => rotX(p, h.obj.rotation.x, h.py, h.pz), doorIn = (h, q) => rotX(q, -h.obj.rotation.x, h.py, h.pz);
-  const opened = h => Math.max(0, Math.min(1, h.obj.rotation.x / (h.sign * h.max)));
   const ease01 = s => (s <= 0 ? 0 : s >= 1 ? 1 : s * s * (3 - 2 * s));
+  /* where a hold-open rod's free end is at fraction w of fitting it, all in its door's frame: it swings off its stow clip about the pivot
+     P toward the fitting F, the swing leading and the telescoping following, and arrives on F at w = 1 */
+  const qSw = new THREE.Quaternion(), qPart = new THREE.Quaternion();
+  function rodEnd(P, Sw, F, w) {
+    if (!(w > 0)) return Sw.clone(); if (w >= 1) return F.clone();
+    const ds = Sw.clone().sub(P), Ls = ds.length(), df = F.clone().sub(P), Ld = df.length(); ds.multiplyScalar(1 / Ls); df.multiplyScalar(1 / Ld);
+    qSw.setFromUnitVectors(ds, df); qPart.identity().slerp(qSw, ease01(w / .75));
+    return P.clone().addScaledVector(ds.applyQuaternion(qPart), Ls + (Ld - Ls) * ease01((w - .3) / .7));
+  }
   /* the blocker door angle for sleeve travel u: the drag link keeps its length, so solve |door end - fitting| = L by bisection */
   function doorAngle(b, u) {
     if (u < 1e-5) return 0;
@@ -150,7 +176,7 @@
 
     /* ============================== FAN COWL DOORS ============================== */
     PW.part('fan-cowls', { parent: 'nacelle', label: 'Fan cowl doors', src: 'p.8-15; photos',
-      info: 'Two carbon fibre (CFRP) doors between the inlet cowl and the thrust reverser, stiffened with radial stiffeners and longerons, with copper mesh in the laminate for lightning protection. Each hangs from the pylon\'s fan cowl support beam on three hinges, whose pins are held by retaining clips; pulling the pins frees the cowl for removal with the ground handling sling on its three hoist points. Wear strips keep the joints between the cowls smooth.\n\nThe cowls latch together at the bottom centreline with three flush latches, L1 forward to L3 aft, opened and closed in the order L1, L3, L2: push the trigger to release the handle, pull the handle down and lift the hook off the eye-bolt of its keeper. When they are properly closed the handles are flush and their red marks do not show; alignment pins beside the latches line the cowls up. An unlatched fan cowl can depart in flight.\n\nEach door weighs more than 100 lb (45 kg), so two people open it. Do not open a fan cowl in wind above 60 mph (96 km/h), and take care above 46 mph (74 km/h). Lifting it more than 55 degrees can damage the door or the pylon. Two hold-open rods on each door hold it open: the forward rod goes to the forward HOR bracket on the fan case, the aft rod to the door opening system (PDOS) bracket (p.12-15).' });
+      info: 'Two carbon fibre (CFRP) doors between the inlet cowl and the thrust reverser, stiffened with radial stiffeners and longerons, with copper mesh in the laminate for lightning protection. Each hangs from the pylon\'s fan cowl support beam on three hinges, whose pins are held by retaining clips; pulling the pins frees the cowl for removal with the ground handling sling on its three hoist points. Wear strips keep the joints between the cowls smooth.\n\nThe cowls latch together at the bottom centreline with three flush latches, L1 forward to L3 aft, opened and closed in the order L1, L3, L2: push the trigger to release the handle, pull the handle down and lift the hook off the eye-bolt of its keeper. When they are properly closed the handles are flush and their red marks do not show; alignment pins beside the latches line the cowls up. An unlatched fan cowl can depart in flight.\n\nEach door weighs more than 100 lb (45 kg), so two people open it. Do not open a fan cowl in wind above 60 mph (96 km/h), and take care above 46 mph (74 km/h). Lifting it more than 55 degrees can damage the door or the pylon. Two hold-open rods on each door hold it open (p.12-15). With the cowl lifted and held, fit the forward rod into the forward HOR bracket on the fan case, then the aft rod onto the door opening system (PDOS) bracket, each secured with its quick-release pin, and lower the cowl onto them. To close, lift the cowl off the rods, take the aft rod off first, then the forward rod, which goes back into its hold-open rod clip.' });
     const yh = 1.18;                                                   // hinge line height, just under the pylon
     for (const side of ['left', 'right']) {
       const sg = side === 'right' ? 1 : -1, pid = `fan-cowl-${side}`;
@@ -162,33 +188,32 @@
       const outer = [], inner = []; for (let i = 0; i <= 18; i++) { const xx = xJ1 - .002 + (xJ2 + .002 - xJ1) * i / 18; outer.push([xx, rOut(xx)]); inner.push([xx, rOut(xx) - .028]); }
       PW.add(pid, G.revolve(outer.concat(inner.slice().reverse()), { seg: 72, thetaStart: sg > 0 ? t0 : Math.PI + deg(.08), thetaLength: tl + deg(.92) }), 'nacellePaint', { into: hinge });   // the skins meet at the bottom split line
       PW.add(pid, G.revolve(inner.map(([xx, r]) => [xx, r]).concat(inner.map(([xx, r]) => [xx, r - .003]).reverse()), { seg: 72, thetaStart: t0, thetaLength: tl }), 'cowlWhite', { into: hinge });
-      for (const xx of [xJ1 - .03, (xJ1 + xJ2) / 2, xJ2 + .03]) PW.add(pid, G.revolve([[xx + .015, rOut(xx) - .03], [xx - .015, rOut(xx) - .03], [xx - .015, rOut(xx) - .075], [xx + .015, rOut(xx) - .075]], { seg: 72, thetaStart: t0, thetaLength: tl }), 'lime', { into: hinge });   // frames
+      for (const xx of [xJ1 - .03, (xJ1 + xJ2) / 2, xJ2 + .03]) PW.add(pid, G.revolve([[xx + .015, rOut(xx) - .03], [xx - .015, rOut(xx) - .03], [xx - .015, rOut(xx) - .075], [xx + .015, rOut(xx) - .075]], { seg: 72, thetaStart: t0, thetaLength: tl }), 'cowlWhite', { into: hinge });   // stiffener frames, white like the skin inside (photos); only the fittings are lime green
       // three latches at the bottom edge (keepers on the right cowl, hooks on the left), three hinges at the top
       for (const f of [.2, .5, .8]) { const xx = xJ1 + (xJ2 - xJ1) * f, a = t0 + (sg > 0 ? tl : 0), m = new THREE.Mesh(G.roundedBox(.12, .024, .03, .005));
         m.position.copy(G.onRing(xx, rOut(xx) - .045, a)); m.rotation.x = a; PW.add(pid, m, sg < 0 ? 'darkBox' : 'steel', { solid: true, into: hinge });   // latch body / keeper inside the edge
         if (sg < 0) { const ah = a + deg(1.3);                                                                   // the flush handle in the left cowl's skin, as on the reverser
           for (const [w, t, l, dr, mat] of [[.156, .003, .04, -.0005, 'darkBox'], [.15, .003, .034, .0008, 'greyPrimer']]) { const hd = new THREE.Mesh(G.roundedBox(w, t, l, .0015)); hd.position.copy(G.onRing(xx, rOut(xx) + dr, ah)); hd.rotation.x = ah; PW.add(pid, hd, mat, { solid: true, into: hinge }); } }
         const hm = new THREE.Mesh(G.roundedBox(.08, .06, .03, .006)); hm.position.set(xx, yh - .02, sg * .22); PW.add(pid, hm, 'lime', { solid: true, into: hinge }); }
-      /* two hold-open rods per cowl (p.12-15). Each pivots on a bracket near the cowl's lower edge; with the cowl shut it lies in stow
-         brackets along the inside of the cowl's lower part, as p.15 view A draws them, the one with its free end forward resting in the
-         hold-open rod clip. As the cowl comes up past about 60 % of its travel they go on their fittings on the fan case: the forward HOR
-         bracket, and the door opening system (PDOS) bracket at the aft end of the case (p.14). The model draws them as two-diameter
-         telescopic rods (the p.13 detail shows two diameters), stowed in the forward part of the cowl clear of the ignition cables and
-         harnesses that cross the bottom of the fan case near its aft end. (p.13 draws the outboard cowl's rods rising up its side, but on
-         this No. 2 engine the cowl anti-ice duct runs along the fan case at 5 o'clock under that cowl, so here they lie low, below it) */
-      { const Kt = PW.kit, rr = xx => rOut(xx) - .095, Pc = (xx, th) => G.onRing(xx, rr(xx), sg > 0 ? deg(th) : TAU - deg(th));
-        const full = p => rotX(p, hc.sign * hc.max, hc.py, hc.pz);
+      /* two hold-open rods per cowl (p.12-15, the hangar photos). The forward rod pivots on a bracket about 30 deg up the cowl's side and
+         is stowed hanging down and aft along it, its free end in the hold-open rod clip near the bottom edge (p.13). The aft rod pivots
+         near the bottom edge at the aft end and is stowed forward along the bottom; the two cross, as p.15 view A draws them, the aft
+         one deeper. With the cowl lifted, the forward rod goes on the forward HOR bracket on the fan case, then the aft rod on the door
+         opening system (PDOS) bracket at the aft end of the case, each secured by its quick-release pin (p.14). Closing takes the aft
+         rod off first. The deployed rods run almost level to the case, as in the photos of an engine with its cowls open */
+      { const Kt = PW.kit, Pc = (xx, th, d) => G.onRing(xx, rOut(xx) - d, sg > 0 ? deg(th) : TAU - deg(th));
         /* [pivot, stowed free end, fan case fitting] */
-        const RODS = sg > 0 ? [[Pc(.30, 168.5), Pc(-.45, 166), G.onRing(.30, .99, G.clock(3.1))], [Pc(-.62, 163), Pc(.20, 160), G.onRing(-.84, 1.062, G.clock(3.75))]]
-          : [[Pc(.30, 167.5), Pc(-.45, 167), G.onRing(.30, .99, G.clock(9.3))], [Pc(-.62, 164.5), Pc(.20, 164), G.onRing(-.84, 1.062, G.clock(8.25))]];
+        const RODS = [[Pc(.20, 148, .095), Pc(-.30, 176, .095), G.onRing(.30, .99, G.clock(sg > 0 ? 3.1 : 9.3))],
+          [Pc(-.62, 168, .125), Pc(.12, 172, .125), G.onRing(-.84, 1.062, G.clock(sg > 0 ? 3.75 : 8.25))]];
+        hc.w = [0, 0];
         RODS.forEach(([pv, sw, fit], k) => {
-          const Ls = pv.distanceTo(sw), Ld = full(pv).distanceTo(fit), n = 2 * Ls * .96 >= Ld + .06 ? 2 : 3, l = Math.min(Ls * .96, (Ld + .08) / n + .04);
-          for (const [p, nm] of [[pv, 'pivot'], [sw.clone().lerp(pv, .04), 'stow'], [pv.clone().lerp(sw, .5), 'mid']]) {
+          for (const [p, nm] of [[pv, 'pivot'], [sw.clone().lerp(pv, .03), 'clip'], [pv.clone().lerp(sw, .55), 'pad']]) {
             const a = Math.atan2(p.z, p.y), r = Math.hypot(p.y, p.z), f = Kt.frame(pid, p.x, a / (Math.PI / 6), r, { into: hinge }), hgt = rOut(p.x) - .031 - r;
-            Kt.box(pid, f, [0, hgt / 2, 0], nm === 'pivot' ? [.05, hgt, .045] : [.026, hgt, .03], k === 1 && nm === 'stow' ? 'darkBox' : 'greyPrimer', { round: .004 }); }   // pivot bracket, stow brackets (the clip at the forward free end)
+            Kt.box(pid, f, [0, hgt / 2 + .006, 0], nm === 'pivot' ? [.05, hgt - .012, .045] : [.024, hgt - .012, .03], 'lime', { round: .004 });   // pivot bracket, stow pad, the clip at the free end
+            if (nm === 'clip') for (const s of [-1, 1]) Kt.box(pid, f, [0, -.006, s * .016], [.02, .026, .003], 'steel', { round: .001 }); }      // its snap spring jaws
           if (k === 0) { const f = Kt.frame('fan-case-shell', fit.x, Math.atan2(fit.z, fit.y) / (Math.PI / 6), .969);                         // the forward HOR bracket on the fan case
-            Kt.box('fan-case-shell', f, [0, .011, 0], [.04, .022, .035], 'darkBox', { round: .004 }); Kt.cyl('fan-case-shell', f, [0, .021, 0], 'x', .006, .045, 'steel'); }
-          strut(pid, hinge, [[.013, l, 'steel'], [.0105, l, 'steel'], [.008, l, 'steel']].slice(0, n), () => { const w = ease01((opened(hc) - .6) / .4); return [pv, w > 0 ? sw.clone().lerp(doorIn(hc, fit), w) : sw]; }, .016); }); }
+            Kt.box('fan-case-shell', f, [0, .011, 0], [.04, .022, .035], 'lime', { round: .004 }); Kt.cyl('fan-case-shell', f, [0, .021, 0], 'x', .006, .045, 'steel'); }
+          hor(pid, hinge, () => [pv, rodEnd(pv, sw, doorIn(hc, fit), hc.w[k])], { ls: pv.distanceTo(sw) }); }); }
       /* p.12-13: three hoist points on each cowl, each a doubler with two screw holes for the ground handling sling (two on the side,
          forward and aft, one low and aft); drain holes near the bottom split line; on the outboard cowl the pressure-relief door, a third
          of the way down from the hinges and mid-length, between the stiffeners, which relieves the fan compartment if a duct fails; wear
@@ -230,7 +255,9 @@
       PW.part(pid, { parent: 'thrust-reverser', label: `${side === 'left' ? 'Left' : 'Right'} thrust reverser door`, explode: [0, .25, sg * .9], src: 'p.18-23; photos',
         info: `${side === 'left' ? 'Left' : 'Right'} C-duct: outer fixed cowl, translating sleeve, cascades, blocker doors and actuators outside, the IFS half inside. It hinges at the pylon and latches to the other door at the bottom.` + (side === 'right' ? ' The oil tank access door is on its IFS at about 2:30.' : ' Its IFS carries the air/oil cooler window and the IFS pressure-relief door at 9 o\'clock, and its latch beam carries the latch access door where the drain mast exits.') });
       const obj = PW.parts.get(pid).obj, hinge = new THREE.Group(); obj.add(hinge); obj.position.set(0, yhT + .2, sg * .2); hinge.position.set(0, -(yhT + .2), -sg * .2);
-      const hd = { obj, axis: 'tr', sign: -sg, max: deg(45), py: yhT + .2, pz: sg * .2 }; S.hinges.push(hd);
+      /* max is the door at full extension of its single-stage locking actuator (p.41); it then settles back onto the lock (TR.hold). About
+         31 deg, as the actuator's stroke allows and as the photo of an engine with all its cowls open shows */
+      const hd = { obj, axis: 'tr', sign: -sg, max: deg(31), py: yhT + .2, pz: sg * .2 }; S.hinges.push(hd);
       const t0 = sg > 0 ? deg(10) : Math.PI + deg(1), tl = Math.PI - deg(11);
       /* inner structure (IFS, fan duct outer wall, forward frame) stops 6 deg either side of 6 o'clock for the lower bifurcation (it was 4 deg until 2026-10-07; p.31 and the photo from below show a bay about 0.2 m wide) */
       const it0 = sg > 0 ? t0 : Math.PI + deg(6), itl = Math.PI - deg(16);
@@ -526,23 +553,31 @@
       /* the door opening (PDOS) locking actuator (p.32, p.36, p.41, p.43): connected between the fan case and the torque box, it lies
          along the aft end of the fan case, retracted, from its bearing end on a bracket at 3:45 (8:15) up to its rod end on a lug on the
          torque box's forward face, centred on 3 (9) o'clock. It extends to lift the door and its internal lock holds it open. The
-         powerpack's line reaches it at the quick-disconnect by the bearing end */
+         powerpack's line reaches it at the quick-disconnect by the bearing end. p.41 draws it single-stage: a cylinder from the bearing
+         end, the mechanical lock pin and the manual bleed port on its head, and a chromed rod out to the rod end. Its stroke (about 0.6 m
+         on a 0.72 m actuator) is what limits the door to about 31 deg */
       { const Kt = PW.kit, hF = sg > 0 ? 3.75 : 8.25, Af = G.onRing(-.86, 1.06, G.clock(hF)), Ad = G.onRing(-.955, 1.08, A(73.5));
         const fl = Kt.frame('pdos', -.86, hF, .968);
         Kt.box('pdos', fl, [0, .05, 0], [.03, .1, .045], 'lime', { round: .004 }); Kt.fitting('pdos', fl, [.015, .055, 0], 'x', .009);       // bracket on the fan case's aft ring, and the quick-disconnect
         const fd = Kt.frame(pid, -.957, hOf(73.5), 1.08, { into: hinge }); Kt.box(pid, fd, [0, 0, 0], [.02, .05, .045], 'lime', { round: .004 });   // lug on the torque box
-        strut('pdos', PW.parts.get('pdos').obj, [[.03, .62, 'steel'], [.022, .6, 'steel'], [.015, .58, 'steel']], () => [Af, doorOut(hd, Ad)], .02);
+        const Lc = .68, Lr = .69, eye = () => new THREE.SphereGeometry(.02, 14, 10);
+        member('pdos', PW.parts.get('pdos').obj, [
+          { geo: eye(), mat: 'steel', at: 'a', s: 0 }, { geo: tubeY(.03, Lc), mat: 'accPaint', at: 'a', s: .012 + Lc / 2 },          // bearing end, cylinder
+          { geo: tubeY(.034, .05), mat: 'accPaint', at: 'a', s: Lc - .02 }, { geo: crossX(.009, .085), mat: 'steel', at: 'a', s: Lc - .02 },   // head, mechanical lock pin
+          { geo: G.roundedBox(.024, .022, .03, .004), mat: 'accPaint', at: 'a', s: .07 },                                         // quick-disconnect boss by the bearing end
+          { geo: tubeY(.016, Lr), mat: 'shaft', at: 'b', s: .012 + Lr / 2 }, { geo: eye(), mat: 'steel', at: 'b', s: 0 }],      // rod, rod end
+          () => [Af, doorOut(hd, Ad)]);
         /* the door's telescopic hold-open rod (p.40-43): pivoted on the torque box's forward face, stowed up along it with its top end in
-           the stow bracket; with the door open it goes to the HOR open fitting on the fan case just below the actuator's bracket. A
-           red band shows when its lock collar is unlocked, green when locked */
+           the stow bracket; with the door open and locked, it goes to the HOR open fitting on the fan case just below the actuator's
+           bracket. Its collar band is red while it is unlocked and being extended, green when locked (p.41) */
         const hid = `${pid}-hor`, Pv = G.onRing(-.955, 1.12, A(129)), Sw = G.onRing(-.955, 1.14, A(97.5)), Ft = G.onRing(-.86, 1.03, G.clock(sg > 0 ? 4.0 : 8.0));
         PW.part(hid, { parent: 'pdos', attach: hinge, label: `${side === 'left' ? 'Left' : 'Right'} reverser door hold-open rod`, src: 'p.32, p.36-43',
           info: 'Telescopic hold-open rod for this reverser door. When not in use it is stowed on the door\'s torque box, its top end in the stow bracket. With the door opened by the locking actuator, release the top end and fit it to the HOR open fitting on the fan case. The actuator carries 100 % of the load in normal operation; the rod is the failsafe.\n\nLock collars extend and retract it: a red band shows when it is unlocked, green when it is locked. Do not go between the engine and an open reverser door until the rod is installed: if the door opening system fails, the heavy door can close quickly.' });
         for (const [p, sz] of [[Pv, [.03, .045, .05]], [Sw, [.025, .03, .03]]]) { const a = Math.atan2(p.z, p.y), f = Kt.frame(hid, p.x - .012, a / (Math.PI / 6), Math.hypot(p.y, p.z), { into: hinge });
-          Kt.box(hid, f, [0, 0, 0], sz, 'greyPrimer', { round: .004 }); }                                                                  // pivot and stow brackets
-        const ff = Kt.frame('pdos', -.86, sg > 0 ? 4.0 : 8.0, .968); Kt.box('pdos', ff, [0, .03, 0], [.03, .06, .04], 'darkBox', { round: .004 }); Kt.cyl('pdos', ff, [0, .062, 0], 'x', .006, .04, 'steel');   // HOR open fitting
-        const ln = Pv.distanceTo(Sw);
-        strut(hid, hinge, [[.016, ln * .9, 'steel'], [.013, ln * .9, 'steel'], [.0105, ln * .9, 'steel']], () => { const w = ease01((opened(hd) - .6) / .4); return [Pv, w > 0 ? Sw.clone().lerp(doorIn(hd, Ft), w) : Sw]; }, .018); }
+          Kt.box(hid, f, [0, 0, 0], sz, 'lime', { round: .004 }); }                                                                         // pivot and stow brackets
+        const ff = Kt.frame('pdos', -.86, sg > 0 ? 4.0 : 8.0, .968); Kt.box('pdos', ff, [0, .03, 0], [.03, .06, .04], 'lime', { round: .004 }); Kt.cyl('pdos', ff, [0, .062, 0], 'x', .006, .04, 'steel');   // HOR open fitting and its pin
+        hd.w = 0;
+        hor(hid, hinge, () => [Pv, rodEnd(Pv, Sw, doorIn(hd, Ft), hd.w)], { ls: Pv.distanceTo(Sw), r: .016, unlocked: () => hd.w > 0 && hd.w < 1 }); }
     }
     /* IFS features: oil tank access door (right, 3 o'clock), AOC window and pressure-relief door (left, 9 o'clock), ACC scoop (right, 1:30) */
     const ifsPanel = (pid, parentDoor, label, info, xx, h, l, w, mat) => { PW.part(pid, { parent: parentDoor, label, info, src: 'p.20-23', attach: PW.parts.get(parentDoor).obj.children[0] }); const a = G.clock(h);
@@ -591,15 +626,28 @@
           PW.kit.box('pylon', f, [0, 0, s * .0005], [.266, .206, .003], 'darkBox', { round: .002 }); PW.kit.box('pylon', f, [0, 0, s * .0018], [.26, .2, .003], 'whitePaint', { round: .012 }); } }
     }
 
-    /* the nacelle animation: hinges, sleeves and blocker doors follow the toolbar state; the first part of the explode slider swings
-       the fan cowls and reverser doors open as well, before they lift away */
-    PW.anim.push(dt => { const k = 1 - Math.exp(-3.5 * dt), s = Math.min(1, Math.max(0, (PW.explodeT || 0) / .12)), ex = s * s * (3 - 2 * s);
-      for (const key of ['fan', 'tr', 'sleeve']) S[key] += (S.want[key] - S[key]) * k;
-      for (const h of S.hinges) h.obj.rotation.x = h.sign * h.max * Math.max(S[h.axis], ex);
+    /* the door sequences, as the manual gives them. Fan cowls (p.14): lift the cowl to 55 deg, fit the forward hold-open rod, then the
+       aft one. Reverser doors (p.40-42): the locking actuator extends fully, the door settles back onto the actuator's mechanical lock,
+       then the hold-open rod goes on. Closing runs each backward, rods first; the reverser door rises to full extension again to free
+       the lock before it comes down. S.fan and S.tr run 0..1 through their sequence at a steady rate; a reverser door opens only once
+       the fan cowls are open, the fan cowls close only once the doors are shut, and the sleeves move only with the doors shut */
+    const FAN = { lift: .42, rods: [[.42, .71], [.71, 1]] }, TR = { up: .5, lock: .6, max: deg(31), hold: deg(29.5) };
+    S.angle = { fan: p => deg(55) * ease01(p / FAN.lift), tr: p => p < TR.up ? TR.max * ease01(p / TR.up) : TR.max - (TR.max - TR.hold) * ease01((p - TR.up) / (TR.lock - TR.up)) };
+    /* pose everything for the current S (ex: how far the explode slider swings the doors open) */
+    S.apply = ex => {
+      for (const h of S.hinges) { h.obj.rotation.x = h.sign * Math.max(S.angle[h.axis](S[h.axis]), (ex || 0) * h.max);
+        if (h.axis === 'fan') h.w = FAN.rods.map(([a, b]) => ease01((S.fan - a) / (b - a))); else h.w = ease01((S.tr - TR.lock) / (1 - TR.lock)); }
       const u = S.stroke * S.sleeve;
       for (const sl of S.sleeves) sl.position.x = -u;
       for (const b of S.blockers) { const th = doorAngle(b, u); b.piv.rotation.set(b.a, 0, 0); b.piv.rotateZ(th); aimLink(b, u, th); }
-      for (const st of S.struts) st.update();
+      for (const st of S.struts) st.update(); };
+    /* the first part of the explode slider swings the fan cowls and reverser doors open as well, before they lift away */
+    PW.anim.push(dt => { const k = 1 - Math.exp(-3.5 * dt), s = Math.min(1, Math.max(0, (PW.explodeT || 0) / .12)), ex = s * s * (3 - 2 * s), step = dt / 5.5;
+      const go = key => { S[key] += Math.max(-step, Math.min(step, S.want[key] - S[key])); };
+      if (S.want.fan > S.fan || S.tr <= 0) go('fan');
+      if (S.want.tr < S.tr || S.fan >= 1) go('tr');
+      if (S.tr <= 0) S.sleeve += (S.want.sleeve - S.sleeve) * k;
+      S.apply(ex);
     });
     PW.addControl && PW.addControl('Cowls', [
       { label: 'Closed', on: true, apply: () => { S.want.fan = 0; S.want.tr = 0; } },
