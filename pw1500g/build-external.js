@@ -16,6 +16,7 @@
     clampOrange: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#c8642c'), roughness: .6, metalness: .1 }),
     labelBlue: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#2f62b8'), roughness: .5, metalness: .1 }),
     stainless: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#c4c7c9'), roughness: .36, metalness: .8, roughnessMap: PW.tex.noise('fine', 256, 40, .6, 1) }),   // the bleed ducts' brushed finish (photos)
+    chromate: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#a08a40'), roughness: .45, metalness: .4 }),         // the olive-gold conversion coat on the VFG air/oil cooler's grille (photo)
   });
 
   /* ---------------- helpers ---------------- */
@@ -482,10 +483,13 @@
     PW.part('vfg-aohx', { parent: 'oil', label: 'VFG air/oil cooler', src: 'p.215, p.217; A Nahas location photos p.18; photos',
       info: 'The last cooler in the generator\'s own oil loop: VFG, VFG oil/oil heat exchanger, this air/oil cooler, and back to the VFG (p.215, p.217). It sits under a fairing on the fan exit liner, low on the left side, its matrix open to the fan stream through the grille behind the fairing\'s hood. To reach it, remove the fan exit case fairing and then the cooler\'s own fairing.\n\nThe manual shows it only in the oil schematics; its place comes from the location photos.' });
     { Kt.arcLoft('vfg-aohx', [{ h: 7.75, x: -.765, w: .31, ri: .488, ro: .522, n: 5 }, { h: 8.65, x: -.765, w: .31, ri: .488, ro: .522, n: 5 }], 'mint');   // the fairing
-      Kt.arcLoft('vfg-aohx', [{ h: 7.8, x: -.672, w: .024, ri: .515, ro: .536, n: 4 }, { h: 8.6, x: -.672, w: .024, ri: .515, ro: .536, n: 4 }], 'mint');   // its hood
-      const sl = []; for (let k = 0; k < 10; k++) for (let j = 0; j < 5; j++) { const a = G.clock(7.88 + (j + .5) * .128), g = G.roundedBox(.005, .008, .038, .001);
+      Kt.arcLoft('vfg-aohx', [{ h: 7.8, x: -.672, w: .024, ri: .515, ro: .536, n: 4 }, { h: 8.6, x: -.672, w: .024, ri: .515, ro: .536, n: 4 }], 'stainless');   // its hood, bare polished sheet (photo)
+      /* the matrix grille: olive-gold slats in four sections round the arc, with a pale retaining clip at each joint (photo) */
+      const sl = [], cl = []; for (let k = 0; k < 10; k++) for (let j = 0; j < 4; j++) { const a = G.clock(7.88 + (j + .5) * .16), g = G.roundedBox(.005, .008, .040, .001);
         g.rotateZ(.55); g.rotateX(a); g.translate(-.695 - k * .02, .5245 * Math.cos(a), .5245 * Math.sin(a)); sl.push(g); }
-      PW.add('vfg-aohx', G.merge(sl), 'brass', { solid: true });                                                             // the matrix grille
+      for (let j = 1; j < 4; j++) for (const xc of [-.70, -.865]) { const a = G.clock(7.88 + j * .16), g = G.roundedBox(.014, .006, .008, .0015);
+        g.rotateX(a); g.translate(xc, .5275 * Math.cos(a), .5275 * Math.sin(a)); cl.push(g); }
+      PW.add('vfg-aohx', G.merge(sl), 'chromate', { solid: true }); PW.add('vfg-aohx', G.merge(cl), 'plateAl', { solid: true });
       Kt.arcLoft('vfg-aohx', [{ h: 7.85, x: -.74, w: .23, ri: .45, ro: .484, n: 6 }, { h: 8.55, x: -.74, w: .23, ri: .45, ro: .484, n: 6 }], 'castAl');   // the core under the liner
       for (const h of [8.0, 8.4]) Kt.fitting('vfg-aohx', Kt.frame('vfg-aohx', -.855, h, .467), [0, 0, 0], '-x', .011);         // oil out (8:00) and in (8:24)
       const c = line('vfg-aohx', [FLa(-.855, 8.0, .467)(-.01595, 0, 0), P(-.895, 8.04, .468), P(-.93, 8.1, .468), P(-.98, 8.2, .468), P(-1.03, 8.33, .462), P(-1.10, 8.42, .48), P(-1.15, 8.45, .492), P(-1.20, 8.48, .502), P(-1.25, 8.51, .508),

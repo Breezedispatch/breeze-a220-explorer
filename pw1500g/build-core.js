@@ -240,7 +240,7 @@
 
     /* =========================== FAN INTERMEDIATE CASE AND SPLITTER =========================== */
     PW.part('fic', { label: 'Fan intermediate case (FIC)', explode: [.25, 0, 0], src: 'p.53-55, p.60; TTM ch. 72',
-      info: 'Structural case behind the fan. Its splitter divides fan air into the bypass and core streams, the FEGV inner ends attach to it, and it carries the No. 1, 1.5 and 2 bearing supports and the FDGS torque frame.\n\nThe six fan exit liner segments on its outer wall have louvres where 2.5 bleed air leaves into the fan stream; each segment comes off on its own for access to the lines behind it.' });
+      info: 'Structural case behind the fan. Its splitter divides fan air into the bypass and core streams, the FEGV inner ends attach to it, and it carries the No. 1, 1.5 and 2 bearing supports and the FDGS torque frame.\n\nThe six fan exit liner segments on its outer wall carry the louvred grille where 2.5 bleed air leaves into the fan stream; each segment comes off on its own for access to the lines behind it.' });
     {
       const bi = L().bypassInner;
       const xs = bi[0][0];                                                     // splitter lip
@@ -248,14 +248,32 @@
       const outerS = seg('bypassInner', xs, xs - .05, 6), innerS = seg('coreCase', xs + .01, xs - .05, 6);
       PW.add('fic', G.revolve(outerS.concat(innerS.reverse()), { seg: 128, crease: 40 }), 'titanium');
       PW.part('fan-exit-liner', { parent: 'fan-case', label: 'Fan exit liner segments (6)', src: 'p.60-61; photos',               // a fan case component (p.60), like the FEGVs
-        info: 'Six removable panels forming the inner wall of the bypass duct behind the FEGVs. Louvres in them let 2.5 bleed air out into the fan stream. Painted pale green on this engine.' });
-      const xe = bi[bi.length - 1][0];
+        info: 'Six removable panels forming the inner wall of the bypass duct behind the FEGVs, joined over bolted splice straps at 1, 3, 5, 7, 9 and 11 o\'clock. 2.5 bleed air leaves into the fan stream through the louvred grille just below the 3 o\'clock joint. Painted pale green on this engine.' });
+      const xe = bi[bi.length - 1][0], rL = x => rAt('bypassInner', x);
+      /* the six segments meet at 1, 3, 5, 7, 9 and 11 o'clock (the photos show the joints at 3 and 9; they were at 12, 2, 4 ... until
+         2026-10-12). Each joint lies over a bolted splice strap (p.61), whose two rows of flush fasteners show either side of it aft of
+         the FEGVs, and a row of fasteners runs round the aft edge */
       for (let i = 0; i < 6; i++) { const a = seg('bypassInner', xs - .05, xe, 20);
-        PW.add('fan-exit-liner', G.revolve(G.shellProfile(a, a.map(([x, r]) => [x, r - .008])), { seg: 24, thetaStart: i / 6 * TAU + .004, thetaLength: TAU / 6 - .008 }), 'mint'); }
-      /* louvred grilles: 2.5 bleed exits (p.60-61; photos). The louvred fairing low on the left is the VFG air/oil cooler's, built with it */
-      for (const c of [2.2, 3.8, 9.8]) { const a = G.clock(c), xg = -.79, rg = rAt('bypassInner', xg) + .002;
-        for (let k = 0; k < 7; k++) { const sl = new THREE.Mesh(G.roundedBox(.11, .004, .012, .0015));
-          sl.position.copy(G.onRing(xg, rg, a + (k - 3) * .022)); sl.rotation.x = a + (k - 3) * .022; sl.rotateZ(.35); PW.add('fan-exit-liner', sl, 'darkBox', { solid: true }); } }
+        PW.add('fan-exit-liner', G.revolve(G.shellProfile(a, a.map(([x, r]) => [x, r - .008])), { seg: 24, thetaStart: (i + .5) / 6 * TAU + .004, thetaLength: TAU / 6 - .008 }), 'mint'); }
+      { const fx = [], put = (x, a) => fx.push(new THREE.CylinderGeometry(.0028, .0028, .0012, 8).rotateX(a).translate(...G.onRing(x, rL(x) + .0003, a).toArray()));
+        for (let i = 0; i < 6; i++) for (let x = -.615; x > xe + .03; x -= .036) for (const s of [-1, 1]) put(x, G.clock(1 + 2 * i) + s * .024 / rL(x));
+        for (let k = 0; k < 28; k++) put(xe + .016, (k + .5) / 28 * TAU);
+        PW.add('fan-exit-liner', G.merge(fx), 'steel'); }
+      /* the 2.5 bleed exit grille (p.60-61; photos): a recess in the 3-5 o'clock segment just below the 3 o'clock joint, framed by a
+         raised rim and crossed by slats across the flow, each leaning aft to turn the bleed air into the fan stream. The photos show no
+         other grille on this engine: the ones at 2:12 and 9:48 (until 2026-10-12) are gone. p.61 also draws a second grille lower down
+         and two plain openings near 2 o'clock. The louvred fairing low on the left is the VFG air/oil cooler's, built with it */
+      { const x0 = -.64, x1 = -.86, a0 = G.clock(3.17), a1 = G.clock(3.85), xsG = [], band = (xa, xb, lo, hi, ta, tb, mat) => { const pts = []; for (let i = 0; i <= 6; i++) pts.push(xa + (xb - xa) * i / 6);
+          PW.add('fan-exit-liner', G.revolve(pts.map(x => [x, rL(x) + lo]).concat(pts.map(x => [x, rL(x) + hi]).reverse()), { seg: Math.max(2, Math.round((tb - ta) / deg(1.5))), thetaStart: ta, thetaLength: tb - ta }), mat); };
+        band(x0, x1, .0003, .0011, a0, a1, 'darkBox');                                                                  // the recess
+        const pad = .009 / rL(-.75);
+        band(x0 + .009, x0, .0003, .0026, a0 - pad, a1 + pad, 'mint'); band(x1, x1 - .009, .0003, .0026, a0 - pad, a1 + pad, 'mint');
+        band(x0, x1, .0003, .0026, a0 - pad, a0, 'mint'); band(x0, x1, .0003, .0026, a1, a1 + pad, 'mint');             // the rim
+        const n = 12, sl = [];
+        for (let k = 0; k < n; k++) { const xc = x0 + (x1 - x0) * (k + .5) / n, rc = rL(xc), d = [-.923, .385], t = .0015;
+          const p0 = [xc + .0062, rc - .0024], p1 = [xc - .0058, rc + .0026];
+          sl.push(G.revolve([p0, p1, [p1[0] + d[1] * t, p1[1] - d[0] * t], [p0[0] + d[1] * t, p0[1] - d[0] * t]], { seg: 16, thetaStart: a0 + .002, thetaLength: a1 - a0 - .004 })); }
+        PW.add('fan-exit-liner', G.merge(sl), 'mint'); }
       /* the core casing behind the splitter, to the LPC */
       wall('fic', 'coreCase', xs + .005, -.50, .012, 'nickel', { n: 12 });
       /* the inner wall of the core inlet from behind the fan to the struts (static; p.57 colours it as fixed structure), and the FIC's
@@ -307,6 +325,10 @@
       /* the CIC's outer wall: a conical disc from the bypass inner wall down to the HPC case (p.55 render). The angle gearbox is bolted
          to its aft face at 7:18 (p.66); until 2026-10-08 the gearbox sat in a pocket cut into the cone, now filled in */
       PW.add('cic', G.revolve([[-.95, .515], [-1.16, .262], [-1.17, .262], [-1.17, .245], [-1.155, .245], [-.94, .50]], { seg: 120 }), 'nickel');
+      /* photos: a bright band on the cone's rim just aft of the fan exit liner, the seal land the reverser halves' forward fire seals
+         bear on */
+      { const on = (x, d) => [x - .770 * d, .515 - (-.95 - x) * 1.2048 + .638 * d];
+        PW.add('cic', G.revolve([on(-.951, .0003), on(-.993, .0003), on(-.993, .0016), on(-.951, .0016)], { seg: 160 }), 'plateAl', { solid: false }); }      // a skin on the cone, not counted in the clash checks
       for (const re of ['LPC exit guide vane', 'CIC strut', 'CIC rear vane']) { const r = R(re); if (r && !/exit guide/.test(re)) statorRow('cic', r, { role: 'stator', s: 1, count: re === 'CIC strut' ? 10 : 0, gHub: re === 'CIC strut' ? 0 : 20, gTip: re === 'CIC strut' ? 0 : 24, camHub: re === 'CIC strut' ? 0 : .08, camTip: .06, tHub: re === 'CIC strut' ? .25 : .1, tTip: re === 'CIC strut' ? .25 : .08, mat: 'nickel', bands: re !== 'CIC strut' }); }
     }
 
