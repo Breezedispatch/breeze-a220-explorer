@@ -859,9 +859,11 @@
       for (const x of [.18, .1, -.02, -.1]) for (const s of [1, -1]) Kt.connector('eec', f, [x, 0, s * .11], s > 0 ? 'z' : '-z', .017);
       Kt.placard('eec', f, [.02, .0485, 0], 'y', 'z', .06, .07, 'thisSideUp');
       Kt.label('eec', f, [.19, .0479, -.02], 'y', 'z', .05, .03, 'dataBlack'); Kt.label('eec', f, [.12, .0479, -.02], 'y', 'z', .04, .045, 'white');   // black data plate and white label (photo)
-      /* p.102: the Pamb sensor reads ambient pressure through a port on the EEC (screened, no line); the other port takes the P2 sense
-         line from the inlet's P2/T2 probe */
-      Kt.fitting('eec', f, [.262, 0, .04], 'x', .008); Kt.fitting('eec', f, [.262, 0, -.03], 'x', .008, { plugged: true }); Kt.cyl('eec', f, [.278, 0, -.03], 'x', .0075, .006, 'darkBox');
+      /* p.94-95, p.102 and the A Nahas photo: the two pneumatic ports on the EEC's lower edge. The P2 port, under the forward pair of
+         lower connectors, takes the P2 sense line from the inlet's P2/T2 probe; the ambient pressure port, under the aft pair, is a
+         small oval boss with a screen and no line, feeding the Pamb sensor inside (channel A) */
+      Kt.fitting('eec', f, [.14, -.03, -.11], '-z', .007);
+      Kt.box('eec', f, [-.06, -.03, -.112], [.016, .01, .006], 'eecGrey', { round: .003 }); Kt.cyl('eec', f, [-.06, -.03, -.1155], '-z', .0035, .001, 'darkBox');
       PW.part('dsu', { parent: 'eec', label: 'Data storage unit (DSU)', src: 'p.90-91, p.104-105',
         info: 'Small round plug, a Hamilton Sundstrand DSU1230-1, in connector J99 on the face of the EEC, on a lanyard. It holds the engine serial number and the rating and trim data in flash memory, read by both channels\' protection processors. It stays with the engine: when an EEC is changed, the new EEC reads the engine\'s data from it.' });
       const g = Kt.frame('dsu', ex, eh, er); Kt.cyl('dsu', g, [-.07, .052, .07], 'y', .021, .012, 'steel', { edge: .003 }); Kt.cyl('dsu', g, [-.07, .061, .07], 'y', .018, .008, 'capBlack', { edge: .002 });
@@ -925,9 +927,12 @@
       /* the P2/T2 probe harness from the inlet's disconnect at flange A to WF02 (the inlet side is built with the probe) */
       { const g = Kt.frame('harnesses', .33, 11.1, rc); Kt.cyl('harnesses', g, [0, .046, 0], 'x', .011, .02, 'connector', { edge: .002 }); }
       harn([P(.32, 11.1, 1.016), P(.29, 11.1, 1.01), P(.22, 11.15, rh), P(.14, 11.25, rh), P(.105, 11.3, rh)], .008, { bands: [.1] });
-      /* the P2 sense line from the probe's pneumatic disconnect beside it at flange A down the case to the EEC's P2 port (p.102) */
+      /* the P2 sense line from the probe's pneumatic disconnect beside it at flange A (p.102): a bare tube down the case just aft of the
+         forward flange, then a braided flexible line aft and up under the EEC to its P2 port (the photos) */
       { const g = Kt.frame('harnesses', .33, 10.95, rc); Kt.cyl('harnesses', g, [0, .046, 0], 'x', .007, .018, 'steel'); Kt.hex('harnesses', g, [-.01, .046, 0], 'x', .007, .006, 'steel'); }
-      line('harnesses', [P(.322, 10.95, 1.016), P(.315, 10.7, 1.015), P(.30, 10.25, 1.015), P(.275, 9.7, 1.022), P(.245, 9.25, 1.035), P(.215, 9.07, 1.046), P(.194, 9.07, 1.046)], .004, 'tube', { clamps: 2 });
+      { const E = FLa(-.08, 9, 1.045);
+        line('harnesses', [P(.322, 10.95, 1.016), P(.315, 10.7, 1.015), P(.305, 10.25, 1.015), P(.30, 9.7, 1.015), P(.295, 9.2, 1.015), P(.29, 8.75, 1.015), P(.28, 8.55, 1.015)], .004, 'tube', { clamps: 3 });
+        line('harnesses', [P(.28, 8.55, 1.015), P(.24, 8.52, 1.018), P(.19, 8.55, 1.02), E(.14, -.03, -.165), E(.14, -.03, -.135), E(.14, -.03, -.12015)], .0045, 'hose', { clamps: 0, ends: true, mat: 'braid' }); }
       /* the powerpack's second connector into the run that serves its motor connector */
       harn([P(-.491, 2.26, 1.11), P(-.47, 2.26, 1.11), P(-.45, 2.15, 1.07), P(-.43, 2.06, 1.025)], .006);
       /* the left core harness from the junction at the bottom (p.105): up the left forward of the IFPC, over the layshaft, past the Pb
