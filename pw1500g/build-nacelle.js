@@ -104,6 +104,15 @@
     const X = D.zsToX, Z = D.ZS, x = zs => X(zs);
     const nac = D.nacOuter();                                         // outer line [x, r], forward to aft
     const rOut = xx => G.interp(nac, xx);
+    /* flush fastener heads in rows, painted over with the skin (a shade darker where the paint dips into them): one instanced mesh per
+       call. A row is { x, a0, a1 } round the skin at station x, or { a, x0, x1 } along it at angle a (radians from 12 o'clock toward
+       the right); d is how far inside the skin's outer line the head sits (0 on it) */
+    const fasteners = (pid, into, rows, step) => { const pts = [];
+      for (const r of rows) { if (r.x !== undefined) { const n = Math.max(1, Math.round(Math.abs(r.a1 - r.a0) * rOut(r.x) / step)); for (let i = 0; i <= n; i++) pts.push([r.x, r.a0 + (r.a1 - r.a0) * i / n, r.d || 0]); }
+        else { const n = Math.max(1, Math.round(Math.abs(r.x1 - r.x0) / step)); for (let i = 0; i <= n; i++) pts.push([r.x0 + (r.x1 - r.x0) * i / n, r.a, r.d || 0]); } }
+      const m = new THREE.InstancedMesh(new THREE.CylinderGeometry(.0034, .0034, .0008, 10), null, pts.length), o = new THREE.Object3D();
+      pts.forEach(([xx, a, d], i) => { o.position.copy(G.onRing(xx, rOut(xx) - d + .0002, a)); o.rotation.set(a, 0, 0); o.updateMatrix(); m.setMatrixAt(i, o.matrix); });
+      return PW.add(pid, m, 'nacellePaint', { into, mat: { color: '#0a3080', roughness: .5 }, solid: false, shadow: false }); };
     const xHL = x(Z.inletHighlight), xJ1 = x(Z.inletFanCowl), xJ2 = x(Z.fanCowlTR), xTE = x(Z.sleeveTE), xCN = D.GEN.nacelle.coreNozzleExit.x;
     const fA = D.GEN.flanges.find(f => /^A /.test(f.name));
     PW.NACELLE_IDS = ['inlet', 'fan-cowls', 'thrust-reverser', 'pylon'];
@@ -186,7 +195,10 @@
       const hc = { obj, axis: 'fan', sign: -sg, max: deg(55), py: yh, pz: sg * .21 }; S.hinges.push(hc);
       const t0 = sg > 0 ? deg(10) : Math.PI + deg(1), tl = Math.PI - deg(11);
       const outer = [], inner = []; for (let i = 0; i <= 18; i++) { const xx = xJ1 - .002 + (xJ2 + .002 - xJ1) * i / 18; outer.push([xx, rOut(xx)]); inner.push([xx, rOut(xx) - .028]); }
-      PW.add(pid, G.revolve(outer.concat(inner.slice().reverse()), { seg: 72, thetaStart: sg > 0 ? t0 : Math.PI + deg(.08), thetaLength: tl + deg(.92) }), 'nacellePaint', { into: hinge });   // the skins meet at the bottom split line
+      PW.add(pid, G.revolve(outer.concat(inner.slice().reverse()), { seg: 144, thetaStart: sg > 0 ? t0 : Math.PI + deg(.08), thetaLength: tl + deg(.92) }), 'nacellePaint', { into: hinge });   // the skins meet at the bottom split line
+      /* p.13: the outer skin's fasteners, two staggered rows along the hinge line and a row round each stiffener frame */
+      { const Ad = d => (sg > 0 ? deg(d) : TAU - deg(d)), xs = [xJ1 - .03, (xJ1 + xJ2) / 2, xJ2 + .03];
+        fasteners(pid, hinge, [{ a: Ad(12), x0: xJ1 - .04, x1: xJ2 + .04 }, { a: Ad(13.3), x0: xJ1 - .07, x1: xJ2 + .07 }].concat(xs.map(xx => ({ x: xx, a0: Ad(15), a1: Ad(176) }))), .065); }
       PW.add(pid, G.revolve(inner.map(([xx, r]) => [xx, r]).concat(inner.map(([xx, r]) => [xx, r - .003]).reverse()), { seg: 72, thetaStart: t0, thetaLength: tl }), 'cowlWhite', { into: hinge });
       for (const xx of [xJ1 - .03, (xJ1 + xJ2) / 2, xJ2 + .03]) PW.add(pid, G.revolve([[xx + .015, rOut(xx) - .03], [xx - .015, rOut(xx) - .03], [xx - .015, rOut(xx) - .075], [xx + .015, rOut(xx) - .075]], { seg: 72, thetaStart: t0, thetaLength: tl }), 'cowlWhite', { into: hinge });   // stiffener frames, white like the skin inside (photos); only the fittings are lime green
       // three latches at the bottom edge (keepers on the right cowl, hooks on the left), three hinges at the top
@@ -239,6 +251,9 @@
       const sh = new THREE.Shape(); sh.moveTo(0, 0); sh.lineTo(-.91, 0); sh.lineTo(-.82, h * .55); sh.lineTo(-.12, h); sh.lineTo(0, 0);
       const g = new THREE.ExtrudeGeometry(sh, { depth: .008, bevelEnabled: false }); g.translate(0, 0, -.004);
       const m = new THREE.Mesh(g); m.position.copy(G.onRing(xa, rOut(xa) - .002, a)); m.rotation.x = a; m.rotateZ(0); PW.add('fan-cowl-left', m, 'nacellePaint', { solid: true, into: p });
+      /* p.13: its base flange, fastened to the cowl along both sides */
+      const fl = new THREE.Mesh(G.roundedBox(.87, .002, .03, .001)); fl.position.copy(G.onRing(xa - .45, rOut(xa - .45) + .0008, a)); fl.rotation.x = a; PW.add('fan-cowl-left', fl, 'nacellePaint', { solid: true, into: p });
+      fasteners('fan-cowl-left', p, [-1, 1].map(s => ({ a: a + s * .0095, x0: xa - .05, x1: xa - .86, d: -.0018 })), .075);
     }
 
     /* ============================== THRUST REVERSER DOORS ============================== */
@@ -301,7 +316,7 @@
       PW.part(sid, { parent: pid, label: `${side === 'left' ? 'Left' : 'Right'} translating sleeve and blocker doors`, attach: hinge, src: 'p.18-19, p.330-337, p.374-375; TTM 78 fig. 2 and 3',
         info: 'The whole outer cowl of the reverser door, from the fan cowl back to the trailing edge, which slides 0.53 m aft to deploy. Stowed, it covers the cascades in a cavity in its forward part. Two hydraulic actuators on the torque box move it: the locking feedback actuator in the upper section, whose LVDT reports its position, and the locking actuator in the lower section, kept in step by a flexible drive shaft; their rod ends are reached through the two access panels on its skin. A track lock unit on the latch beam holds it stowed.\n\nIts inner wall carries five composite blocker doors, hinged at their forward edge on clevises in the wall. As the sleeve moves aft, each door\'s drag link pulls it down across the fan duct behind the cascades, so the fan air goes out through them. The upper and lower doors are unique to their positions; drain holes stop water collecting in them, and rest pads damp them when stowed.\n\nA small blanking plate on its lower edge near the front covers the hole for the reverser lockout pin.' });
       const sl = PW.parts.get(sid).obj; S.sleeves.push(sl);
-      { const SP = Object.assign({ seg: 72 }, span(10, 174)), so = [], sa = [], sw = [];
+      { const SP = Object.assign({ seg: 144 }, span(10, 174)), so = [], sa = [], sw = [];
         for (let i = 0; i <= 14; i++) { const xx = xJ2 - .002 + (xBH - xJ2 + .002) * i / 14; so.push([xx, rOut(xx)]); }
         PW.add(sid, G.revolve(G.shellProfile(so, so.map(([xx, r]) => [xx, r - .018])), SP), 'nacellePaint');                                       // outer skin over the cavity
         for (let i = 0; i <= 10; i++) { const xx = xBH + (xTE - xBH) * i / 10; sa.push([xx, rOut(xx)]); }
