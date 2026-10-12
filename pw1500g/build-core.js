@@ -119,8 +119,8 @@
     /* fan blades: from the measured leading and trailing edge curves (p.53), hub to tip */
     PW.part('fan-blades', { parent: 'fan-rotor', label: 'Fan blades (18)', src: 'p.53, p.58-59; photos',
       info: 'Eighteen hollow aluminium blades with a titanium leading edge and black polyurethane erosion paint. Each dovetail root slides into a hub slot with a spacer under it and composite wear strips on its sides.\n\nInspect for leading-edge nicks, dents and erosion against the AMM limits, and for paint loss. A bird strike or FOD finding here usually leads to a borescope of the core.' });
-    PW.part('fan-hub', { parent: 'fan-rotor', label: 'Fan hub, fairings and lock ring', src: 'p.58-59',
-      info: 'The hub carries the 18 blades in dovetail slots. Composite fairings between the blades form the inner flow path, each held by a pin through lugs on the hub. A front lock ring holds the blades axially.\n\nTrim balance weights bolt to the hub front flange; the OMS gives the balance solution after a vibration survey.' });
+    PW.part('fan-hub', { parent: 'fan-rotor', label: 'Fan hub, lock ring and balance weights', src: 'p.58-59, p.144-147',
+      info: 'The hub carries the 18 blades in dovetail slots, the No. 1 slot between the two "No. 1" marks on the hub. Composite fairings between the blades form the inner flow path, each held by a pin through lugs on the hub. The lock ring across the front of the slots holds the blades axially.\n\nInside the lock ring, behind the inlet cone, is the fan correction plane: the balance weight flange. The riveted module (Z) balance weights are set when the module is built and are never disturbed. Clip-on trim weights go either side of them. After a vibration survey the OMS trim balance procedure gives each weight (each mass has its own part number) and its angle from the 0 deg reference, a dimple on the fan shaft. Check the stored weight configuration against the hardware first: if they differ, the solution is wrong.' });
     {
       const le = L().fanLE.map(([x, r]) => [r, x]), te = L().fanTE.map(([x, r]) => [r, x]);   // tables r -> x
       const rh = .286, rt = .925, n = 12, secs = [], sheath = [];
@@ -136,7 +136,27 @@
       const fl = (L().fanPlatform || []).slice().sort((a, b) => b[0] - a[0]);
       PW.add('fan-hub', G.revolve(G.shellProfile(fl, fl.map(([x, r]) => [x, r - .012])), { seg: 128 }), 'composite', { mat: { color: '#2b2f33' } });
       disk('fan-hub', .0, -.235, .262, .17, { rim: .05, web: .05, bore: .14, boreH: .03, mat: 'titanium' });   // its bore clears the No. 1 bearing support's neck; the gearbox shaft bolts to its front
-      PW.add('fan-hub', G.boltCircle(PW.partMat('fan-hub', 'steel'), .004, .245, 36, .004), null);   // trim balance weight flange holes
+      /* p.59, p.146-147, behind the inlet cone: the lock ring across the front of the blade slots, and inside it the fan correction
+         plane, the balance weight flange. Its front face has eight stations, each a large hole between two notches in the inner
+         edge, with three small holes in every gap (p.147 end view). The riveted module (Z) balance weight sits on the inner edge
+         next to a notch with a clip-on trim weight either side (p.147 iso view). Weight angles are measured from the 0 deg
+         reference, a dimple on the fan shaft: here on the front of the gearbox shaft's disc, seen through the hub */
+      PW.add('fan-hub', G.ring(.006, 0, .236, .262, { seg: 128 }), 'steel');                                                   // lock ring
+      PW.add('fan-hub', G.ring(.008, 0, .19, .228, { seg: 128 }), 'titanium');                                                 // balance weight flange
+      { const disc = (x, r, a, rad, len) => { const g = new THREE.CylinderGeometry(rad, rad, len, 12); g.rotateZ(Math.PI / 2); g.translate(x, r * Math.cos(a), r * Math.sin(a)); return g; };
+        const blk = (x, r, a, sz) => { const g = G.roundedBox(sz[0], sz[1], sz[2], .0015); g.rotateX(a); g.translate(x, r * Math.cos(a), r * Math.sin(a)); return g; };
+        const marks = [];
+        for (let k = 0; k < 8; k++) { const a = k * TAU / 8;
+          marks.push(disc(.0084, .209, a, .0036, .0008));                                                                      // large hole
+          for (const s of [-1, 1]) marks.push(blk(.0084, .1945, a + s * .07, [.0008, .009, .0055]));                           // the notch pair
+          for (let j = 1; j <= 3; j++) marks.push(disc(.0084, .209, a + j * TAU / 32, .0022, .0008)); }                        // three small holes
+        PW.add('fan-hub', G.merge(marks), 'darkBox');
+        const aw = deg(36.5), da = .0148 / .191, W = [];                                                                        // the weights, next to the 45 deg station's notch
+        for (const i of [-1, 0, 1]) W.push(blk(.004, .191, aw + i * da, [.014, .014, .0142]));
+        PW.add('fan-hub', G.merge(W), 'steel', { solid: true });
+        const holes = [disc(.0114, .191, aw, .0021, .0008)];                                                                    // module (Z) weight: one rivet
+        for (const i of [-1, 1]) for (const dr of [-.0035, .0035]) holes.push(disc(.0114, .191 + dr, aw + i * da, .0017, .0008));   // trim weights: two bolts each
+        PW.add('fan-hub', G.merge(holes), 'darkBox'); }
     }
 
     /* =========================== FAN CASE =========================== */
@@ -399,6 +419,7 @@
       info: 'The FDGS output shaft: the ring gear halves turn it through its large dished aft disc, and its forward end is bolted and splined to the fan hub. It runs on the No. 1 and No. 1.5 bearings at fan speed, opposite to the LP spool. The toothed front shaft gear on it, between the bearings, is what the fan speed probe reads.' });
     PW.add('fdgs-shaft', G.ring(-.032, -.404, .09, .105, { seg: 64 }), 'shaft');                                                  // the tube
     PW.add('fdgs-shaft', G.ring(-.03, -.045, .09, .195, { seg: 96 }), 'titanium'); PW.add('fdgs-shaft', G.boltCircle(PW.partMat('fdgs-shaft', 'steel'), -.028, .18, 24, .004), null);   // flange to the fan hub
+    { const g = new THREE.CylinderGeometry(.0028, .0028, .0012, 12); g.rotateZ(Math.PI / 2); g.translate(-.0298, .14, 0); PW.add('fdgs-shaft', g, 'darkBox'); }   // the 0 deg reference dimple for the balance weight angles (p.146-147)
     PW.add('fdgs-shaft', G.revolve([[-.404, .099], [-.404, .14], [-.407, .20], [-.408, .245], [-.414, .245], [-.413, .20], [-.410, .14], [-.410, .099]], { seg: 128 }), 'titanium');   // the dished aft disc
     PW.add('fdgs-shaft', G.ring(-.25, -.272, .105, .113, { seg: 64 }), 'gearSteel');                                               // front shaft gear (fan speed target)
     { const t = new THREE.BoxGeometry(.022, .007, .006); t.translate(-.261, .1165, 0); t.userData.solid = true; PW.add('fdgs-shaft', G.ringInstances(t, PW.partMat('fdgs-shaft', 'gearSteel'), 48), null); }
@@ -482,7 +503,17 @@
     const fnPath = L().fuelNozzle;
     for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + TAU / 32;                       // 16 nozzles; two straddle 12 o'clock at +/-11.25 deg (p.164-165)
       const pts = fnPath.map(([x, r]) => G.onRing(x, r, a)); PW.add('fuel-nozzles', G.tube(pts, .0065, { radial: 10, tension: .1 }), 'steel');
-      const pad = new THREE.Mesh(G.roundedBox(.032, .012, .036, .003)); pad.position.copy(G.onRing(fnPath[0][0], fnPath[0][1] + .004, a)); pad.rotation.x = a; PW.add('fuel-nozzles', pad, 'steel', { solid: true });
+      /* the head on the case (p.174-175): a two-eared mounting flange with a bolt through each ear and an alignment pin, whose place
+         differs between the types so a simplex cannot go into a duplex position; the elbow body; and the inlet fittings, pointing
+         forward to the manifolds. Duplex nozzles (10) have the smaller primary inlet above the secondary; simplex nozzles (6) have the
+         secondary only. Clockwise from 2:37 ALF: 4 duplex, 4 simplex, 6 duplex, 2 simplex (p.174) */
+      { const Kt = PW.kit, dup = D.fuelDuplex.includes(i), f = Kt.frame('fuel-nozzles', -1.761, a / (TAU / 12), .289), N = 'fuel-nozzles';
+        Kt.box(N, f, [0, .003, 0], [.022, .006, .052], 'steel', { round: .003 });
+        for (const s of [-1, 1]) Kt.hex(N, f, [0, .0085, s * .019], 'y', .0045, .005, 'steel');
+        Kt.cyl(N, f, [-.007, .0075, dup ? .011 : -.011], 'y', .0018, .004, 'steel');                                           // alignment pin
+        const top = dup ? .034 : .028; Kt.cyl(N, f, [0, (.006 + top) / 2, 0], 'y', .0085, top - .006, 'steel', { edge: .002 }); Kt.cyl(N, f, [0, top + .0015, 0], 'y', .0068, .003, 'steel');
+        Kt.cyl(N, f, [.008, .016, 0], 'x', .0068, .016, 'steel'); Kt.fitting(N, f, [.017, .016, 0], 'x', .006);                 // secondary inlet
+        if (dup) { Kt.cyl(N, f, [.007, .03, 0], 'x', .005, .014, 'steel'); Kt.fitting(N, f, [.015, .03, 0], 'x', .0045); } }   // primary inlet
       const tip = new THREE.Mesh(new THREE.CylinderGeometry(.009, .012, .016, 12)); tip.geometry.userData.solid = true; G.aim(tip, G.onRing(fnPath[fnPath.length - 1][0] - .006, fnPath[fnPath.length - 1][1], a), new THREE.Vector3(-1, 0, 0)); PW.add('fuel-nozzles', tip, 'steel', { solid: true }); }
   }
 

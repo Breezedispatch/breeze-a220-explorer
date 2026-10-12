@@ -98,6 +98,10 @@
     PW.part('mgb', { parent: 'gearboxes', label: 'Main gearbox (MGB)', src: 'p.66-69; p.53; p.237; photos',
       info: 'Cast aluminium housing under the core, from about 4:30 to 9 o\'clock, with machined pads on both faces. Forward face: the fuel/oil manifold with the IFPC (8 o\'clock), the layshaft input, the hydraulic pump and the lube and scavenge oil pump (5 o\'clock). Aft face: the air turbine starter, the PMAG (7 o\'clock), the VFG and the oil control module; the deoiler is in its right arm.\n\nTwo mounting links hang it from the diffuser case and a rod link from its aft face to the turbine intermediate case takes the axial load. A heat shield over its top keeps the core\'s radiant heat off it, and a centering puck on top lines it up during installation. Replaceable carbon seals at each pad, the N2 cranking pad for turning the core by hand during a borescope, and the core drain plugs are serviced here.' });
     const mg = GB.mainGearboxBody, mx0 = mg.x_from, mx1 = mg.x_to, xm = (mx0 + mx1) / 2;
+    /* the axes of the starter (8:24) and the VFG (6:09) on the gearbox's aft face. Both hang lower than the gearbox's mid-depth, so their
+       bodies clear the diffuser case and the fuel nozzle heads behind it: p.297 puts the starter axis about 8 in below the engine axis,
+       16-17 in out from it. Until 2026-10-12 they were at r 0.385 and 0.365 and cut into the case */
+    const ATS_R = .43, VFG_R = .435;
     { const th0 = G.clock(4.4), th1 = G.clock(9.1);
       /* section from the p.53 outline (drawn at 6 o'clock): bottom about 0.47; the top at r 0.285 under the heat shield leaves the
          5 cm gap to the core that p.237 shows the deoiler vent duct crossing in (it was 0.27 until 2026-10-07, with no room for it) */
@@ -112,7 +116,7 @@
       PW.add('mgb', G.revolve([[mx0 - .004, .277], [mx1 + .004, .277], [mx1 + .004, .2805], [mx0 - .004, .2805]], { seg: 44, thetaStart: th0 + .04, thetaLength: th1 - th0 - .08 }), 'insulation');
       { const f = Kt.frame('mgb', xm - .02, 6.3, .275); Kt.cyl('mgb', f, [0, -.006, 0], 'y', .026, .016, 'steel'); Kt.bolts('mgb', f, [0, .003, 0], '-y', .036, 4, .004); }
       /* aft face pads: starter, PMAG, VFG; the N2 cranking pad cover; the core drain plugs in a row near the bottom (p.67) */
-      for (const [h, r, r0, r1, n] of [[8.4, .385, .085, .125, 16], [7.15, .40, .042, .066, 6], [6.15, .365, .1, .132, 16]]) {
+      for (const [h, r, r0, r1, n] of [[8.4, ATS_R, .085, .118, 16], [7.15, .40, .042, .066, 6], [6.15, VFG_R, .1, .118, 16]]) {
         const f = Kt.frame('mgb', mx1, h, r); Kt.flange('mgb', f, [-.006, 0, 0], '-x', r0, r1, .012, n, 'castTan'); }
       { const f = Kt.frame('mgb', mx1, 7.75, .40); Kt.cyl('mgb', f, [-.008, 0, 0], 'x', .032, .014, 'castTan'); Kt.bolts('mgb', f, [-.016, 0, 0], '-x', .024, 2, .005, { phase: Math.PI / 2 }); }
       for (let i = 0; i < 5; i++) { const f = Kt.frame('mgb', mx1, 6.95 + i * .13, .445); Kt.plug('mgb', f, [-.008, 0, 0], '-x', .009); }
@@ -189,11 +193,11 @@
       for (const y of [.02, -.02]) Kt.fitting('lsop', f, [.04, y, .07], 'z', .01); }
     // aft face
     acc('ats', 'Air turbine starter (ATS)', 'Pneumatic starter at the left end of the MGB aft face, held on its pad by a V-band clamp. Bleed air from the APU, ground cart or the other engine, admitted by the starter air valve, enters through the cone at its aft end and spins its turbine; it cranks the N2 rotor through the gearboxes and disengages above cutout speed. A speed sensor reports to the EEC, and a halo tube round its gearbox end blows cooling air on it.\n\nIt has its own oil: check the level on the sight glass between FULL and ADD, fill through the FILL port until oil comes out of the overfill port, and drain through the drain port. The magnetic plug at the bottom collects debris: check it in starter troubleshooting.', 'p.286-301, p.69');
-    { const ax = mx1, ah = 8.4, ar = .385, f = Kt.frame('ats', ax, ah, ar);
+    { const ax = mx1, ah = 8.4, ar = ATS_R, f = Kt.frame('ats', ax, ah, ar);
       /* p.301, from the pad aft: V-band, gearbox and oil sump, bolted mid flange, grooved turbine housing, inlet cone to the duct */
       Kt.vband('ats', f, [-.012, 0, 0], '-x', .095, { phase: 2.4 });
-      Kt.prof('ats', f, [0, 0, 0], '-x', [[.02, 0], [.02, .092], [.03, .1], [.125, .1], [.13, .126], [.145, .126], [.15, .116], [.212, .116], [.272, .062], [.285, .062], [.285, 0]], 'castAl', { seg: 56 });
-      Kt.bolts('ats', f, [-.149, 0, 0], '-x', .118, 20, .005);
+      Kt.prof('ats', f, [0, 0, 0], '-x', [[.02, 0], [.02, .092], [.03, .1], [.125, .1], [.13, .12], [.145, .12], [.15, .116], [.212, .116], [.272, .062], [.285, .062], [.285, 0]], 'castAl', { seg: 56 });
+      Kt.bolts('ats', f, [-.149, 0, 0], '-x', .113, 20, .005);
       for (const g of [.165, .18, .195]) Kt.tube('ats', f, [-g, 0, 0], 'x', .113, .12, .004, 'castAl');                   // turbine housing grooves
       Kt.fins('ats', f, [-.235, 0, 0], '-x', .085, 18, .006, .004, .006, 'darkBox');                                       // exhaust slots round the cone
       Kt.vband('ats', f, [-.282, 0, 0], '-x', .062, { phase: 1 });
@@ -207,7 +211,7 @@
       Kt.prof('ats', f, [-.03, 0, 0], 'x', (() => { const o = []; for (let i = 0; i <= 12; i++) { const a = i / 12 * TAU; o.push([.009 * Math.cos(a), .108 + .009 * Math.sin(a)]); } return o; })(), 'tube', { seg: 48 });
       /* p.300-301, TTM p.879: the halo cooling air supply tube takes fan air from the inlet plenum of the air/oil cooler down to the ring
          round the starter's forward flange, held by a P-clamp on a lug on the gearbox housing */
-      line('ats', [P(-1.595, 9.13, .472), P(-1.60, 8.97, .487), P(-1.62, 8.8, .497), P(-1.645, 8.62, .522), P(-1.672, 8.48, .52), P(ax - .03, ah, ar + .117)], .011, 'tube', { clamps: 1 });   // over the starter pad's flange
+      line('ats', [P(-1.595, 9.13, .472), P(-1.60, 8.97, .487), P(-1.62, 8.8, .497), P(-1.648, 8.72, .522), FLa(ax, ah, ar)(-.03, .083, .083)], .011, 'tube', { clamps: 1 });   // over the starter pad's flange
       { const g = Kt.frame('ats', -1.62, 8.8, .452); Kt.box('ats', g, [0, .018, 0], [.02, .036, .03], 'castAl', { round: .003 }); }   // its clamp lug on the gearbox
       /* starter air valve on the duct coming down from the pylon (left side) */
       acc('sav', 'Starter air valve (SAV)', 'Pneumatically operated butterfly valve in the starter duct, spring-loaded closed, with a regulator that holds 30 psi downstream. The EEC opens it through a dual-coil torque motor and confirms it open from starter speed and N2. It sits inside a cooling shroud fed by a tube from the air/oil cooler; its line-replaceable filter is under the cover on top.\n\nA 3/8 in square-drive manual override can be reached through an access hole in the left thrust reverser door. The 2017 manual carries a warning that a manual override start is not an approved procedure, because of the motor-to-start logic that prevents starting with a bowed rotor: follow the current AMM and MEL.', 'p.290-299; p.298 warning');
@@ -240,22 +244,23 @@
       Kt.fins('pmag', f, [-.065, 0, 0], '-x', .052, 10, .005, .003, .08, 'castAl');
       Kt.connector('pmag', f, [-.13, .02, .0], '-x', .011, { lead: '-z' }); Kt.connector('pmag', f, [-.13, -.02, .0], '-x', .011, { lead: '-z' }); }   // backshells toward 6 o'clock, where their harness runs
     acc('vfg', 'Variable frequency generator (VFG)', 'The engine\'s main AC generator on the MGB aft face: 115/200 V AC, 75 kVA, 380 to 760 Hz, the frequency following N2. Its grey-blue housing is in two bolted sections, with a round blue cap and a capped port underneath; its pad seal drains to the drain mast (tube 4, DR61). It has its own oil, cooled through the VFG oil/oil heat exchanger and a VFG air/oil cooler.\n\nThe crew can disconnect it from the gearbox with the L or R DISC switch on the electrical panel, which also shows its oil cautions (TTM ch. 24). Reconnection is done on the ground, following the AMM.', 'p.66-69; TTM ch. 24; photos');
-    { const vr = .365, f = Kt.frame('vfg', mx1, 6.15, vr);
+    { const f = Kt.frame('vfg', mx1, 6.15, VFG_R);
       /* Brian's photos from below: a grey-blue housing, boxy with rounded corners rather than a finned drum, in two bolted sections, with
          a round blue cap and a capped port on its underside. The white disc of tube ends near it in the same photos is the drain mast's
-         end plate, not part of the VFG: until 2026-10-08 the model put it here as a feeder terminal cover */
+         end plate, not part of the VFG: until 2026-10-08 the model put it here as a feeder terminal cover. It hangs low enough to clear
+         the diffuser case and the fuel nozzle heads behind the gearbox (until 2026-10-12 it was at r 0.365 and cut into the case) */
       Kt.cyl('vfg', f, [-.012, 0, 0], 'x', .1, .024, 'vfgGrey', { edge: .004 }); Kt.vband('vfg', f, [-.014, 0, 0], '-x', .102, { phase: 2.6 });   // adapter on the pad
-      Kt.box('vfg', f, [-.115, 0, 0], [.17, .21, .18], 'vfgGrey', { round: .035 });                                         // forward section
-      Kt.box('vfg', f, [-.2, 0, 0], [.014, .218, .188], 'vfgGrey', { round: .036 });                                        // the bolted joint
-      Kt.box('vfg', f, [-.255, 0, 0], [.1, .2, .17], 'vfgGrey', { round: .032 });                                           // aft section
-      for (const [y, z] of [[.096, -.06], [.096, 0], [.096, .06], [-.096, -.06], [-.096, 0], [-.096, .06], [-.05, .084], [.05, .084], [-.05, -.084], [.05, -.084]])
+      Kt.box('vfg', f, [-.115, 0, 0], [.17, .2, .18], 'vfgGrey', { round: .035 });                                          // forward section
+      Kt.box('vfg', f, [-.2, 0, 0], [.014, .208, .188], 'vfgGrey', { round: .036 });                                        // the bolted joint
+      Kt.box('vfg', f, [-.255, 0, 0], [.1, .19, .17], 'vfgGrey', { round: .032 });                                          // aft section
+      for (const [y, z] of [[.091, -.06], [.091, 0], [.091, .06], [-.091, -.06], [-.091, 0], [-.091, .06], [-.05, .084], [.05, .084], [-.05, -.084], [.05, -.084]])
         Kt.hex('vfg', f, [-.208, y, z], '-x', .0045, .004, 'steel');
-      Kt.cyl('vfg', f, [-.12, .107, .025], 'y', .017, .006, 'labelBlue'); Kt.hex('vfg', f, [-.12, .113, .025], 'y', .006, .006, 'steel');   // round blue cap
-      Kt.cyl('vfg', f, [-.26, .102, -.035], 'y', .016, .012, 'castAl'); Kt.cyl('vfg', f, [-.26, .111, -.035], 'y', .013, .006, 'capBlack');   // capped port
+      Kt.cyl('vfg', f, [-.12, .102, .025], 'y', .017, .006, 'labelBlue'); Kt.hex('vfg', f, [-.12, .108, .025], 'y', .006, .006, 'steel');   // the disconnect solenoid reset, under its round blue cap
+      Kt.cyl('vfg', f, [-.26, .097, -.035], 'y', .016, .012, 'castAl'); Kt.cyl('vfg', f, [-.26, .106, -.035], 'y', .013, .006, 'capBlack');   // its oil filter
       Kt.box('vfg', f, [-.24, .02, .093], [.08, .03, .006], 'labelBlue', { round: .003 });                                   // the blue data label
-      Kt.connector('vfg', f, [-.1, .07, .085], [0, .6, .8], .012, { lead: '-x' }); Kt.connector('vfg', f, [-.1, .07, -.085], [0, .6, -.8], .012, { lead: '-x' });
+      for (const y of [0, .06]) Kt.connector('vfg', f, [-.16, y, .09], 'z', .012, { lead: '-x' });                         // J1 above J2, both on the left face (A Nahas photo, p.18)
       Kt.fitting('vfg', f, [-.04, .06, .095], [0, .53, .85], .009); Kt.fitting('vfg', f, [-.11, .065, .09], [0, .53, .85], .009);   // oil to and from its oil/oil cooler, both toward it
-      Kt.fitting('vfg', f, [-.05, .105, -.03], 'y', .006); }                                                                       // pad seal drain, to the drain mast
+      Kt.fitting('vfg', f, [-.05, .1, -.03], 'y', .006); }                                                                         // pad seal drain, to the drain mast
     acc('ocm', 'Oil control module (OCM)', 'Cast module at the right end of the MGB aft face. Under the round thermal blanket cap on its outboard face is the main oil filter: a primary and a secondary element behind a bolted cover with a vent plug and a drain plug, with a bypass valve that opens at 55 psid. It also carries the filter differential pressure sensor, the oil debris monitor, the main oil pressure and temperature sensors, the active oil damper valve and the variable oil reduction valve with the journal oil shuttle valve for the FDGS.\n\nThe scavenge oil from the pump also passes through it, past the temperature sensor, on its way back to the tank: the tube up to the tank leaves its aft face, beside the pressure tube to the No. 4 and No. 5/6 bearings. A filter impending-bypass or debris message is worked from here.', 'p.214-215, p.226-249, p.229, p.235; TTM 79-00 fig. 3; photos');
     { const f = Kt.frame('ocm', mx1, 4.9, .40);
       Kt.box('ocm', f, [-.06, 0, 0], [.12, .13, .17], 'castAl', { round: .015 });
@@ -279,14 +284,15 @@
       Kt.cyl('ocm', f, [-.095, .045, .092], [0, .5, .866], .009, .02, 'steel'); Kt.connector('ocm', f, [-.095, .055, .11], [0, .5, .866], .007, { lead: '-x' });   // main oil temperature (MOT) sensor
       Kt.fitting('ocm', f, [-.12, -.04, .04], '-x', .011); Kt.fitting('ocm', f, [-.12, .04, .02], '-x', .011); }   // pressure to No. 4 and No. 5/6 (inboard); scavenge on to the tank
     acc('deoiler', 'Deoiler', 'Self-contained centrifugal deoiler in the right arm of the MGB, on its aft face, driven by a gear. It takes breather air from the gearbox, the No. 3 bearing compartment and the oil tank\'s deaerator, spins the oil out of it back into the gearbox, and vents the air overboard through the deoiler vent duct, which crosses over the top of the gearbox, between it and the core, to its flattened outlet at the left end. Its drive oil seal is line-replaceable.', 'p.66-67, p.236-237');
-    /* p.237: a drum on the aft face of the right arm; the vent duct leaves its aft end, turns in over the top of the gearbox (between
-       the heat shield and the core) and runs across to the left end, where it ends in a flattened outlet */
+    /* p.237: a drum on the aft face of the right arm; the vent duct turns in over the top of the gearbox (between the heat shield and the
+       core) and runs across to the left end, where it ends in a flattened outlet. p.237 draws the duct leaving the drum's aft end; here it
+       leaves the drum's inner side, because the secondary fuel manifold runs just behind the drum */
     { const f = Kt.frame('deoiler', mx1, 4.2, .34);
       Kt.flange('deoiler', f, [-.008, 0, 0], '-x', .03, .06, .012, 8, 'castTan'); Kt.cyl('deoiler', f, [-.025, 0, 0], 'x', .032, .025, 'castAl');
-      Kt.flange('deoiler', f, [-.04, 0, 0], '-x', .011, .022, .006, 4, 'steel');                                                 // the duct's bolted flange
-      line('deoiler', [P(-1.693, 4.2, .34), P(-1.70, 4.25, .322), P(-1.688, 4.37, .298), P(-1.668, 4.55, .27), P(-1.644, 4.85, .261), P(-1.641, 5.4, .261), P(-1.641, 6.0, .261), P(-1.641, 6.6, .261),
-        P(-1.641, 7.2, .261), P(-1.641, 7.8, .261), P(-1.641, 8.4, .261), P(-1.646, 8.85, .263), P(-1.67, 9.12, .276), P(-1.684, 9.3, .296)], .011, 'tube', { clamps: 3, ends: false });
-      const g = Kt.frame('deoiler', -1.685, 9.35, .30); Kt.box('deoiler', g, [0, .013, 0], [.02, .026, .05], 'tube', { round: .005 }); }   // flattened outlet
+      Kt.flange('deoiler', f, [-.025, -.034, 0], '-y', .011, .022, .006, 4, 'steel');                                            // the duct's bolted flange
+      line('deoiler', [FLa(mx1, 4.2, .34)(-.025, -.03, 0), P(-1.68, 4.22, .29), P(-1.678, 4.32, .272), P(-1.668, 4.5, .265), P(-1.655, 4.7, .262), P(-1.648, 4.85, .261), P(-1.644, 4.95, .261), P(-1.641, 5.4, .261), P(-1.641, 6.0, .261), P(-1.641, 6.6, .261),
+        P(-1.641, 7.2, .261), P(-1.641, 7.8, .261), P(-1.641, 8.4, .261), P(-1.646, 8.85, .263), P(-1.665, 9.12, .276), P(-1.672, 9.3, .296)], .011, 'tube', { clamps: 3, ends: false });
+      const g = Kt.frame('deoiler', -1.672, 9.35, .30); Kt.box('deoiler', g, [0, .013, 0], [.02, .026, .05], 'tube', { round: .005 }); }   // flattened outlet
 
     /* ============================== OIL SYSTEM ============================== */
     PW.part('oil', { label: 'Oil system', explode: [0, 0, .45], src: 'p.212-255; TTM ch. 79',
@@ -425,9 +431,9 @@
     { const vx = -1.46, vh = 10.0; box('vfgoohx', vx, vh, .40, .085, .07, .11, 'steel'); for (const dx of [.05, -.05]) box('vfgoohx', vx + dx, vh, .405, .025, .09, .12, 'castAl', { round: .008 });
       /* VFG oil down the left of the gearbox, between the PMAG and the generator, to the fitting on the VFG's 7 o'clock side
          (points closer than 0.6 h apart, so the run does not cut in across the curve of the casting) */
-      line('vfgoohx', [P(vx, 9.72, .43), P(-1.475, 9.68, .47), P(-1.485, 9.5, .495), P(-1.485, 9.3, .51), P(-1.47, 9.1, .525), P(-1.51, 8.55, .512), P(-1.57, 8.0, .505), P(-1.635, 7.45, .508), P(-1.68, 7.0, .505), P(-1.69, 6.78, .48), P(-1.694, 6.65, .455)], .014, 'tube', { clamps: 3 });
+      line('vfgoohx', [P(vx, 9.72, .43), P(-1.475, 9.68, .47), P(-1.485, 9.5, .495), P(-1.485, 9.3, .51), P(-1.47, 9.1, .525), P(-1.51, 8.55, .512), P(-1.57, 8.0, .505), P(-1.635, 7.45, .515), P(-1.675, 7.0, .515), P(-1.69, 6.78, .528), FLa(mx1, 6.15, VFG_R)(-.04, .0775, .1231), FLa(mx1, 6.15, VFG_R)(-.04, .06692, .10609)], .014, 'tube', { clamps: 3 });
       /* and back (p.213 draws the VFG oil circuit as a pair, to and from the VFG): beside the first, aft of and outboard of it, between the fuel/oil manifold and the air/oil cooler's plenum */
-      line('vfgoohx', [P(vx - .045, 9.74, .44), P(-1.512, 9.62, .485), P(-1.515, 9.5, .525), P(-1.515, 9.3, .53), P(-1.51, 9.1, .53), P(-1.545, 8.55, .512), P(-1.605, 8.0, .505), P(-1.67, 7.45, .508), P(-1.715, 7.0, .505), P(-1.735, 6.8, .48), P(-1.755, 6.66, .458), P(-1.764, 6.585, .443)], .014, 'tube', { clamps: 3 }); }
+      line('vfgoohx', [P(vx - .045, 9.74, .44), P(-1.512, 9.62, .485), P(-1.515, 9.5, .525), P(-1.515, 9.3, .53), P(-1.51, 9.1, .53), P(-1.545, 8.55, .512), P(-1.605, 8.0, .505), P(-1.67, 7.45, .515), P(-1.712, 7.0, .518), P(-1.745, 6.78, .532), FLa(mx1, 6.15, VFG_R)(-.11, .0825, .1181), FLa(mx1, 6.15, VFG_R)(-.11, .07192, .10109)], .014, 'tube', { clamps: 3 }); }
     PW.part('fohe', { parent: 'oil', label: 'Fuel/oil heat exchanger (FOHX) and bypass valve', src: 'p.162-170, p.212-217, p.232-233',
       info: 'Fuel-cooled oil cooler on the upper left of the core at 11 o\'clock, over the front HPC. Its bypass valve (FOHXBV) sits at its forward end on the compressor intermediate case near 12 o\'clock, on the dark FOC manifold block. Boost-pump fuel from the fuel/oil manifold takes heat from the oil and goes back to the manifold, keeping the fuel above 0 deg C at the fuel filter inlet.\n\nThe EEC modulates the bypass valve on the fuel temperature sensor, opening it as the fuel gets colder to send more hot oil through. Normally about 75 percent of the cooled-path oil comes here and 25 percent goes to the air/oil cooler. If the fuel side blocks, a bypass valve sends the fuel round it; the oil side has a relief valve.' });
     { const fx = -1.26, f = frame('fohe', fx, 11.0, .39);
@@ -454,11 +460,21 @@
         P(-1.32, 9.75 + o * .8, .475 + r1), P(-1.40, 9.4 + o * .67, .465 + r1 * .83), P(-1.432 - o * .233, 9.47 + o * .25, .44 + o * .2), P(-1.444 - o * .233, 9.407, .43 + o * .208)], .012, 'tube', { clamps: 2 }); }
     /* metered fuel: two tubes leave the top end of the FOM, turn up in front of the MGB's left arm, pass under the VFG oil/oil cooler
        and run aft above the arm, under the AOHX, to the primary and secondary manifolds */
-    line('fuel', [P(-1.472, 9.415, .38), P(-1.47, 9.5, .368), P(-1.47, 9.58, .352), P(-1.50, 9.66, .345), P(-1.60, 9.66, .343), P(-1.67, 9.7, .325), P(-1.70, 9.76, .31), P(-1.725, 9.8, .305)], .012, 'tube', { clamps: 2 });
-    line('fuel', [P(-1.444, 9.413, .395), P(-1.445, 9.5, .39), P(-1.44, 9.6, .365), P(-1.445, 9.75, .342), P(-1.46, 9.86, .338), P(-1.55, 9.87, .338), P(-1.65, 9.9, .335), P(-1.69, 9.95, .33), P(-1.716, 10.0, .327)], .012, 'tube', { clamps: 2 });
-    for (const [dr, nm] of [[.0, 'primary'], [.022, 'secondary']]) {
-      const xr = -1.725 + dr * .4, rr = .305 + dr; PW.add('fuel', G.revolve([[xr + .008, rr - .008], [xr - .008, rr - .008], [xr - .008, rr + .008], [xr + .008, rr + .008]], { seg: 96 }), 'steel');
-      for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + TAU / 32; PW.add('fuel', G.rod(G.onRing(xr, rr, a), G.onRing(-1.761, .284, a), .004), 'steel'); } }
+    /* p.162-163, p.174-175: the two manifold rings round the diffuser case. The secondary, the larger bore with a forged tee at every
+       nozzle, feeds all 16 nozzles; the primary feeds only the 10 duplex ones. The manual draws the rings aft of the nozzle heads, toward
+       flange M. Here the starter and generator hang from the main gearbox close behind the heads at 6 to 9 o'clock, so the rings run just
+       forward of the heads instead, the secondary furthest forward, and the heads' inlets point forward to them */
+    const xS = -1.705, rS = .31, xPm = -1.722, rPm = .3215;
+    line('fuel', [P(-1.472, 9.415, .38), P(-1.47, 9.5, .368), P(-1.47, 9.58, .352), P(-1.50, 9.66, .345), P(-1.60, 9.66, .343), P(-1.67, 9.70, .34), P(-1.70, 9.76, .338), P(-1.716, 9.79, .333), P(-1.722, 9.8, .3255)], .008, 'tube', { clamps: 2 });   // to the primary
+    line('fuel', [P(-1.444, 9.413, .395), P(-1.445, 9.5, .39), P(-1.44, 9.6, .365), P(-1.445, 9.75, .342), P(-1.46, 9.86, .338), P(-1.55, 9.87, .338), P(-1.65, 9.9, .336), P(-1.685, 9.96, .332), P(-1.70, 10.0, .325), P(-1.705, 10.0, .3165)], .008, 'tube', { clamps: 2 });   // to the secondary
+    { const torus = (x, r, t) => { const o = []; for (let k = 0; k <= 16; k++) { const q = k / 16 * TAU; o.push([x + t * Math.cos(q), r + t * Math.sin(q)]); } return o; };
+      PW.add('fuel', G.revolve(torus(xS, rS, .0065), { seg: 160 }), 'steel', { solid: true });                               // secondary manifold
+      PW.add('fuel', G.revolve(torus(xPm, rPm, .0045), { seg: 160 }), 'steel', { solid: true });                             // primary manifold
+      for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + TAU / 32, h = a / (TAU / 12), N = FLa(-1.761, h, .289);
+        const t = new THREE.Mesh(G.roundedBox(.014, .016, .016, .003)); t.position.copy(P(xS, h, rS)); t.rotation.x = a; PW.add('fuel', t, 'steel', { solid: true });   // the tee
+        line('fuel', [N(.0257, .016, 0), N(.034, .0165, 0), N(.042, .019, 0), N(.049, .021, 0)], .004, 'tube', { clamps: 0, ends: false });   // secondary transfer tube
+        if (D.fuelDuplex.includes(i)) { const b = new THREE.Mesh(G.roundedBox(.008, .012, .01, .002)); b.position.copy(P(xPm - .002, h, rPm)); b.rotation.x = a; PW.add('fuel', b, 'steel', { solid: true });
+          line('fuel', [N(.0215, .03, 0), N(.027, .031, 0), N(.0325, .0325, 0)], .0035, 'tube', { clamps: 0, ends: false }); } } }   // primary transfer tube
     /* p.167: servo fuel from the IFPC's servo pressure regulator to the four fuel-powered actuators (turbine ACC air valve, HPC and LPC
        vane actuators, 2.5 bleed valve) and back to the fuel/oil manifold ahead of the filter. The supply and return run as a pair round
        the right of the core just aft of WC08 and the CIC fire seal, under the actuators, with a branch up to each one's ports, then aft
@@ -915,17 +931,19 @@
          VFG's right connector. The VFG and hydraulic pump circuits belong to the aircraft (generator control unit, hydraulic system)
          and are assumed to join the bundle here. The VFG's feeder studs are left bare, as in the photo from below */
       { const leg = (pts, r) => line('harnesses', pts, r || .006, 'harness', { clamps: 0, ends: false });
-        const T1 = P(-1.70, 6.64, .50), T2 = P(-1.80, 6.72, .49), T4 = P(-1.86, 8.2, .523), T6 = P(-1.70, 5.45, .48), T7 = P(-1.79, 5.1, .40);
-        line('harnesses', [P(-1.35, 6.9, .42), P(-1.40, 6.82, .445), P(-1.47, 6.68, .495), P(-1.57, 6.55, .502), P(-1.65, 6.56, .50), T1], .011, 'harness', { clamps: 3, ends: false });
+        const T1 = P(-1.70, 6.64, .50), T2 = P(-1.80, 6.72, .49), T4 = P(-1.97, 8.2, .52), T6 = P(-1.70, 5.45, .48), T7 = P(-1.79, 5.1, .40);
+        const vfgL = FLa(mx1, 6.15, VFG_R), atsL = FLa(mx1, 8.4, ATS_R);                                                  // points in the VFG's and starter's frames
+        line('harnesses', [P(-1.35, 6.9, .42), P(-1.40, 6.82, .445), P(-1.47, 6.68, .495), P(-1.57, 6.6, .502), P(-1.65, 6.65, .50), T1], .011, 'harness', { clamps: 3, ends: false });
         leg([T1, P(-1.76, 6.68, .498), T2], .009);
         leg([P(-1.8052, 7.06, .42), P(-1.813, 6.95, .435), P(-1.81, 6.8, .47), T2], .007);                                     // PMAG, EEC channel A
         leg([P(-1.8052, 7.05, .38), P(-1.818, 6.93, .40), P(-1.82, 6.8, .45), P(-1.81, 6.74, .48), T2], .007);                 // PMAG, channel B
-        leg([P(-1.776, 6.58, .46), P(-1.795, 6.6, .468), P(-1.805, 6.66, .482), T2]);                                           // VFG, left
-        leg([T2, P(-1.83, 6.85, .50), P(-1.85, 7.3, .515), P(-1.86, 7.8, .52), T4], .008);
-        leg([T4, P(-1.84, 8.6, .524), P(-1.80, 8.95, .51), P(-1.77, 9.1, .45), P(-1.745, 9.08, .39), P(-1.729, 9.06, .366)]);   // starter speed sensor
-        leg([T4, P(-1.92, 8.3, .524), P(-2.0, 8.5, .525), P(-2.05, 8.7, .526), P(-2.068, 8.82, .53), P(-2.07, 8.85, .532)]);      // starter air valve torque motor
+        leg([vfgL(-.1816, 0, .1128), P(-1.852, 6.66, .452), P(-1.85, 6.74, .47), P(-1.83, 6.75, .484), T2]);                     // VFG J1
+        leg([vfgL(-.1816, .06, .1128), P(-1.852, 6.6, .51), P(-1.85, 6.69, .508), P(-1.83, 6.73, .498), T2]);                   // VFG J2
+        leg([T2, P(-1.83, 6.85, .50), P(-1.85, 7.3, .515), P(-1.89, 7.8, .52), P(-1.94, 8.05, .52), T4], .008);                // aft of the starter, clear of its housing
+        const sTap = P(-2.05, 8.7, .526);
+        leg([T4, P(-2.0, 8.45, .525), sTap, P(-2.068, 8.82, .53), P(-2.07, 8.85, .532)]);                                        // starter air valve torque motor
+        leg([sTap, P(-2.0, 8.92, .52), P(-1.90, 9.0, .52), P(-1.80, 9.0, .51), P(-1.765, 9.0, .47), P(-1.745, 8.99, .425), atsL(-.0744, -.04035, .12369)]);   // starter speed sensor, up its far side
         leg([P(-1.57, 6.55, .502), P(-1.60, 6.2, .49), P(-1.62, 5.85, .49), P(-1.66, 5.55, .49), T6], .009);
-        leg([P(-1.776, 5.72, .46), P(-1.79, 5.72, .455), P(-1.785, 5.6, .44), P(-1.75, 5.5, .445), P(-1.72, 5.46, .46), T6]);   // VFG, right
         leg([P(-1.698, 5.63, .409), P(-1.69, 5.55, .43), P(-1.695, 5.48, .46), T6]);                                           // VORV/JOSV
         leg([P(-1.762, 5.40, .477), P(-1.735, 5.43, .48), T6]);                                                                 // MOT sensor
         leg([T7, P(-1.795, 5.25, .41), P(-1.775, 5.5, .43), P(-1.735, 5.5, .455), T6], .008);
@@ -954,7 +972,7 @@
       line('harnesses', [P(-1.595, .99, .45), P(-1.575, .99, .445), P(-1.555, 1.0, .41), P(-1.545, 1.0, .36), P(-1.54, 1.0, .325), P(-1.53, 1.015, .307)], .005, 'harness', { clamps: 0, ends: false });
       /* WC05 aft over the fuel manifolds, under the right edge of the precooler and over the clearance control manifolds (the precooler
          sits low enough over the combustor that it can no longer run along 12 o'clock) */
-      line('harnesses', [P(-1.67, 12.05, .305), P(-1.684, 12.35, .31), P(-1.697, 12.45, .34), P(-1.712, 12.45, .356), P(-1.75, 12.45, .356), P(-1.80, 12.45, .34), P(-1.95, 12.45, .325), P(-2.05, 12.4, .345), P(-2.10, 12.35, .385), P(-2.14, 12.3, .47), P(-2.20, 12.18, .51), P(-2.24, 12.08, .555), P(-2.40, 12.0, .56), P(-2.45, 12.0, .52), P(-2.465, 12.0, .478)], .012, 'harness', { clamps: 4 });
+      line('harnesses', [P(-1.67, 12.05, .305), P(-1.684, 12.35, .32), P(-1.697, 12.45, .345), P(-1.712, 12.45, .356), P(-1.75, 12.45, .356), P(-1.80, 12.45, .34), P(-1.95, 12.45, .325), P(-2.05, 12.4, .345), P(-2.10, 12.35, .385), P(-2.14, 12.3, .47), P(-2.20, 12.18, .51), P(-2.24, 12.08, .555), P(-2.40, 12.0, .56), P(-2.45, 12.0, .52), P(-2.465, 12.0, .478)], .012, 'harness', { clamps: 4 });
       /* WC05 then rings the LPT's aft flange both ways to the EGT probe junctions at 3 and 9 o'clock (p.107, p.129) */
       for (const [h0, h1] of [[12, 15], [12, 9]]) { const pts = []; for (let i = 0; i <= 15; i++) pts.push(P(-2.465, h0 + (h1 - h0) * i / 15, .474));
         line('harnesses', pts, .009, 'harness', { clamps: 5, ends: false });
@@ -984,10 +1002,10 @@
          the right of B all the way, so they never cross; both ride over the W03 harness where they cross it ahead of the panel */
       for (const [h0, dh, hp] of [[7.952, -.03, 4.05], [8.048, .03, 5.0]]) {
         const k = dh > 0 ? .03 : 0, da = dh < 0 ? dh * 1.6 : dh, run = [P(-.673, h0, 1.0403), P(-.70 - k, h0 - .05, 1.04), P(-.735 - k, 7.6 + dh, 1.045), P(-.765 - k, 7.0 + dh, 1.07), P(-.82 - k * .5, 6.4 + dh * 1.5, 1.10), P(-.88, 6.15 + dh * 2.5, 1.10), P(-.94, 6.0 + 3 * dh, 1.09), P(-.985, 6.0 + 3 * dh, 1.06),
-          P(-1.05, 6.0 + 3 * dh, 1.03), P(-1.11, 6.0 + 3 * dh, .99), P(-1.15, 6.0 + 2.5 * dh, .86), P(-1.18, 6.0 + 2 * dh, .72), P(-1.21, 5.97 + da, .58), P(-1.30, 5.875 + da, .52), P(-1.50, 5.825 + da, .525), P(-1.75, 5.78 + dh * 1.5, .53)];
+          P(-1.05, 6.0 + 3 * dh, 1.03), P(-1.11, 6.0 + 3 * dh, .99), P(-1.15, 6.0 + 2.5 * dh, .86), P(-1.18, 6.0 + 2 * dh, .72), P(-1.21, 5.97 + da, .58), P(-1.30, 5.875 + da, .52), P(-1.50, 5.76 + da, .525), P(-1.75, 5.62 + dh * 1.5, .53)];
         /* A turns up behind the oil control module high under the IFS, over the No. 4 and No. 5/6 scavenge tubes */
         const tail = hp < 4.5 ? [P(-1.812, 5.45, .532), P(-1.82, 5.2, .528), P(-1.822, 4.9, .515), P(-1.82, 4.7, .50), P(-1.815, 4.5, .49), P(-1.79, 4.3, .45), P(-1.80, 4.15, .40), P(-1.81, 4.06, .37), P(-1.81, hp, .347)]
-          : [P(-1.835, 5.45, .47), P(-1.835, 5.15, .42), P(-1.82, 5.03, .385), P(-1.81, hp, .347)];   // B keeps aft of the OCM's sensor harness
+          : [P(-1.80, 5.6, .51), P(-1.83, 5.52, .478), P(-1.835, 5.45, .465), P(-1.835, 5.15, .42), P(-1.82, 5.03, .385), P(-1.81, hp, .347)];   // B keeps aft of the OCM's sensor harness, under the No. 5/6 oil tube
         const ic = line('ignition', run.concat(tail), .0085, 'cable', { clamps: 6, ends: false });
         PW.add('ignition', G.alongCurve(ic, [tAt(ic, -.985)], () => new THREE.CylinderGeometry(.015, .015, .03, 14)), 'silicone').userData.isLine = true;   // orange boot through the bifurcation panel
         /* p.319, from the case out: classified spacer, mounting boss (diamond flange, two bolts, collar), the plug's seating hex, body,
@@ -1313,7 +1331,7 @@
         [P(-1.40, 7.15, .46), P(-1.40, 6.6, .50), P(-1.43, 6.1, .515)],                                                             // fuel/oil manifold and IFPC
         [P(-1.685, 7.95, .43), P(-1.70, 7.75, .47), P(-1.72, 7.45, .52), P(-1.68, 7.1, .545), P(-1.60, 6.8, .545), P(-1.52, 6.45, .54), P(-1.47, 6.2, .535)],   // starter pad seal, under the gearbox and the VFG oil line
         /* the VFG and oil tank drains come forward from aft into the back of the collector */
-        [P(-1.704, 6.03, .479), P(-1.69, 6.05, .515), P(-1.60, 6.08, .54), P(-1.54, 6.09, .58), P(-1.515, 6.09, .612)],          // VFG pad seal
+        [FLa(mx1, 6.15, VFG_R)(-.05, .1087, -.03), P(-1.70, 6.05, .56), P(-1.62, 6.08, .575), P(-1.55, 6.09, .595), P(-1.515, 6.09, .612)],          // VFG pad seal
         [P(-1.99, 2.787, .530), P(-1.99, 2.88, .537), P(-1.993, 3.4, .537), P(-2.0, 3.9, .536), P(-2.01, 4.3, .533), P(-2.022, 4.6, .526), P(-2.03, 4.85, .513), P(-2.03, 5.08, .50), P(-2.0, 5.3, .512), P(-1.95, 5.45, .53), P(-1.88, 5.55, .545), P(-1.75, 5.95, .545),
           P(-1.62, 6.02, .56), P(-1.54, 6.03, .59), P(-1.515, 6.03, .612)]];                                                        // oil tank scupper, from the fitting at the bottom of the fill port pocket, down the outboard face and round the cone
       /* the six forward drains keep their own lanes, 1 cm apart, into the top of the collector block on the mast, all to the left of the

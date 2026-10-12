@@ -31,6 +31,8 @@
   D.stations = {};
   D.flanges = [];
   D.layout = {};
+  /* fuel nozzles (p.174-175): 16 at 22.5 deg pitch from 11.25 deg (ALF clockwise from top); these indices are the 10 duplex ones */
+  D.fuelDuplex = [0, 3, 4, 5, 6, 11, 12, 13, 14, 15];
 
   /* lookups */
   D.r = (name, x) => G.interp(D.flow[name], x);          // radius of a flowpath line at axial x
