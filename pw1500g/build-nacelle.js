@@ -428,14 +428,26 @@
           info: 'Two hydraulic actuators on the torque box move this door\'s translating sleeve, their bodies running aft between the cascade boxes and their rod ends on the sleeve. The locking feedback actuator in the upper section carries the LVDT on its forward end that reports sleeve position to the EEC; the locking actuator in the lower section carries the manual drive unit. Each has an internal lock released by hydraulic pressure, a proximity sensor on the lock and a manual lock lever. The flexible drive shaft keeps the two in step and the deploy tube feeds the locking actuator.\n\nThe track lock unit on the latch beam pushes a spring-loaded bolt into the sleeve\'s path, so the sleeve cannot deploy even if the actuators do; two proximity sensors report the bolt to the EEC. Its track lock valve, on the torque box next to the locking actuator, takes pressure from that actuator\'s head and is opened by the CDC to pull the bolt back; it stays open until the reverser is stowed again. To move a sleeve by hand, release the manual locks and turn the manual drive unit; its torque limiter protects the actuators.' });
         for (const [h, feedback] of [[hU, true], [hL, false]]) {
           const f = Kt.frame(aid, xm, h, ra);
-          Kt.box(aid, f, [.02, 0, 0], [.05, .075, .075], 'steel', { round: .008 });                                              // gimbal mount on the torque box
-          Kt.cyl(aid, f, [-.33, 0, 0], 'x', .033, .62, 'steel', { edge: .006 }); Kt.cyl(aid, f, [-.655, 0, 0], 'x', .027, .03, 'steel');   // body and rod gland
-          for (const xr of [-.15, -.45]) Kt.tube(aid, f, [xr, 0, 0], 'x', .033, .037, .012, 'steel');
-          Kt.cyl(aid, f, [-.1, .038, 0], 'y', .009, .02, 'steel'); Kt.connector(aid, f, [-.1, .048, 0], 'y', .007, { lead: 'x' });    // lock proximity sensor
-          Kt.box(aid, f, [-.18, .036, .02], [.05, .01, .012], 'steel', { round: .003, mat: { color: '#c0262b', metalness: .2, roughness: .5 } });   // manual lock lever
+          /* p.349, p.351, p.377: the cast head, with the gimbal ring behind it whose two trunnions sit in a yoke on the torque box; the
+             lock proximity sensor and the manual lock lever on top of the head; the body with four clamp bands holding the stow tube; the
+             larger housing at the rod end carrying the stow port; the rod gland */
+          const zs = -sg;                                                                                                         // the side away from the LVDT harness
+          Kt.box(aid, f, [.0025, 0, 0], [.085, .07, .07], 'castAl', { round: .01 });                                              // head
+          Kt.tube(aid, f, [-.047, 0, 0], 'x', .034, .056, .01, 'castAl');                                                         // gimbal ring
+          for (const s of [-1, 1]) { Kt.cyl(aid, f, [-.047, 0, s * .062], 'z', .011, .014, 'steel'); Kt.box(aid, f, [-.047, -.012, s * .076], [.03, .05, .012], 'greyPrimer', { round: .003 }); }   // trunnions and yoke
+          Kt.cyl(aid, f, [-.33, 0, 0], 'x', .033, .62, 'steel', { edge: .006 }); Kt.cyl(aid, f, [-.61, 0, 0], 'x', .041, .07, 'steel', { edge: .006 }); Kt.cyl(aid, f, [-.66, 0, 0], 'x', .027, .03, 'steel');   // body, rod-end housing and gland
+          for (const xr of [-.13, -.27, -.41, -.54]) Kt.tube(aid, f, [xr, 0, 0], 'x', .033, .037, .012, 'steel');                // clamp bands
+          if (feedback) { Kt.cyl(aid, f, [.0, .04, -.015 * zs], 'y', .009, .012, 'steel'); Kt.connector(aid, f, [.0, .047, -.015 * zs], 'y', .007, { lead: 'x' }); }   // lock proximity sensor on the head (p.349)
+          else { Kt.cyl(aid, f, [-.1, .038, 0], 'y', .009, .02, 'steel'); Kt.connector(aid, f, [-.1, .048, 0], 'y', .007, { lead: 'x' }); }   // on the locking actuator, just behind the head (p.351)
+          Kt.box(aid, f, [.028, .04, .02 * zs], [.035, .006, .01], 'steel', { round: .002, mat: { color: '#c0262b', metalness: .2, roughness: .5 } });   // manual lock lever, its hook and pin hole
+          Kt.box(aid, f, [.043, .046, .02 * zs], [.008, .014, .01], 'steel', { round: .002, mat: { color: '#c0262b', metalness: .2, roughness: .5 } });
           for (const xr of [-.06, -.60]) Kt.fitting(aid, f, [xr, .028, -.03 * sg], 'y', .008);                                      // deploy (head) and stow (rod end) ports, on the hinge side
           if (feedback) { Kt.cyl(aid, f, [.085, 0, 0], 'x', .016, .1, 'steel'); Kt.connector(aid, f, [.135, 0, 0], 'x', .009, { lead: 'y' }); }   // LVDT
-          else { Kt.cyl(aid, f, [.035, .04, 0], 'y', .015, .03, 'steel'); Kt.hex(aid, f, [.035, .06, 0], 'y', .011, .01, 'steel'); Kt.cyl(aid, f, [.035, .068, 0], 'y', .008, .006, 'capBlack'); }   // manual drive unit
+          else { /* the manual drive unit on the head's forward face (p.351, p.377): a Goodrich can with a three-lobed plate round the square
+                    drive and a knurled cover on a lanyard */
+            Kt.cyl(aid, f, [.06, .022, 0], 'x', .022, .03, 'castAl', { edge: .003 }); Kt.plate(aid, f, [.06, .022, .0226], 'z', 'x', .024, .018, 'GOODRICH');
+            Kt.cyl(aid, f, [.0765, .022, 0], 'x', .017, .003, 'steel'); for (let k = 0; k < 3; k++) { const a = k * TAU / 3; Kt.hex(aid, f, [.079, .022 + .013 * Math.cos(a), .013 * Math.sin(a)], 'x', .0025, .002, 'steel'); }
+            Kt.cyl(aid, f, [.0815, .022, 0], 'x', .011, .007, 'capBlack', { edge: .002 }); Kt.rod(aid, f, [.08, .011, 0], [.07, .0, .008], .0008, 'steel'); }
           const g = Kt.frame(sid, xm, h, ra); Kt.cyl(sid, g, [-.39, 0, 0], 'x', .016, .62, 'steel'); Kt.box(sid, g, [-.72, 0, 0], [.04, .05, .05], 'steel', { round: .006 });   // rod and rod end on the sleeve
           Kt.box(sid, g, [-.748, 0, 0], [.014, .07, .06], 'greyPrimer', { round: .004 }); }                                         // its clevis on the cavity's aft wall
         const arc = (h0, h1, r, dx) => { const pts = [], n = Math.max(1, Math.ceil(Math.abs(h1 - h0) / .2)); for (let i = 0; i <= n; i++) pts.push(G.onRing(xm + dx, r, G.clock(h0 + (h1 - h0) * i / n))); return pts; };
@@ -476,7 +488,8 @@
         { const lc = tube([U(.1521, .0162, 0), U(.1521, .03, 0), U(.12, .05, .025 * zh), U(.04, .058, .04 * zh), U(-.05, .068, .045 * zh), onTk(1.4)], .004, 'harness', 'harness').geometry.userData.curve;   // LVDT, over the deploy line
           let tb = 0, best = Infinity; for (let i = 0; i <= 200; i++) { const d = Math.abs(lc.getPointAt(i / 200).x + .996); if (d < best) { best = d; tb = i / 200; } }
           PW.add(aid, G.alongCurve(lc, [tb], () => new THREE.CylinderGeometry(.009, .009, .05, 12)), 'silicone').userData.isLine = true; }   // grommet through the torque box's forward frame (x -0.967 to -1.025)
-        for (const [W, h] of [[U, 1.47], [Lw, 4.47]]) tube([W(-.0874, .0613, 0), W(-.07, .072, 0), W(-.085, .076, .02 * zh), onTk(h)], .004, 'harness', 'harness');   // lock sensors
+        tube([U(.0126, .0603, -.015 * zh), U(.026, .068, -.016 * zh), U(.01, .072, -.018 * zh), U(-.05, .071, -.012 * zh), U(-.09, .072, 0), onTk(1.47)], .004, 'harness', 'harness');   // lock sensor, from the top of the head, under the return line
+        tube([Lw(-.0874, .0613, 0), Lw(-.07, .072, 0), Lw(-.085, .076, .02 * zh), onTk(4.47)], .004, 'harness', 'harness');           // the locking actuator's lock sensor
         tube([V(-.0126, .0583, 0), V(-.05, .075, 0), G.onRing(-1.20, 1.125, G.clock(hm(5.0)))], .004, 'harness', 'harness');            // track lock valve solenoid
         /* the track lock unit on the latch beam (p.354-355, p.377): block on a pad, the bolt's boss facing aft, two proximity sensors and the
            two hydraulic ports on top */
