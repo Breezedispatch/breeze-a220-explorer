@@ -245,7 +245,7 @@
       /* splitter: a solid nose that opens into the bypass liner (outside) and the core casing (inside) */
       const outerS = seg('bypassInner', xs, xs - .05, 6), innerS = seg('coreCase', xs + .01, xs - .05, 6);
       PW.add('fic', G.revolve(outerS.concat(innerS.reverse()), { seg: 128, crease: 40 }), 'titanium');
-      PW.part('fan-exit-liner', { parent: 'fic', label: 'Fan exit liner segments (6)', src: 'p.60-61; photos',
+      PW.part('fan-exit-liner', { parent: 'fan-case', label: 'Fan exit liner segments (6)', src: 'p.60-61; photos',               // a fan case component (p.60), like the FEGVs
         info: 'Six removable panels forming the inner wall of the bypass duct behind the FEGVs. Louvres in them let 2.5 bleed air out into the fan stream. Painted pale green on this engine.' });
       const xe = bi[bi.length - 1][0];
       for (let i = 0; i < 6; i++) { const a = seg('bypassInner', xs - .05, xe, 20);
@@ -439,7 +439,7 @@
     PW.add('fdgs-ring', G.ring(xc + .0015, xc - .0015, .214, .222, { seg: 128 }), 'steel');                                        // the joint between the halves
     PW.add('fdgs-ring', G.boltCircle(PW.partMat('fdgs-ring', 'steel'), xc + .046, .232, 40, .0045), null);
     PW.part('fdgs-stars', { parent: 'fdgs', label: 'Star gears (5), carrier and journal bearings', src: 'p.63-65',
-      info: 'Five double-helical star gears, each turning on its own journal bearing pin in the carrier. The carrier does not turn: the torque frame holds it, through the flex support, to the FIC. Each star turns on its own fixed axis, opposite to the sun. The journal bearings take pressurised oil from the manifold at the rear of the FDGS; normally through the variable oil reduction valve, and from the fan-driven pump through the journal oil shuttle valve while windmilling and under negative g (p.212-221).' });
+      info: 'Five double-helical star gears, each turning on its own journal bearing pin in the carrier. The carrier does not turn: the torque frame holds it, through the flex support, to the FIC. Each star turns on its own fixed axis, opposite to the sun. The journal bearings take pressurised oil from a manifold at the rear of the FDGS through the journal oil shuttle valve: main oil normally, and oil from the fan-driven pump when main oil pressure falls (windmilling, negative g). The gear teeth are fed through the variable oil reduction valve, which gives them full flow at takeoff and cuts it at cruise, sending the excess back to the tank; it fails to full flow (p.218-221).' });
     const stars = new THREE.Group(); PW.parts.get('fdgs-stars').obj.add(stars);
     const rs = .064, rc = .062 + rs;
     for (let i = 0; i < 5; i++) { const a = i / 5 * TAU, g = new THREE.Group(); g.position.copy(G.onRing(0, rc, a)); stars.add(g);
@@ -499,7 +499,7 @@
     { const dm = L().combustorDome; PW.add('combustor-liner', G.revolve(G.shellProfile(dm.map(([x, r]) => [x + .006, r]), dm), { seg: 96 }), 'combLiner'); }   // dome bulkhead (p.53)
     /* 16 fuel nozzles through the case, with their swirler cups at the dome (TTM: 16) */
     PW.part('fuel-nozzles', { parent: 'combustor', label: 'Fuel nozzles (16)', src: 'p.164-175; TTM ch. 73',
-      info: 'Sixteen nozzles fed by the primary and secondary manifolds, each held by a mounting flange on the diffuser case with its tip in a swirler at the combustor dome. Some positions are duplex (primary and secondary), others simplex.\n\nA streaky or uneven EGT pattern can point to a coked or leaking nozzle.' });
+      info: 'Sixteen nozzles fed by the primary and secondary manifolds, each held by a mounting flange on the diffuser case with its tip in a swirler at the combustor dome. Ten are duplex (primary and secondary) and six simplex (secondary only), in a pattern of 4 duplex, 4 simplex, 6 duplex, 2 simplex. Every nozzle has check valves in both circuits that shut as the pressure falls at shutdown, so the manifolds do not drain into the combustor, and an alignment pin that stops it being fitted wrongly (p.174).\n\nA streaky or uneven EGT pattern can point to a coked or leaking nozzle.' });
     const fnPath = L().fuelNozzle;
     for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + TAU / 32;                       // 16 nozzles; two straddle 12 o'clock at +/-11.25 deg (p.164-165)
       const pts = fnPath.map(([x, r]) => G.onRing(x, r, a)); PW.add('fuel-nozzles', G.tube(pts, .0065, { radial: 10, tension: .1 }), 'steel');
@@ -546,8 +546,9 @@
     const lp = [['LPT blade 1', 'lpt-rotor-1', true], ['LPT vane 1', 'lpt-vane-2', false], ['LPT blade 2', 'lpt-rotor-2', true], ['LPT vane 2', 'lpt-vane-3', false], ['LPT blade 3', 'lpt-rotor-3', true]];
     for (const [nm, pid, rot] of lp) { const rr = rowBy(new RegExp(nm + '$'))[0] || rowBy(new RegExp(nm))[0]; if (!rr) continue;
       const k = pid.slice(-1);
-      PW.part(pid, { parent: 'lpt', label: rot ? `LPT stage ${k} rotor` : `LPT stage ${k} vanes`, attach: rot ? SP.n1 : null, src: 'p.53',
-        info: rot ? `Stage ${k} of the LPT on the N1 spool: shrouded blades on a disc. Count representative.` : `Stage ${k} LPT vane ring. Count representative.` });
+      /* the vane rows are named as the manual's borescope table does (p.70): the 1st stage vanes sit between the 1st and 2nd rotors */
+      PW.part(pid, { parent: 'lpt', label: rot ? `LPT stage ${k} rotor` : `LPT stage ${k - 1} vanes`, attach: rot ? SP.n1 : null, src: 'p.53, p.70',
+        info: rot ? `Stage ${k} of the LPT on the N1 spool: shrouded blades on a disc. Count representative.` : `LPT ${k - 1 === 1 ? '1st' : '2nd'} stage vane ring, between the stage ${k - 1} and stage ${k} rotors. Count representative.` });
       if (rot) { const r = bladeRow(pid, rr, { role: 'tblade', s: -1, gHub: 22, gTip: 30, camHub: .2, camTip: .14, tHub: .14, tTip: .08, mat: 'lptBlade', sigma: 1.25 });
         PW.add(pid, G.ring(rr.x_le - .002, rr.x_te + .002, r.rt, r.rt + .006, { seg: 128 }), 'lptBlade');      // interlocking tip shrouds
         disk(pid, rr.x_le, rr.x_te, r.rh, .06, { mat: 'nickel', web: .01, bore: .025 }); }
