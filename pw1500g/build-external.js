@@ -15,6 +15,7 @@
     blackHose: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#222426'), roughness: .8, metalness: .05, bumpMap: PW.tex.noise('weave', 256, 30, .6, 1), bumpScale: .0008 }),
     clampOrange: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#c8642c'), roughness: .6, metalness: .1 }),
     labelBlue: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#2f62b8'), roughness: .5, metalness: .1 }),
+    stainless: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#c4c7c9'), roughness: .36, metalness: .8, roughnessMap: PW.tex.noise('fine', 256, 40, .6, 1) }),   // the bleed ducts' brushed finish (photos)
   });
 
   /* ---------------- helpers ---------------- */
@@ -187,15 +188,15 @@
       Kt.fitting('edp', f, [.13, .06, .03], 'y', .014); Kt.fitting('edp', f, [.13, .06, -.03], 'y', .011); Kt.fitting('edp', f, [.07, -.02, -.065], '-z', .008);   // suction, pressure, case drain
       Kt.plate('edp', f, [.11, .0, -.063], '-z', 'x', .05, .025);
       /* its pressure and suction hoses run up the right of the core, aft of the vane and bleed actuators, into the pylon beside the
-         precooler supply duct: under the cowl
-         anti-ice duct where they cross it low on the right, and under the right thrust link at 1:30 */
+         precooler supply duct: under the cowl anti-ice duct where they cross it low on the right, then over the PRSOV and the right
+         thrust link at 1:30, just inside the IFS */
       for (const dx of [0, -.035]) line('edp', (dx ? [P(-1.358, 5.68, .482), P(-1.355, 5.6, .47)] : [P(-1.358, 5.92, .484), P(-1.35, 5.84, .49), P(-1.325, 5.66, .488)]).concat([P(-1.30 + dx, 5.42, .45), P(-1.275 + dx, 5.15, .462), P(-1.265 + dx, 4.95, .49), P(-1.258 + dx, 4.75, .505), P(-1.25 + dx, 4.4, .51), P(-1.25 + dx, 3.2, .51),
-        P(-1.26 + dx, 1.9, .51), P(-1.262 + dx, 1.65, .44), P(-1.265 + dx, 1.35, .43), P(-1.29 + dx, 1.05, .495), P(-1.35 + dx, .6, .51), P(-1.39 + dx, .3, .52), P(-1.398 + dx, .15, .555), V(-1.40 + dx, .62, .08), V(-1.405 + dx, .70, .101),
+        P(-1.26 + dx, 1.9, .512), P(-1.264 + dx, 1.62, .515), P(-1.27 + dx, 1.35, .515), P(-1.29 + dx, 1.05, .51), P(-1.35 + dx, .6, .51), P(-1.39 + dx, .3, .52), P(-1.398 + dx, .15, .555), V(-1.40 + dx, .62, .08), V(-1.405 + dx, .70, .101),
         V(-1.41 + dx, .76, .108), V(-1.415 + dx, .85, .12), V(-1.42 + dx, 1.03, .125)]), .012, 'hose', { clamps: 5 }); }   // suction (forward) and pressure (aft) hoses, up between the fan-air duct and the right bifurcation wall, aft of the fan air valve
     /* its case drain to the aircraft's hydraulic return, beside the two hoses all the way to the pylon: it crosses under the cowl anti-ice
        duct at 5 o'clock, where the gap between the duct and the LSOP's chip collectors is widest */
-    line('edp', [P(-1.418, 5.42, .388), P(-1.405, 5.36, .40), P(-1.385, 5.3, .425), P(-1.35, 5.2, .455), P(-1.326, 5.05, .463), P(-1.322, 4.85, .482), P(-1.324, 4.7, .50), P(-1.32, 4.4, .51), P(-1.32, 3.2, .51), P(-1.33, 1.9, .51),
-      P(-1.332, 1.65, .44), P(-1.335, 1.35, .43), P(-1.36, 1.05, .495), P(-1.42, .6, .51), P(-1.46, .3, .52), P(-1.468, .15, .555), V(-1.47, .62, .078), V(-1.475, .70, .097), V(-1.48, .76, .107), V(-1.485, .85, .12), V(-1.49, 1.03, .125)], .006, 'hose', { clamps: 4 });
+    line('edp', [P(-1.418, 5.42, .388), P(-1.405, 5.36, .40), P(-1.385, 5.3, .425), P(-1.35, 5.2, .455), P(-1.326, 5.05, .463), P(-1.322, 4.85, .482), P(-1.324, 4.7, .50), P(-1.32, 4.4, .51), P(-1.32, 3.2, .51), P(-1.33, 1.9, .512),
+      P(-1.333, 1.62, .515), P(-1.337, 1.35, .515), P(-1.36, 1.05, .505), P(-1.42, .6, .51), P(-1.46, .3, .52), P(-1.468, .15, .555), V(-1.47, .62, .078), V(-1.475, .70, .097), V(-1.48, .76, .107), V(-1.485, .85, .12), V(-1.49, 1.03, .125)], .006, 'hose', { clamps: 4 });
     acc('lsop', 'Lubrication and scavenge oil pump (LSOP)', 'Seven-stage pump at the right end of the MGB forward face, 5 o\'clock: one pressure stage and six scavenge stages. It slides onto the gearbox pad on two guide pins and is held by captive bolts. Each scavenge return has its own chip collector with a black bayonet cap along the pump body, so a debris message can be traced to the bearing compartment it came from. The No. 4 and No. 5/6 scavenge tubes come forward under the gearbox into the two fittings on its 6 o\'clock side. A low oil pressure indication with normal quantity often points here or to the oil control module.', 'p.212-235, p.231, p.69; photos');
     { const f = Kt.frame('lsop', mx0, 4.85, .40);
       Kt.box('lsop', f, [.008, 0, 0], [.016, .13, .13], 'castTan', { round: .008 });                                       // square mounting flange
@@ -515,12 +516,14 @@
     /* p.167: servo fuel from the IFPC's servo pressure regulator to the four fuel-powered actuators (turbine ACC air valve, HPC and LPC
        vane actuators, 2.5 bleed valve) and back to the fuel/oil manifold ahead of the filter. The supply and return run as a pair round
        the right of the core just aft of WC08 and the CIC fire seal, under the actuators, with a branch up to each one's ports, then aft
-       to the ACC valve */
+       to the ACC valve, low under the bleed duct's elbow and beside the PRSOV, rising to the valve aft of the 4th-stage tee */
     { const arcP = (x, r, h0, h1, n) => Array.from({ length: n + 1 }, (_, i) => P(x, h0 + (h1 - h0) * i / n, r));
       line('fuel', [P(-1.258, 7.68, .448), P(-1.255, 7.5, .44), P(-1.24, 7.25, .435), P(-1.19, 7.0, .42), P(-1.168, 6.8, .395), P(-1.165, 6.6, .385)].concat(arcP(-1.165, .385, 6.45, 1.85, 16),
-        [P(-1.25, 1.68, .395), P(-1.42, 1.45, .405), P(-1.48, 1.25, .42), P(-1.53, 1.12, .44), P(-1.57, 1.10, .455), P(-1.585, 1.13, .465), P(-1.594, 1.157, .47)]), .006, 'tube', { clamps: 6, ends: false });   // supply
+        [P(-1.19, 1.74, .36), P(-1.225, 1.6, .322), P(-1.30, 1.42, .31), P(-1.40, 1.38, .31), P(-1.44, 1.36, .34), P(-1.47, 1.28, .40), P(-1.50, 1.2, .43), P(-1.53, 1.12, .44), P(-1.57, 1.10, .455),
+         P(-1.585, 1.13, .465), P(-1.594, 1.157, .47)]), .006, 'tube', { clamps: 6, ends: false });   // supply
       line('fuel', [P(-1.458, 7.9, .485), P(-1.458, 7.84, .503), P(-1.458, 7.5, .505), P(-1.455, 7.15, .503), P(-1.44, 7.0, .50), P(-1.35, 6.98, .50), P(-1.25, 6.98, .495), P(-1.20, 6.93, .46), P(-1.185, 6.75, .43), P(-1.18, 6.55, .405)].concat(arcP(-1.18, .40, 6.45, 1.9, 16),
-        [P(-1.27, 1.72, .41), P(-1.43, 1.52, .42), P(-1.48, 1.38, .465), P(-1.53, 1.29, .50), P(-1.575, 1.258, .485), P(-1.587, 1.258, .475), P(-1.594, 1.258, .47)]), .006, 'tube', { clamps: 6, ends: false });   // return, leaving the manifold aft of the fuel filter
+        [P(-1.205, 1.8, .375), P(-1.24, 1.7, .33), P(-1.30, 1.56, .312), P(-1.40, 1.52, .312), P(-1.45, 1.5, .33), P(-1.48, 1.45, .39), P(-1.51, 1.38, .45), P(-1.53, 1.29, .50), P(-1.575, 1.258, .485),
+         P(-1.587, 1.258, .475), P(-1.594, 1.258, .47)]), .006, 'tube', { clamps: 6, ends: false });   // return, leaving the manifold aft of the fuel filter
       for (const pts of [
         [P(-1.165, 2.62, .385), P(-1.16, 2.6, .43), P(-1.148, 2.64, .465), P(-1.145, 2.69, .471)], [P(-1.18, 2.58, .40), P(-1.183, 2.57, .44), P(-1.185, 2.64, .467), P(-1.185, 2.69, .471)],   // 2.5 bleed valve actuator
         [P(-1.165, 5.40, .385), P(-1.16, 5.42, .43), P(-1.148, 5.36, .465), P(-1.145, 5.31, .469)], [P(-1.18, 5.44, .40), P(-1.183, 5.45, .44), P(-1.185, 5.36, .466), P(-1.185, 5.31, .469)],   // LPC vane actuator
@@ -561,53 +564,126 @@
       line('bleed-25', [P(-1.03, 3.0, .455), P(-.95, 3.0, .462), P(-.86, 3.0, .466)], .007, 'tube', { clamps: 0, ends: false });
       box('bleed-25', -.85, 3.0, .468, .05, .05, .03, 'steel'); }                                                                            // bellcrank ahead of the ring
     PW.part('hpc-bleed-valve', { parent: 'air', label: 'HPC bleed valve and pressure sensor', src: 'p.264-267',
-      info: 'Two-position poppet valve on top of the HPC at the 6th-stage bleed port. It is spring-loaded open for the start, dumping 6th-stage air into the core compartment, and HPC pressure (station 2.9) closes it; it is fully closed by idle. The cowl anti-ice valves open during the start as well, adding bleed through the anti-ice ducting.\n\nA sense line runs forward over the case to the pressure sensor on the CIC firewall, upper right. The EEC uses it to detect a valve that fails open after the start, putting hot air into the core compartment, or one that stays closed during the start, which can stall the HPC.' });
-    { const xb = -1.53, rb = Math.max(rCase(xb), .235);
-      can('hpc-bleed-valve', xb, 12, rb + .045, .035, .09, 'steel', { rot: [G.clock(12), 0, Math.PI / 2] }); box('hpc-bleed-valve', xb, 12, rb + .105, .07, .03, .07, 'darkBox');
-      line('hpc-bleed-valve', [P(xb, 12, rb + .12), P(-1.45, 12.15, .335), P(-1.34, 12.35, .33), P(-1.20, 12.7, .345), P(-1.13, 1.2, .37), P(-1.08, 1.75, .405), P(-1.04, 2.05, .445), P(-1.02, 2.12, .455)], .005, 'tube', { clamps: 4 });
-      box('hpc-bleed-valve', -1.005, 2.15, rFire(-1.005) + .02, .05, .04, .045, 'steel'); }                                                    // pressure sensor, clear of the right thrust link's clevis
+      info: 'Two-position poppet valve on the HPC case at 1 o\'clock, on the 6th-stage bleed port. It is spring-loaded open for the start, dumping 6th-stage air through the slots round its base into the core compartment, and HPC pressure (station 2.9) closes it; it is fully closed by idle. The cowl anti-ice valves open during the start as well, adding bleed through the anti-ice ducting.\n\nA sense line from its cap runs forward over the vane rings to the pressure sensor on the CIC fire seal at 2 o\'clock. The EEC uses the sensor to detect a valve that fails open after the start, putting hot air into the core compartment, or one that stays closed during the start, which can stall the HPC.' });
+    /* p.266: "on the HPC case at the 1 o'clock position"; p.267 draws it on a pad on the rear HPC case: a slotted discharge body, a
+       narrower spring housing and a round cap with the sense line leaving its top, forward over the vane rings and down to the sensor
+       on the fire seal. Here it stands at 1:18 on the 6th stage, between the T3 harness branch and the 6th-stage HPT cooling tube at
+       1:36, under the turbine ACC valve's inlet elbow. It was on top at 12 o'clock until 2026-10-12 */
+    { const xb = -1.537, hb = 1.3, rb = rCase(xb), f = Kt.frame('hpc-bleed-valve', xb, hb, rb), L = FLa(xb, hb, rb);
+      Kt.box('hpc-bleed-valve', f, [0, .005, 0], [.058, .01, .058], 'nickel', { round: .006 });                                  // pad on the 6th-stage port
+      Kt.bolts('hpc-bleed-valve', f, [0, .011, 0], 'y', .029, 4, .0035, { phase: Math.PI / 4 });
+      Kt.cyl('hpc-bleed-valve', f, [0, .03, 0], 'y', .026, .04, 'nickel', { edge: .003 });                                       // discharge body
+      Kt.fins('hpc-bleed-valve', f, [0, .03, 0], 'y', .0255, 12, .0012, .005, .026, 'capBlack');                                // its discharge slots
+      Kt.flange('hpc-bleed-valve', f, [0, .052, 0], 'y', .014, .03, .005, 6, 'nickel');
+      Kt.cyl('hpc-bleed-valve', f, [0, .068, 0], 'y', .02, .028, 'castAl', { edge: .003 });                                      // spring housing
+      Kt.cyl('hpc-bleed-valve', f, [0, .066, .021], 'z', .008, .012, 'castAl');                                                   // side boss
+      Kt.cyl('hpc-bleed-valve', f, [0, .089, 0], 'y', .015, .016, 'castAl', { edge: .003 });                                      // cap
+      Kt.fitting('hpc-bleed-valve', f, [0, .097, 0], 'y', .005);
+      /* the sensor (p.267): a transducer on a bracket on the fire seal, the sense line into its aft side, its connector on top, wired into
+         the buffer air pressure sensor's lead where that comes through the seal */
+      const g = Kt.frame('hpc-bleed-valve', -1.008, 2.15, rFire(-1.008)), S = FLa(-1.008, 2.15, rFire(-1.008));
+      Kt.box('hpc-bleed-valve', g, [0, .006, 0], [.036, .012, .046], 'steel', { round: .003 });
+      Kt.cyl('hpc-bleed-valve', g, [0, .03, 0], 'y', .012, .036, 'steel', { edge: .002 }); Kt.hex('hpc-bleed-valve', g, [0, .016, 0], 'y', .013, .007, 'steel');
+      Kt.fitting('hpc-bleed-valve', g, [-.0118, .018, 0], '-x', .005);
+      Kt.connector('hpc-bleed-valve', g, [0, .048, 0], 'y', .008, { lead: '-x' });
+      line('hpc-bleed-valve', [L(0, .1043, 0), L(0, .114, 0), P(-1.52, 1.27, .353), P(-1.48, 1.2, .343), P(-1.40, 1.2, .335), P(-1.30, 1.21, .325), P(-1.22, 1.24, .322), P(-1.16, 1.3, .33),
+        P(-1.125, 1.42, .362), P(-1.10, 1.55, .38), P(-1.075, 1.75, .408), P(-1.045, 2.03, .44), S(-.03, .02, 0), S(-.019, .018, 0)], .005, 'tube', { clamps: 4 });   // over WC08's end, then up the fire seal
+      line('hpc-bleed-valve', [S(-.0144, .0632, 0), S(-.026, .0634, -.002), P(-1.036, 2.08, .49), P(-1.03, 2.02, .462), P(-1.022, 2.0, .446)], .004, 'harness', { clamps: 0, ends: false }); }
     /* ---- engine bleed, TTM ch. 36 (p.576-579): 4th-stage air through a check valve, or 8th-stage air through the high-pressure valve,
        joins, passes the bleed monitoring pressure sensor and the pressure-regulating shutoff valve, and enters the precooler; the bleed
-       temperature sensor is on the precooler's outlet, where the starter duct branches off. The TTM gives that order, not where the
-       units sit. The precooler, its fan-air duct and fan air valve, the outlet duct with the temperature sensor and the starter branch
-       are placed from the manual's starting figure (p.297, a left side view, scaled off the fan case at about 2.47 mm a pixel at 150
-       dpi, engine centreline at pixel row 590); the bleed ports from the HPC stages (p.53). The check valve, HPV, pressure sensor and
-       PRSOV are ASSUMED positions, packed above the rear of the HPC to the right of the 6th-stage bleed valve, inside the HPT cooling
-       tubes, where p.297's precooler inlet points */
-    PW.part('bleed-hp', { parent: 'air', label: 'Bleed ports and ducts (4th and 8th stage)', src: 'p.264; p.53; TTM ch. 36 (p.576-579)',
-      info: 'Customer bleed for the aircraft (air conditioning packs, wing anti-ice, fuel tank inerting and engine starting) is taken from the HPC case at the 4th stage, through a check valve, or from the 8th stage through the high-pressure valve when 4th-stage pressure is too low for the demand. A check valve keeps 8th-stage air from flowing back into the 4th stage. The joined duct passes the bleed monitoring pressure sensor and the pressure-regulating shutoff valve into the precooler above the core.\n\nA duct leak in the core compartment is detected by the overheat loops and can open the IFS pressure-relief door. The positions of the valves and the sensor along the duct are assumed: the manuals give their order, not where they sit.' });
-    const hB = 12.45;                                                                                                // clock of the bleed duct over the rear HPC
-    const r8 = D.GEN.rows.find(r => r.name.startsWith('HPC rotor 8')), x8 = (r8.x_le + r8.x_te) / 2, J = P(x8, hB, .35);   // the junction, over the 8th-stage port
-    { const r4 = D.GEN.rows.find(r => r.name.startsWith('HPC rotor 4')), x4 = (r4.x_le + r4.x_te) / 2;
-      PW.add('bleed-hp', G.revolve([[x4 + .03, rCase(x4)], [x4 - .03, rCase(x4)], [x4 - .03, rCase(x4) + .035], [x4 + .03, rCase(x4) + .035]], { seg: 96 }), 'nickel');     // 4th-stage manifold collar
-      line('bleed-hp', [P(x4, hB, rCase(x4) + .033), P(x4 - .012, hB, .318), P(-1.445, hB, .345), P(-1.464, hB, .347)], .035, 'duct', { clamps: 0 });   // to the check valve
-      line('bleed-hp', [P(-1.486, hB, .347), P(-1.52, hB, .35), P(-1.565, hB, .35), J], .035, 'duct', { clamps: 0 });                               // on to the junction
-      Kt.ball('bleed-hp', PW.parts.get('bleed-hp').obj, J.toArray(), .041, 'nickel');                                                               // the junction tee
+       temperature sensor is on the precooler's outlet, where the starter duct branches off. The precooler, its fan-air duct and fan air
+       valve, the outlet duct with the temperature sensor and the starter branch are placed from the manual's starting figure (p.297, a
+       left side view, scaled off the fan case at about 2.47 mm a pixel at 150 dpi, engine centreline at pixel row 590).
+       The valves are placed from the A Nahas photo of the core's right side (location photos p.19, "ENG CORE - RH"), which labels the
+       PRSOV and the HPV, and its CAD side view (p.20), which calls them the ECS valves: they sit on the right of the core, not on top,
+       where the model had them until 2026-10-12. The HPV is in a duct that rises forward from the 8th-stage port at the back of the HPC
+       to a tee over the 4th stage; the PRSOV carries on forward from the tee, and its outlet elbow turns up. Measured in the photo
+       against the turbine ACC valve, the 2.5 bleed and vane actuators and the oil tank, the tee is over the 4th stage and the PRSOV's
+       centre near x -1.30. The check valve (on the 4th-stage port under the tee) and the pressure sensor (between the tee and the PRSOV)
+       are hidden in the photo and follow the TTM's order. So is the duct beyond the elbow: here it passes under the right thrust link,
+       crosses the top of the HPC and runs aft into the precooler's inlet, which p.297 draws pointing forward */
+    PW.part('bleed-hp', { parent: 'air', label: 'Bleed ports and ducts (4th and 8th stage)', src: 'p.264; p.53; TTM ch. 36 (p.576-579); A Nahas location photos p.19-20',
+      info: 'Customer bleed for the aircraft (air conditioning packs, wing anti-ice, fuel tank inerting and engine starting). It is taken from the HPC at the 4th stage through a check valve, or from the 8th stage through the high-pressure valve (HPV) when 4th-stage pressure is too low for the demand; the check valve keeps the 8th-stage air out of the 4th stage. The two meet at a tee on the right of the core at about 2 o\'clock, over the 4th stage, with the HPV in the duct rising forward to it from the 8th-stage port at the rear of the HPC. Forward of the tee the air passes the bleed monitoring pressure sensor and the pressure-regulating shutoff valve (PRSOV); the duct then turns up under the right thrust link, crosses the top of the core and runs aft into the precooler.\n\nA rupture of these ducts in the core compartment opens the pressure-relief door on the left inner fixed structure (p.20-23). The valve positions come from a labelled photo of the core\'s right side; the check valve, the pressure sensor and the duct\'s route over the core are hidden there and follow the TTM\'s order.' });
+    const rowX = n => { const rw = D.GEN.rows.find(r => r.name.startsWith(n)); return (rw.x_le + rw.x_te) / 2; };
+    const BL = (() => { const x4 = rowX('HPC rotor 4'), TE = P(x4, 1.9, .395), Pout = P(-1.255, 1.62, .40), E2 = P(-1.570, 2.57, .392), B5 = P(-1.45, .46, .405), M = V(-1.665, .395, 0);
+      return { x4, TE, dP: Pout.clone().sub(TE).normalize(), dH: E2.clone().sub(TE).normalize(), E2, B5, M, dM: B5.clone().sub(M).normalize() }; })();   // the tee, the PRSOV and HPV axes, the precooler inlet
+    /* a valve's own frame at pos: x along its duct, y toward `up` (squared to x), z across */
+    const vframe = (pid, pos, ax, up) => { const X = ax.clone().normalize(), Y = up.clone().addScaledVector(X, -up.dot(X)).normalize(), Z = new THREE.Vector3().crossVectors(X, Y);
+      const g = new THREE.Group(); g.position.copy(pos); g.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, Y, Z)); PW.parts.get(pid).obj.add(g); g.updateMatrixWorld(true); return g; };
+    const lastPort = () => { const p = PW.ports[PW.ports.length - 1]; p.f.updateMatrixWorld(true); return p.f.localToWorld(V(...p.end)); };   // the end of the fitting or connector just built
+    const radAt = p => V(0, p.y, p.z).normalize(), tanAt = p => V(0, -p.z, p.y).normalize();                                // radially out, and toward increasing clock
+    { const { x4, TE, dP, dH, E2, B5, M, dM } = BL, W = PW.parts.get('bleed-hp').obj, rc4 = rCase(x4) + .035, leads = {};
+      PW.add('bleed-hp', G.revolve([[x4 + .03, rCase(x4)], [x4 - .03, rCase(x4)], [x4 - .03, rc4], [x4 + .03, rc4]], { seg: 96 }), 'nickel');     // 4th-stage manifold collar
+      /* the tee: a cast body with three branches, down to the 4th-stage port, aft to the HPV and forward to the PRSOV */
+      Kt.ball('bleed-hp', W, TE.toArray(), .046, 'nickel');
+      for (const d of [dP, dH]) { Kt.cyl('bleed-hp', W, TE.clone().addScaledVector(d, .034).toArray(), d, .042, .03, 'nickel'); Kt.vband('bleed-hp', W, TE.clone().addScaledVector(d, .05).toArray(), d, .042, { phase: Math.PI / 2 }); }
+      /* the 4th-stage riser under it, from its boss on the collar through the check valve */
+      { const g = Kt.frame('bleed-hp', x4, 1.9, rc4);
+        Kt.box('bleed-hp', g, [0, .004, 0], [.06, .008, .06], 'nickel', { round: .006 }); Kt.bolts('bleed-hp', g, [0, .009, 0], 'y', .029, 4, .0035, { phase: Math.PI / 4 });
+        Kt.cyl('bleed-hp', g, [0, .017, 0], 'y', .036, .018, 'nickel'); Kt.cyl('bleed-hp', g, [0, .057, 0], 'y', .036, .024, 'nickel'); }
       PW.part('bleed-cv', { parent: 'bleed-hp', label: '4th-stage bleed check valve', src: 'TTM ch. 36 (p.576-579)',
-        info: 'Flapper check valve in the 4th-stage bleed duct, ahead of the junction with the 8th-stage air. When the high-pressure valve is open, the higher 8th-stage pressure closes it, so 8th-stage air cannot flow back into the 4th stage. Its position on the duct is assumed.' });
-      { const g = Kt.frame('bleed-cv', -1.475, hB, .347);
-        Kt.cyl('bleed-cv', g, [0, 0, 0], 'x', .043, .02, 'castAl', { edge: .003 });
-        for (const s of [-1, 1]) Kt.flange('bleed-cv', g, [s * .0135, 0, 0], s > 0 ? 'x' : '-x', .035, .047, .006, 8, 'steel');
-        Kt.decal('bleed-cv', g, [0, .0435, 0], 'y', 'z', .03, .012, 'FLOW >'); }                                      // reads aft, with the flow
-      PW.part('hpv', { parent: 'bleed-hp', label: 'High-pressure valve (HPV)', src: 'TTM ch. 36 (p.576-579); p.186-187',
-        info: 'Valve on the 8th-stage bleed port. The integrated air system controllers (IASCs) open it when 4th-stage pressure is too low for the demand, and the bleed then comes from the 8th stage; otherwise it stays closed and the bleed comes from the 4th stage. Its open or closed state goes to the EEC, which uses it in setting idle (p.186-187).\n\nThe actuator with its position indicator is on the forward side. Its position over the port is assumed.' });
-      { const g = Kt.frame('hpv', x8, hB, rCase(x8));
-        Kt.cyl('hpv', g, [0, .004, 0], 'y', .038, .008, 'nickel');                                                    // port boss on the case
-        for (const y of [.011, .047]) Kt.flange('hpv', g, [0, y, 0], 'y', .024, .039, .005, 6, 'steel');
-        Kt.cyl('hpv', g, [0, .029, 0], 'y', .033, .03, 'castAl', { edge: .004 });                                     // butterfly body
-        Kt.cyl('hpv', g, [.022, .028, 0], 'x', .009, .014, 'castAl'); Kt.box('hpv', g, [.042, .028, 0], [.034, .028, .042], 'castAl', { round: .006 });   // shaft housing and actuator
-        Kt.cyl('hpv', g, [.042, .028, .0215], 'z', .012, .003, 'plateAl');                                            // position indicator
-        Kt.connector('hpv', g, [.06, .03, .012], 'x', .008); }
+        info: 'Flapper check valve on the 4th-stage bleed port, under the tee where the 8th-stage air joins. When the high-pressure valve is open, the higher 8th-stage pressure closes it, so 8th-stage air cannot flow back into the 4th stage. It is hidden under the ducts in the photo of the core: its place follows the TTM\'s order.' });
+      { const g = Kt.frame('bleed-cv', x4, 1.9, rc4 + .037);
+        Kt.cyl('bleed-cv', g, [0, 0, 0], 'y', .044, .02, 'castAl', { edge: .003 });
+        for (const s of [-1, 1]) Kt.flange('bleed-cv', g, [0, s * .0135, 0], s > 0 ? 'y' : '-y', .034, .046, .006, 8, 'steel');
+        Kt.decal('bleed-cv', g, [.0447, 0, 0], 'x', 'z', .03, .012, 'FLOW >'); }                                      // on its forward face, reading outward with the flow
+      /* the HPV branch: from the tee aft and down to the 8th-stage port at the back of the HPC, the valve in its straight run with the
+         actuator on the outboard side (the photo) */
+      line('bleed-hp', [TE.clone().addScaledVector(dH, .05), TE.clone().addScaledVector(dH, .084)], .038, 'tube', { clamps: 0, ends: false, mat: 'stainless' });   // tee to the valve's forward flange
+      line('bleed-hp', [TE.clone().addScaledVector(dH, .146), TE.clone().addScaledVector(dH, .17), E2, P(-1.583, 2.6, .375), P(-1.587, 2.61, .345), P(-1.587, 2.61, .30), P(-1.587, 2.61, rCase(-1.587) + .012)], .038, 'tube', { clamps: 0, ends: false, tension: .15, mat: 'stainless' });
+      { const g = Kt.frame('bleed-hp', -1.587, 2.61, rCase(-1.587)); Kt.box('bleed-hp', g, [0, .006, 0], [.062, .012, .062], 'nickel', { round: .006 }); Kt.bolts('bleed-hp', g, [0, .0125, 0], 'y', .03, 4, .0035, { phase: Math.PI / 4 }); }   // 8th-stage port boss
+      Kt.vband('bleed-hp', W, P(-1.587, 2.61, .29).toArray(), radAt(P(0, 2.61, 1)), .038, { phase: 0 });
+      PW.part('hpv', { parent: 'bleed-hp', label: 'High-pressure valve (HPV)', src: 'TTM ch. 36 (p.576-579); p.186-187; A Nahas location photos p.19',
+        info: 'Butterfly valve in the 8th-stage bleed duct on the right of the core, between the 8th-stage port at the rear of the HPC and the tee over the 4th stage (the photo of the core\'s right side labels it). The integrated air system controllers (IASCs) open it when 4th-stage pressure is too low for the demand, and the bleed then comes from the 8th stage; otherwise it stays closed and the bleed comes from the 4th stage. Its open or closed state goes to the EEC, which uses it in setting idle (p.186-187).\n\nIts pneumatic actuator is on the outboard side, with the position indicator under the cover, the solenoid and connector at its forward end and a small tube from its aft end to the 8th-stage elbow.' });
+      { const c = TE.clone().addScaledVector(dH, .115), g = vframe('hpv', c, dH, radAt(c).multiplyScalar(.75).addScaledVector(tanAt(c), .66)), Hw = (a, b, d) => g.localToWorld(V(a, b, d));
+        Kt.cyl('hpv', g, [0, 0, 0], 'x', .046, .058, 'castAl', { edge: .005 });                                          // body
+        for (const s of [-1, 1]) Kt.flange('hpv', g, [s * .033, 0, 0], s > 0 ? 'x' : '-x', .038, .052, .007, 8, 'steel');
+        Kt.cyl('hpv', g, [0, .052, 0], 'y', .013, .016, 'castAl');                                                         // shaft boss
+        Kt.box('hpv', g, [.004, .083, 0], [.07, .046, .064], 'castAl', { round: .008 });                                   // actuator housing
+        Kt.box('hpv', g, [.004, .1075, 0], [.056, .004, .05], 'castAl', { round: .002 });                                  // its cover
+        for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) Kt.hex('hpv', g, [.004 + a * .023, .11, b * .019], 'y', .0035, .003, 'steel');
+        Kt.cyl('hpv', g, [.004, .083, .033], 'z', .013, .003, 'plateAl'); Kt.box('hpv', g, [.004, .086, .0348], [.0015, .016, .0015], 'capBlack', { round: .0005 });   // position indicator
+        Kt.cyl('hpv', g, [-.046, .08, 0], '-x', .016, .024, 'castAl', { edge: .003 });                                     // solenoid on its forward end
+        Kt.connector('hpv', g, [-.058, .08, 0], '-x', .008, { lead: 'z' }); leads.hpv = lastPort();
+        /* the pneumatic line from the actuator's aft end down to a tap on the forward side of the 8th-stage elbow (photo) */
+        Kt.fitting('hpv', g, [.039, .075, 0], 'x', .005); const pa = lastPort();
+        const tf = Kt.frame('bleed-hp', -1.547, 2.61, .33); Kt.cyl('bleed-hp', tf, [0, 0, 0], 'x', .008, .008, 'nickel'); Kt.fitting('bleed-hp', tf, [.004, 0, 0], 'x', .005); const pb = lastPort();   // the tap is on the elbow
+        line('hpv', [pa, Hw(.058, .078, 0), P(-1.525, 2.75, .44), P(-1.522, 2.78, .38), P(-1.528, 2.7, .345), P(-1.533, 2.64, .332), pb], .004, 'tube', { clamps: 1 }); }
+      /* forward of the tee: a spool with the bleed monitoring pressure sensor, then the PRSOV */
+      Kt.cyl('bleed-hp', W, TE.clone().addScaledVector(dP, .069).toArray(), dP, .042, .038, 'stainless');
       PW.part('bmps', { parent: 'bleed-hp', label: 'Bleed monitoring pressure sensor (BMPS)', src: 'TTM ch. 36 (p.576-579)',
-        info: 'Pressure sensor on the bleed duct after the junction of the 4th and 8th-stage air, ahead of the pressure-regulating shutoff valve. The IASCs use it to control the high-pressure valve. Its position is assumed.' });
-      { const g = Kt.frame('bmps', -1.585, hB, .383);
-        Kt.cyl('bmps', g, [0, .002, 0], 'y', .012, .01, 'steel'); Kt.hex('bmps', g, [0, .012, 0], 'y', .01, .008, 'steel');
-        Kt.cyl('bmps', g, [0, .024, 0], 'y', .0095, .018, 'steel'); Kt.connector('bmps', g, [0, .034, 0], 'y', .007, { lead: 'z' }); } }
+        info: 'Pressure sensor on the bleed duct just forward of the tee where the 4th and 8th-stage air meet, ahead of the pressure-regulating shutoff valve. The IASCs use it to control the high-pressure valve. It is hidden in the photo of the core: its place follows the TTM\'s order.' });
+      { const c = TE.clone().addScaledVector(dP, .069), g = vframe('bmps', c, dP, radAt(c).multiplyScalar(.6).addScaledVector(tanAt(c), -.8));
+        Kt.cyl('bmps', g, [0, .047, 0], 'y', .011, .012, 'nickel'); Kt.hex('bmps', g, [0, .056, 0], 'y', .01, .007, 'steel');
+        Kt.cyl('bmps', g, [0, .071, 0], 'y', .0095, .022, 'steel', { edge: .002 }); Kt.connector('bmps', g, [0, .082, 0], 'y', .007, { lead: '-x' }); leads.bmps = lastPort(); }
+      PW.part('prsov', { parent: 'bleed-hp', label: 'Pressure-regulating shutoff valve (PRSOV)', src: 'TTM ch. 36 (p.576-579); p.198; A Nahas location photos p.19',
+        info: 'Butterfly valve in the bleed duct forward of the tee, on the right of the core at about 2 o\'clock over the forward HPC (the photo of the core\'s right side labels it). It regulates the pressure of the bleed delivered to the aircraft and shuts the engine\'s bleed off. The integrated air system controllers (IASCs) control and monitor it, and it is also controlled from the L (R) BLEED button on the AIR panel. Pressing the ENG FIRE button closes it, through the IASC, with the fan air valve (p.198).\n\nThe actuator is on its outboard side, with the position indicator, a manual override nut, the pressure regulator and the torque motor and connector. Its outlet elbow turns up under the right thrust link toward the precooler.' });
+      { const c = TE.clone().addScaledVector(dP, .13), g = vframe('prsov', c, dP, radAt(c).multiplyScalar(.25).addScaledVector(tanAt(c), .97));
+        Kt.cyl('prsov', g, [0, 0, 0], 'x', .052, .07, 'castAl', { edge: .006 });                                         // body
+        for (const s of [-1, 1]) { Kt.cyl('prsov', g, [s * .039, 0, 0], 'x', .045, .008, 'castAl'); Kt.vband('prsov', g, [s * .041, 0, 0], 'x', .045, { phase: Math.PI }); }
+        Kt.cyl('prsov', g, [0, .057, 0], 'y', .014, .018, 'castAl');                                                        // shaft neck
+        Kt.cyl('prsov', g, [0, .083, 0], 'y', .036, .036, 'castAl', { edge: .006 });                                        // actuator
+        Kt.cyl('prsov', g, [0, .1025, 0], 'y', .028, .003, 'plateAl'); Kt.box('prsov', g, [0, .1045, .006], [.003, .0015, .018], 'capBlack', { round: .0005 });   // position indicator
+        Kt.hex('prsov', g, [.018, .104, -.016], 'y', .007, .007, 'steel');                                                   // manual override nut
+        Kt.box('prsov', g, [.038, .08, 0], [.026, .03, .03], 'castAl', { round: .005 });                                     // pressure regulator
+        Kt.cyl('prsov', g, [-.045, .083, 0], '-x', .015, .022, 'darkBox');                                                    // torque motor
+        Kt.connector('prsov', g, [-.058, .083, 0], '-x', .009, { lead: '-z' }); leads.prsov = lastPort(); }
+      /* on from the PRSOV: the elbow turns up under the right thrust link, the duct crosses the top of the HPC and runs aft, straight for
+         its last part, into the precooler's inlet (built with the precooler) */
+      const dc = line('bleed-hp', [TE.clone().addScaledVector(dP, .172), P(-1.222, 1.45, .388), P(-1.232, 1.22, .392), P(-1.265, 1.0, .41), P(-1.34, .74, .41), B5, M.clone().addScaledVector(dM, .12), M.clone().addScaledVector(dM, .07)], .042, 'tube', { clamps: 0, ends: false, tension: .15, mat: 'stainless' });
+      { const t = tAt(dc, -1.30); Kt.vband('bleed-hp', W, dc.getPointAt(t).toArray(), dc.getTangentAt(t), .042, { phase: 0 }); }
+      /* the IASC wiring, down from the pylon on the right of the fan-air duct, over the duct and under the thrust link to a junction
+         beside the tee, where the leads from the PRSOV's torque motor, the pressure sensor and the HPV's solenoid join it */
+      const J1 = P(-1.43, 1.3, .44);
+      line('bleed-hp', [V(-1.55, 1.017, .12), V(-1.55, .90, .125), V(-1.55, .78, .108), V(-1.55, .70, .10), V(-1.548, .635, .085), V(-1.542, .56, .078), P(-1.535, .3, .50), P(-1.50, .6, .47), P(-1.465, .95, .453), J1], .007, 'harness', { clamps: 2, ends: false });
+      line('prsov', [leads.prsov, P(-1.36, 2.02, .468), P(-1.40, 1.78, .47), P(-1.42, 1.55, .455), J1], .005, 'harness', { clamps: 0, ends: false });
+      line('bmps', [leads.bmps, P(-1.405, 1.55, .462), P(-1.414, 1.585, .459)], .004, 'harness', { clamps: 0, ends: false });   // into the PRSOV's lead
+      line('hpv', [leads.hpv, P(-1.43, 2.0, .482), P(-1.43, 1.8, .48), P(-1.415, 1.67, .468)], .005, 'harness', { clamps: 0, ends: false }); }   // into the PRSOV's lead
 
     /* p.297: the precooler hangs in the upper bifurcation just above the core, from x -1.69 to -2.08, pitched about 17 deg nose-up. Fan
        air comes aft from the precooler duct inlet casting through a bellows and the fan air valve, opens out into its forward face and
-       leaves through the aft face into the core compartment. Bleed comes up into the lower header through the inlet the figure shows
-       pointing forward and down, and leaves the upper header aft, where the outlet duct rises into the pylon and the starter duct drops
+       leaves through the aft face into the core compartment. Bleed comes into the lower header through the inlet the figure shows
+       pointing forward, and leaves the upper header aft, where the outlet duct rises into the pylon and the starter duct drops
        away. A lug on top hangs it from the pylon and a strut braces its lower corner to the aft mount fitting. The bifurcation walls
        are only 0.18 m apart at its lower edge, so it is built 0.16 m wide */
     PW.part('precooler', { parent: 'air', label: 'Precooler', src: 'p.297; p.60; TTM ch. 36 (p.576-579)',
@@ -622,9 +698,11 @@
       for (let i = 0; i < 15; i++) Kt.box('precooler', pf, [-.1205, 0, -.07 + i * .01], [.002, .27, .0012], 'steel', { round: 0, shadow: false });   // fins on the open aft face
       Kt.box('precooler', pf, [-.005, .172, 0], [.23, .055, .14], 'castAl', { round: .024 });                         // upper (outlet) header
       Kt.box('precooler', pf, [.01, -.198, 0], [.22, .11, .14], 'castAl', { round: .028 });                           // lower (inlet) header
-      /* the bleed inlet: from the PRSOV's outlet flange up into the lower header */
-      const M = V(-1.665, .395, 0), dJM = M.clone().sub(J).normalize(), s0 = J.clone().addScaledVector(dJM, .094), s1 = M.clone().addScaledVector(dJM, .075);
-      Kt.cone('precooler', W, s0.clone().add(s1).multiplyScalar(.5).toArray(), dJM, .057, .05, s0.distanceTo(s1), 'nickel');
+      /* the bleed inlet: a stub out of the lower header's forward corner, pointing forward and to the right, where the duct from the
+         PRSOV joins it on a V-band */
+      { const { M, dM } = BL, a = M.clone().addScaledVector(dM, -.05), b = M.clone().addScaledVector(dM, .07);
+        Kt.cone('precooler', W, a.clone().add(b).multiplyScalar(.5).toArray(), dM, .046, .054, a.distanceTo(b), 'nickel');
+        Kt.vband('precooler', W, b.clone().addScaledVector(dM, -.006).toArray(), dM, .046, { phase: Math.PI / 2 }); }
       /* the hanging lug, its link up to the pylon, and the strut from the lower corner to the aft mount fitting */
       { const lug = pcW(.10, .2); Kt.box('precooler', W, lug.toArray(), [.05, .03, .04], 'steel', { round: .006 });
         const top = V(-1.80, 1.012, 0); Kt.rod('precooler', W, [lug.x, lug.y + .012, 0], top.toArray(), .009, 'steel'); Kt.box('precooler', W, [top.x, 1.006, 0], [.05, .016, .05], 'steel', { round: .004 }); }
@@ -661,11 +739,6 @@
       line('precooler', [T, V(-2.20, .82, 0), V(-2.29, .925, 0), V(-2.36, 1.0, 0), V(-2.385, 1.035, 0)], .06, 'tube', { clamps: 0, ends: false });
       Kt.cyl('precooler', W, [-2.245, .8725, 0], [-.09, .105, 0], .067, .1, 'blanket');                                 // insulating sleeve (p.297)
       Kt.vband('precooler', W, [-2.372, 1.016, 0], [-.025, .035, 0], .061, { phase: 0 });                              // the joint with the pylon's bleed duct
-      /* wiring to the IASCs: down from the pylon on the right of the fan-air duct to a breakout over the PRSOV */
-      const bk = V(-1.565, .52, .075);
-      line('precooler', [V(-1.55, 1.017, .12), V(-1.55, .90, .125), V(-1.55, .78, .108), V(-1.55, .70, .10), V(-1.55, .63, .085), V(-1.555, .57, .07), bk], .006, 'harness', { clamps: 2, ends: false });
-      line('precooler', [V(-1.5084, .2821, .080), V(-1.502, .295, .105), V(-1.507, .33, .13), V(-1.512, .39, .126), V(-1.53, .45, .106), V(-1.55, .50, .085), bk], .005, 'harness', { clamps: 0, ends: false });   // HPV
-      line('precooler', [V(-1.585, .4116, .1117), V(-1.578, .43, .108), V(-1.57, .48, .09), bk], .004, 'harness', { clamps: 0, ends: false });   // BMPS
 
       PW.part('fav', { parent: 'precooler', label: 'Fan air valve (FAV)', src: 'TTM ch. 36 (p.578-579); p.198; Breeze maintenance',
         info: 'Butterfly valve at the front of the precooler\'s fan-air duct, just aft of the bellows on the precooler duct inlet. The integrated air system controllers (IASCs) modulate it to hold the bleed temperature measured by the bleed temperature sensor on the precooler outlet: more fan air through the precooler, cooler bleed. Pressing the ENG FIRE button closes it, through the IASC, together with the pressure-regulating shutoff valve (p.198).\n\nThe round actuator on top has a position indicator on its face, with the electrical control head above it and a small tube aft along the duct to a tap on the precooler.' });
@@ -687,21 +760,6 @@
       line('fav', [V(-1.393, .8842, -.004), V(-1.41, .88, -.015), V(-1.47, .865, -.05), V(-1.57, .84, -.075), V(-1.67, .805, -.09), V(-1.735, .77, -.099), V(-1.757, .74, -.098),
         V(-1.765, .725, -.097), V(-1.7676, .7172, -.0922)], .005, 'tube', { clamps: 3 });   // aft along the top left of the duct to the precooler tap
       line('fav', [V(-1.306, 1.0072, 0), V(-1.3058, 1.012, .002), V(-1.3055, 1.017, .004)], .006, 'harness', { clamps: 0, ends: false });   // up into the pylon
-
-      PW.part('prsov', { parent: 'precooler', label: 'Pressure-regulating shutoff valve (PRSOV)', src: 'TTM ch. 36 (p.576-579); p.198',
-        info: 'Butterfly valve between the bleed sources and the precooler. It regulates the pressure of the bleed air delivered to the aircraft and shuts the engine\'s bleed off. The integrated air system controllers (IASCs) control and monitor it, and it is also controlled from the L (R) BLEED button on the AIR panel. Pressing the ENG FIRE button closes it, through the IASC, with the fan air valve (p.198).\n\nThe actuator on top has a position indicator and a manual override nut. Its position is assumed: the TTM places it after the junction of the 4th and 8th-stage air and before the precooler; here it is bolted to the precooler\'s bleed inlet.' });
-      { const P2 = PW.parts.get('prsov').obj, a = J.clone().addScaledVector(dJM, .028), b = J.clone().addScaledVector(dJM, .09), c = a.clone().add(b).multiplyScalar(.5);
-        Kt.cyl('prsov', P2, c.toArray(), dJM, .046, .058, 'castAl', { edge: .005 });
-        for (const [p, s] of [[a, -1], [b, 1]]) Kt.flange('prsov', P2, p.toArray(), dJM.clone().multiplyScalar(s), .04, .052, .007, 8, 'steel');
-        const up = V(0, 1, 0).addScaledVector(dJM, -dJM.y).normalize(), ac = c.clone().addScaledVector(up, .078);
-        Kt.cyl('prsov', P2, c.clone().addScaledVector(up, .05).toArray(), up, .014, .022, 'castAl');                     // shaft neck
-        Kt.cyl('prsov', P2, ac.toArray(), up, .036, .046, 'castAl', { edge: .006 });                                      // actuator
-        Kt.cyl('prsov', P2, ac.clone().addScaledVector(up, .0245).toArray(), up, .028, .004, 'plateAl');                  // position indicator
-        Kt.hex('prsov', P2, ac.clone().addScaledVector(up, .03).toArray(), up, .007, .008, 'steel');                      // manual override nut
-        Kt.cyl('prsov', P2, ac.clone().add(V(0, 0, .043)).toArray(), 'z', .016, .03, 'darkBox');                          // torque motor
-        Kt.connector('prsov', P2, ac.clone().add(V(0, 0, .058)).toArray(), 'z', .009, { lead: 'y' });
-        const pe = ac.clone().add(V(0, .0162, .0751));
-        line('prsov', [pe, V(pe.x + .01, pe.y + .03, pe.z - .02), V(-1.58, .50, .095), bk], .005, 'harness', { clamps: 0, ends: false }); }
 
       PW.part('bts', { parent: 'precooler', label: 'Bleed temperature sensor (BTS)', src: 'TTM ch. 36 (p.576-579); p.297',
         info: 'Temperature probe in the bleed duct just downstream of the precooler, where the starter duct branches off. The IASCs modulate the fan air valve on it, holding the temperature of the bleed delivered to the aircraft. The manual\'s starting figure (p.297) draws it on the outlet duct but does not label it.' });
@@ -783,9 +841,9 @@
     /* p.279 and p.281: three ducts join the core compartment to the 2.5 cavity, where the BAHX and the buffer manifold at the BACV sit.
        They enter it through bosses low on the CIC's aft cone, under the fuel/oil cooler's forward end; their passages through the case
        to the BAHX and the manifold are hidden. The BASOV's outlet turns forward from its top flange, over the pilot line and the left
-       core harness, and runs forward at 11:41 under the cooler. A boss on the 4th-stage collar at 11:58 feeds the BAHX, left of the HPC bleed valve's sense line. Its cooled
-       outlet runs aft along the right of the top, right of the PRSOV and the IASC leads, past the precooler's lower header and over
-       WC05, down to a boss on the TIC over the No. 4 bearing compartment */
+       core harness, and runs forward at 11:41 under the cooler. A boss on the 4th-stage collar at 11:58 feeds the BAHX. Its cooled
+       outlet runs aft low on the right of the top, under the engine bleed duct where that crosses over to the precooler, past the
+       precooler's lower header and over WC05, down to a boss on the TIC over the No. 4 bearing compartment */
     { const boss = (h, rb, s) => { const xb = -.95 - (.515 - rb) * .83, f = Kt.frame('buffer-air', xb, h, rb);                    // on the cone's aft face, the port facing aft
         Kt.cyl('buffer-air', f, [.007, 0, 0], 'x', s * 1.6, .046, 'nickel', { edge: .003 }); Kt.fitting('buffer-air', f, [-.016, 0, 0], '-x', s); };
       boss(11.68, .36, .025); boss(11.97, .36, .02); boss(.6, .37, .02);
@@ -794,8 +852,8 @@
     line('buffer-air', [P(-1.47, 11.03, .367), P(-1.47, 11.03, .392), P(-1.475, 11.25, .41), P(-1.47, 11.5, .40), P(-1.45, 11.66, .385), P(-1.40, 11.68, .366), P(-1.30, 11.68, .362),
       P(-1.20, 11.68, .36), P(-1.16, 11.68, .36), P(-1.1307, 11.68, .36)], .02, 'tube', { clamps: 2 });   // BASOV outlet into the case, to the buffer manifold
     line('buffer-air', [P(-1.44, 11.97, .315), P(-1.43, 11.97, .33), P(-1.38, 11.97, .345), P(-1.25, 11.97, .355), P(-1.16, 11.97, .36), P(-1.1237, 11.97, .36)], .015, 'tube', { clamps: 1 });   // 4th stage to the BAHX
-    line('buffer-air', [P(-1.1154, .6, .37), P(-1.15, .6, .37), P(-1.20, .62, .385), P(-1.30, .62, .40), P(-1.40, .65, .41), P(-1.47, .68, .42), P(-1.55, .72, .425), P(-1.62, .72, .43),
-      P(-1.68, .70, .43), P(-1.75, .62, .43), P(-1.85, .55, .44), P(-1.95, .40, .44), P(-2.02, .27, .42), P(-2.07, .17, .388), P(-2.10, .13, .371)], .015, 'tube', { clamps: 4 });   // BAHX to the No. 4 compartment
+    line('buffer-air', [P(-1.1154, .6, .37), P(-1.15, .58, .366), P(-1.20, .5, .352), P(-1.30, .45, .337), P(-1.42, .42, .332), P(-1.53, .42, .333), P(-1.60, .45, .345), P(-1.66, .55, .375),
+      P(-1.72, .63, .41), P(-1.80, .6, .43), P(-1.85, .55, .44), P(-1.95, .40, .44), P(-2.02, .27, .42), P(-2.07, .17, .388), P(-2.10, .13, .371)], .015, 'tube', { clamps: 4 });   // BAHX to the No. 4 compartment, under the engine bleed duct
     /* p.276-277: four tubes take 6th-stage HPC air to the HPT 2nd stage vanes and blade attachments, two on each side, arching over the
        case from the 6th-stage ports to the HPT case just ahead of the clearance control manifold, metered by plates at the case */
     PW.part('hpt-cooling', { parent: 'air', label: 'HPT cooling air tubes (6th stage)', src: 'p.276-277',
