@@ -44,7 +44,8 @@
      lineId, so the connection audit can tell a line's own end fittings from whatever it plugs into */
   let lineSeq = 0;
   function line(pid, pts, r, kind, o) { o = o || {};
-    const mat = o.mat || { tube: 'tube', hose: 'fireSleeve', harness: 'harness', duct: 'insulation', black: 'blackHose', cable: 'braidSteel' }[kind] || 'tube', lid = ++lineSeq;
+    const inCore = pts.reduce((s, p) => s + (p.isVector3 ? p.x : p[0]), 0) / pts.length < -.95;                    // aft of the fan case, in the core compartment
+    const mat = o.mat || { tube: 'tube', hose: 'fireSleeve', harness: inCore ? 'harnessCore' : 'harness', duct: 'insulation', black: 'blackHose', cable: 'braidSteel' }[kind] || 'tube', lid = ++lineSeq;
     const tag = m => { m.userData.isLine = true; m.userData.lineId = lid; m.userData.lineKind = kind; return m; };
     const g = G.tube(pts.map(p => (p.isVector3 ? p : V(...p))), r, { radial: kind === 'duct' ? 16 : 10, tension: o.tension === undefined ? .25 : o.tension });
     if ((kind === 'harness' || kind === 'cable') && g.attributes.uv) { const L = g.userData.curve.getLength(), uv = g.attributes.uv, k = kind === 'cable' ? 16 : 8; for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * L * k); }   // braid repeats along its length
