@@ -468,7 +468,10 @@
     { const ax = -1.745, ah = 9.9, f = frame('aoc', ax, ah, .44);
       fbox('aoc', f, 0, -.002, 0, .17, .08, .32, 'darkBox', .004);                                                                          // finned matrix
       for (let i = 0; i < 22; i++) fbox('aoc', f, 0, 0, -.152 + i * .304 / 21, .17, .086, .003, 'nickel', .0005);
-      for (const s of [1, -1]) { fbox('aoc', f, s * .15, 0, 0, .13, .12, .34, 'steel', .025); fbox('aoc', f, s * .15, .057, 0, .09, .012, .27, 'darkBox', .01); }   // inlet and exhaust plenums with their openings
+      const fins = [];
+      for (const s of [1, -1]) { fbox('aoc', f, s * .15, 0, 0, .13, .12, .34, 'steel', .025); fbox('aoc', f, s * .15, .057, 0, .09, .012, .27, 'darkBox', .01);   // inlet and exhaust plenums with their openings
+        for (let i = 0; i < 13; i++) fins.push(G.roundedBox(.0012, .012, .25, .0003).translate(s * .15 - .039 + i * .0065, .0578, 0)); }
+      PW.add('aoc', G.merge(fins), 'chromate', { solid: true, into: f });                                                  // the matrix's olive-gold fins seen through each opening (photo)
       /* the photos: a thick orange silicone gasket round the exhaust plenum's opening seals it against the IFS window's plain aft frame
          when the door is closed; the inlet joint's gasket is on the door */
       for (const [dx, dz, w, d] of [[0, .145, .11, .02], [0, -.145, .11, .02], [.055, 0, .02, .29], [-.055, 0, .02, .29]])
@@ -888,6 +891,7 @@
       const inD = V(-.1, .55, .83).normalize(), ringC = V(.088, .05, .07), onIn = s => ringC.clone().addScaledVector(inD, s);   // clear of the right thrust link at 1 o'clock
       line('tacc', [L(.063, 0, 0), L(.08, .006, .008), L(.088, .025, .035), L(...onIn(-.01).toArray())], .036, 'tube', { clamps: 0, ends: false, mat: 'castAl' });
       Kt.tube('tacc', f, ringC.toArray(), inD, .036, .056, .012, 'castAl'); Kt.bolts('tacc', f, onIn(.008).toArray(), inD, .047, 10, .004);
+      Kt.tube('tacc', f, onIn(-.003).toArray(), inD, .056, .061, .009, 'gasketOrange');                                     // the orange silicone seal band on the ring (photo)
       /* servo valve and torque motor housing on top, with its bolted cover */
       Kt.box('tacc', f, [-.005, .056, .015], [.085, .04, .065], 'castAl', { round: .008 });
       for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) Kt.hex('tacc', f, [-.005 + a * .034, .077, .015 + b * .025], 'y', .0035, .003, 'steel');
