@@ -867,7 +867,17 @@
       PW.part('dsu', { parent: 'eec', label: 'Data storage unit (DSU)', src: 'p.90-91, p.104-105',
         info: 'Small round plug, a Hamilton Sundstrand DSU1230-1, in connector J99 on the face of the EEC, on a lanyard. It holds the engine serial number and the rating and trim data in flash memory, read by both channels\' protection processors. It stays with the engine: when an EEC is changed, the new EEC reads the engine\'s data from it.' });
       const g = Kt.frame('dsu', ex, eh, er); Kt.cyl('dsu', g, [-.07, .052, .07], 'y', .021, .012, 'steel', { edge: .003 }); Kt.cyl('dsu', g, [-.07, .061, .07], 'y', .018, .008, 'capBlack', { edge: .002 });
-      Kt.rod('dsu', g, [-.07, .057, .05], [-.03, .05, .035], .0015, 'steel'); }
+      /* its lanyard, over the EEC's face to the support rail (p.91, p.95) */
+      const ly = [[-.07, .057, .05], [-.15, .056, .045], [-.215, .045, .035], [-.25, .01, .03], [-.263, -.022, .027]];
+      for (let i = 1; i < ly.length; i++) Kt.rod('dsu', g, ly[i - 1], ly[i], .0013, 'steel');
+      /* the EEC/PHMU support rail (p.91, p.95, p.105; Brian's photo): a lime bracket standing on the case between the EEC's aft isolators
+         (on its forward side) and the PHMU's forward ones (on its aft side), with a row of oval cutouts and three finger-type harness
+         comb clamps along its top */
+      Kt.arcLoft('eec', [{ h: 8.7, x: -.347, w: .008, ri: .97, ro: 1.02, n: 6 }, { h: 9.3, x: -.347, w: .008, ri: .97, ro: 1.02, n: 6 }], 'lime');
+      Kt.arcLoft('eec', [{ h: 8.7, x: -.347, w: .04, ri: .97, ro: .975, n: 6 }, { h: 9.3, x: -.347, w: .04, ri: .97, ro: .975, n: 6 }], 'lime');   // its foot on the case
+      for (let i = 0; i < 5; i++) { const fo = Kt.frame('eec', -.3515, 8.78 + i * .11, .996); Kt.box('eec', fo, [0, 0, 0], [.001, .018, .03], 'darkBox', { round: .008 }); }   // oval cutouts
+      for (const h of [8.82, 9.0, 9.18]) { const fc = Kt.frame('eec', -.347, h, 1.02);
+        Kt.box('eec', fc, [0, .004, 0], [.014, .008, .028], 'lime', { round: .002 }); for (const s of [-1, 0, 1]) Kt.box('eec', fc, [0, .016, s * .011], [.01, .018, .004], 'lime', { round: .0015 }); } }
     PW.part('harnesses', { label: 'Engine harnesses', explode: [0, .25, 0], src: 'p.102-107; photos',
       info: 'Braided harnesses from the EEC to every sensor, valve and actuator, clipped to the fan case on lime-green stand-offs. WF01 and WF02 bring the aircraft connections down from the pylon to the EEC; W03 and W04 run from the EEC along the bottom of the fan case into the core; WC05 rings the turbine exhaust for the EGT probes and WC08 runs over the HPC (p.105, p.107). Chafe at clamps and connector security are the usual findings.' });
     /* p.105 (traced at 300 dpi) and the photos. Five connectors on a bracket at 12 o'clock form the aircraft interface. WF02 and WF01
