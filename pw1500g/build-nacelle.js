@@ -483,9 +483,9 @@
          with flush handles on the left door, keepers on the right; No. 2 and 3 sit inside the bay behind the latch access door), the
          bifurcation latch system between the IFS halves, the bumpers on the IFS edges, and the closure assist stowed in the bay */
       { const Kt = PW.kit, lb = `${pid}-latch-beam`, aB = sg > 0 ? t0 + tl : t0, hB = aB / (Math.PI / 6), hI = (sg > 0 ? it0 + itl : it0) / (Math.PI / 6);
-        PW.part(lb, { parent: pid, attach: hinge, label: sg > 0 ? 'Right latch beam: latch keepers, BLS receiver, bumpers' : 'Left latch beam: latches, BLS handle, closure assist, bumpers', src: 'p.24-31',
-          info: sg > 0 ? 'The bottom edge of the right door: the keepers for latches 1 to 5, the receiver for the bifurcation latch pin on the IFS edge, the upper and lower bumpers that align the IFS halves as the doors close, and the lug for the reverser lockout pin under the sleeve\'s forward end. The upper bumper has a compression strut for the wider gap at the top.'
-            : 'The bottom edge of the left door. Latches 1 to 5 hook onto the right door: open them 5, 4, 3, 2, 1 and close them 1 to 5, using the closure assist assembly to pull the doors together first. Latches 2 and 3 are inside the bay behind the latch access door.\n\nThe bifurcation latch system (BLS) pins the two IFS halves together at the bottom to limit IFS deflection if an air duct bursts. Its handle is painted red and is worked through the latch access door; if it is not locked, the latch access door cannot be closed. Open the BLS before the latches and close it last.\n\nThe two reverser lockout pins are stowed in sockets in the same bay. To lock the reversers out for MEL dispatch, first pin the ICU\'s inhibit lever, then fit a pin down through each sleeve\'s lower edge into the lug on its latch beam, and stow the sleeves\' blanking plates here in their place (p.372-375). For maintenance alone the ICU inhibit is enough.' });
+        PW.part(lb, { parent: pid, attach: hinge, label: sg > 0 ? 'Right latch beam: latch keepers, BLS receiver, rod and handle, closure assist, bumpers' : 'Left latch beam: latches, BLS pin, bumpers', src: 'p.24-31',
+          info: sg > 0 ? 'The bottom edge of the right door: the keepers for latches 1 to 5; the receiver for the bifurcation latch pin on the IFS edge, with the rod that locks the pin running down to the red BLS handle in the bay; the closure assist stowed on its web; the upper and lower bumpers that align the IFS halves as the doors close; and the lug for the reverser lockout pin under the sleeve\'s forward end. The upper bumper has a compression strut for the wider gap at the top.'
+            : 'The bottom edge of the left door. Latches 1 to 5 hook onto the right door: open them 5, 4, 3, 2, 1 and close them 1 to 5, using the closure assist assembly to pull the doors together first. Latches 2 and 3 are inside the bay behind the latch access door.\n\nThe bifurcation latch system (BLS) pins the two IFS halves together at the bottom to limit IFS deflection if an air duct bursts: the pin is on this door\'s IFS edge, and the receiver, the locking rod and its red handle are on the right door\'s. The handle is worked through the latch access door; if it is not locked, the latch access door cannot be closed. Open the BLS before the latches and close it last.\n\nThe two reverser lockout pins are stowed in sockets in the same bay. To lock the reversers out for MEL dispatch, first pin the ICU\'s inhibit lever, then fit a pin down through each sleeve\'s lower edge into the lug on its latch beam, and stow the sleeves\' blanking plates here in their place (p.372-375). For maintenance alone the ICU inhibit is enough.' });
         /* the web, 1.6 deg in from the door's bottom edge, from just aft of the bifurcation pass-through panel to the sleeve; the drain
            mast passes down between the two webs */
         const aW = aB - sg * deg(.6), hW = aW / (Math.PI / 6), web = new THREE.Shape(), xa = -1.10, xb = xTE - .05, n = 8, pts = [];
@@ -502,25 +502,29 @@
           if (sg < 0) { Kt.box(lb, f, [0, 0, -.017], [.1, .03, .03], 'steel', { round: .004 }); Kt.box(lb, f, [.05, 0, -.036], [.016, .01, .014], 'steel', { round: .003 });   // hook body and hook
             if (outside) { const g = Kt.frame(lb, xx, hB + .04, rOut(xx)); Kt.box(lb, g, [0, -.0005, 0], [.156, .003, .04], 'darkBox', { round: .0015 }); Kt.box(lb, g, [0, .0008, 0], [.15, .003, .034], 'greyPrimer', { round: .004 }); } }
           else { Kt.box(lb, f, [0, 0, .015], [.06, .034, .03], 'steel', { round: .004 }); Kt.cyl(lb, f, [.0, 0, .022], 'x', .005, .07, 'steel'); } }                  // keeper bracket and pin
-        /* bifurcation latch system at x -1.36: the fitting and pin on the left IFS edge, the receiver on the right, the rod down to the
-           red handle in the bay */
+        /* bifurcation latch system at x -1.36 (p.21, p.24-27, p.31): the fitting and pin on the left IFS edge; on the right the receiver,
+           with the rod that is pushed up through the pin's cross bore running down to the red handle in the bay, just right of its
+           centreline. The rod and handle were on the left door until 2026-10-12 */
         const fI = Kt.frame(lb, -1.36, hI, rIFS(-1.36) - .025);
         Kt.box(lb, fI, [0, -.01, sg * .012], [.05, .036, .028], 'steel', { round: .005 });
-        if (sg < 0) { Kt.cyl(lb, fI, [0, -.012, -.04], 'z', .0065, .04, 'steel');
-          PW.add(lb, G.rod(G.onRing(-1.36, rIFS(-1.36) - .01, G.clock(hI - .02)), G.onRing(-1.36, rOut(-1.36) - .05, G.clock(hB + .05)), .006), 'steel');
-          const fh = Kt.frame(lb, -1.36, hB + .05, rOut(-1.36) - .05);
+        if (sg < 0) Kt.cyl(lb, fI, [0, -.012, -.04], 'z', .0065, .04, 'steel');
+        else { Kt.tube(lb, fI, [0, -.012, .028], 'z', .0068, .013, .016, 'steel');
+          PW.add(lb, G.rod(G.onRing(-1.36, rIFS(-1.36) - .01, G.clock(hI + .02)), G.onRing(-1.36, rOut(-1.36) - .05, G.clock(hB - .05)), .006), 'steel');
+          const fh = Kt.frame(lb, -1.36, hB - .05, rOut(-1.36) - .05);
           Kt.box(lb, fh, [0, -.008, 0], [.014, .016, .014], 'steel', { round: .003, mat: { color: '#b3191f', metalness: .15, roughness: .5 } });
           Kt.box(lb, fh, [.035, -.008, 0], [.07, .012, .014], 'steel', { round: .004, mat: { color: '#b3191f', metalness: .15, roughness: .5 } }); }   // the red L-handle
-        else Kt.tube(lb, fI, [0, -.012, .028], 'z', .0068, .013, .016, 'steel');
         /* bumpers: lower on the bottom IFS edge, upper on the top edge (where the compression strut bridges the wider gap). p.21: the
            lower aft pair sits well forward of the upper aft pair, at about 45% of the IFS's length against 59% */
         const hT = (sg > 0 ? it0 : it0 + itl) / (Math.PI / 6);
         for (const [xx, h] of [[-1.08, hI], [-1.70, hI], [-1.08, hT], [-1.86, hT]]) { const f = Kt.frame(lb, xx, h, rIFS(xx) - .03), tw = h === hI ? (sg > 0 ? 'z' : '-z') : (sg > 0 ? '-z' : 'z');
           Kt.box(lb, f, [0, 0, 0], [.04, .024, .02], 'steel', { round: .004 }); Kt.cyl(lb, f, [0, 0, Kt.dir(tw).z * .016], tw, .011, .012, 'rubber', { edge: .003 }); }
-        /* closure assist assembly, stowed along the left web in the bay: a turnbuckle with a hook at its forward end */
-        if (sg < 0) { const fc = Kt.frame(lb, -1.34, hB + .08, rOut(-1.34) - .09);
+        /* closure assist assembly, stowed along the right web in the bay (p.29 view A, p.31): a turnbuckle with a hook at its forward
+           end, which hooks onto the other door's fixed panel support (p.30), a lug on the left web. It was stowed on the left until
+           2026-10-12 */
+        if (sg > 0) { const fc = Kt.frame(lb, -1.34, hB - .08, rOut(-1.34) - .09);
           Kt.cyl(lb, fc, [0, 0, 0], 'x', .009, .16, 'steel', { edge: .002 }); for (const s of [-1, 1]) Kt.hex(lb, fc, [s * .088, 0, 0], 'x', .011, .016, 'steel');
           Kt.box(lb, fc, [.11, .006, 0], [.03, .012, .008], 'steel', { round: .003 }); }
+        else { const fk = Kt.frame(lb, -1.24, hB + .06, rOut(-1.24) - .09); Kt.box(lb, fk, [0, 0, 0], [.024, .03, .012], 'steel', { round: .003 }); Kt.cyl(lb, fk, [0, .004, 0], 'z', .004, .018, 'steel'); }   // its hook lug
         /* p.372-375: reverser lockout, for MEL dispatch or maintenance. With the ICU's inhibit lever pinned, a lockout pin goes down
            through the stowed sleeve's lower edge into this lug, so the sleeve cannot deploy. The two pins live in sockets in the bay at
            the latch access panel; when they are fitted, the sleeves' blanking plates are stowed there instead */
@@ -536,12 +540,17 @@
           const plate = Kt.sub(fp, [0, .014, .03]); plate.visible = false; LG.push([plate, true]);                               // a sleeve's blanking plate, stowed here while its pin is fitted
           Kt.box(lb, plate, [0, 0, 0], [.036, .0016, .024], 'greyPrimer', { round: .008 }); }
         }
-      /* the latch access door on the bottom of the left door, ahead of the drain mast (p.31) */
-      if (sg < 0) { PW.part('tr-latch-access-door', { parent: pid, attach: hinge, label: 'Latch access door', src: 'p.24, p.30-31, p.50',
-          info: 'Door in the bottom of the left reverser door, ahead of the drain mast. Behind it are latches 2 and 3, the red bifurcation latch system handle and the closure assist assembly. It will not close unless the BLS handle is locked, so a latch access door that will not close means the BLS is not latched. The drain mast exits next to it, and the drain map placard is inside it.' });
-        const f = PW.kit.frame('tr-latch-access-door', -1.34, 6.1, rOut(-1.34));
-        PW.kit.box('tr-latch-access-door', f, [0, .0002, 0], [.326, .003, .1], 'darkBox', { round: .002 }); PW.kit.box('tr-latch-access-door', f, [0, .0016, 0], [.32, .004, .094], 'nacellePaint', { round: .008 });
-        for (const s of [-1, 1]) PW.kit.box('tr-latch-access-door', f, [s * .12, .0036, .03], [.026, .002, .016], 'greyPrimer', { round: .003 }); }
+      /* the latch access door in the bottom of the left door, across the bay at 6 o'clock and hinged on its left edge (p.21, p.29-31),
+         from about 15% to 44% of the IFS's length; the drain mast passes through an oval grommet in it (p.21, p.50-51). Until 2026-10-12
+         it was 0.1 m wide, left of centre and ahead of the mast */
+      if (sg < 0) { PW.part('tr-latch-access-door', { parent: pid, attach: hinge, label: 'Latch access door', src: 'p.21, p.24, p.29-31, p.50-51',
+          info: 'Door in the bottom of the left reverser door, across the bay at 6 o\'clock and hinged on its left edge; the drain mast comes out through a grommet in it. Behind it are latches 2 and 3, the red bifurcation latch system handle and the closure assist assembly. It will not close unless the BLS handle is locked, so a latch access door that will not close means the BLS is not latched. The drain map placard is inside it.' });
+        const K = PW.kit, dd = 'tr-latch-access-door', f = K.frame(dd, -1.43, 6.0, rOut(-1.43));
+        /* the skin in four pieces round the grommet (local z points to the engine's left here) */
+        for (const [cx, lx, cz, lz] of [[.117, .226, 0, .2], [-.187, .086, 0, .2], [-.07, .148, .087, .026], [-.07, .148, -.087, .026]]) {
+          K.box(dd, f, [cx, .0002, cz], [lx + .006, .003, lz + .006], 'darkBox', { round: .002 }); K.box(dd, f, [cx, .0016, cz], [lx, .004, lz], 'nacellePaint', { round: .005 }); }
+        K.tube(dd, f, [-.07, .002, 0], 'y', .066, .074, .006, 'silicone');                                                          // the drain mast's grommet
+        for (const s of [-1, 1]) K.box(dd, f, [s * .15, .0036, .088], [.026, .002, .016], 'greyPrimer', { round: .003 }); }        // hinges on its left edge
       { /* the hinge beam along the door's top edge, just inside its skin, which follows the nacelle's taper (until 2026-10-12 a straight
            bar whose aft end stood out of the skin once the pylon no longer covered it) */
         const a = sg > 0 ? t0 + deg(1.6) : t0 + tl - deg(1.6), pts = []; for (let i = 0; i <= 10; i++) { const xx = -1.0 - 1.45 * i / 10; pts.push(G.onRing(xx, rOut(xx) - .036, a)); }
