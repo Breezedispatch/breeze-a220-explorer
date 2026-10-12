@@ -1185,7 +1185,7 @@
        proximity sensors (pointing back along the unit) and the inhibit pin's stowage hole beside A/C RETURN. The manual does not say
        which way the unit faces in the pylon: with the SUPPLY and RETURN face toward the DCU, as here, the renders put the lever at the
        engine-left end */
-    { const f = Kt.frame('tras-icu', -2.9, 12, 1.47), C = 'castAl', I = 'tras-icu';
+    { const f = Kt.frame('tras-icu', -2.9, 12, 1.47), C = 'castAl', I = 'tras-icu'; f.position.z -= .02;                     // 2 cm to the left, so its solenoid end clears the pylon's 0.33 m fin
       Kt.box(I, f, [0, 0, 0], [.085, .075, .15], C, { round: .008 });                                                         // body
       Kt.box(I, f, [0, .0435, 0], [.045, .012, .17], C, { round: .004 });                                                     // mounting plate
       for (const sx of [-1, 1]) for (const sz of [-1, 1]) { Kt.box(I, f, [sx * .045, .0435, sz * .07], [.05, .012, .03], C, { round: .006 });
@@ -1247,10 +1247,10 @@
     { const xm = -1.0406, ra = 1.06, tube = (pid, pts, r) => line(pid, pts, r || .007, 'tube', { clamps: 0, ends: false });
       const door = (k, s) => { const [dr, dx] = [[.02, -.06], [.038, -.072], [.056, -.084]][k], h = s > 0 ? .35 : 11.65;          // k: return, deploy, stow
         return [P(xm + dx - .06, h - s * .05, ra + dr), P(xm + dx, h, ra + dr)]; };
-      tube('tras-icu', [V(-2.9585, 1.476, .035), V(-2.99, 1.476, .035), V(-3.02, 1.50, .04), V(-3.04, 1.56, .045), V(-3.05, 1.63, .05), V(-3.05, 1.66, .05)], .008);   // aircraft supply
-      tube('tras-icu', [V(-2.955, 1.408, -.012), V(-2.98, 1.408, -.012), V(-3.03, 1.43, -.03), V(-3.07, 1.52, -.045), V(-3.09, 1.62, -.05), V(-3.09, 1.66, -.05)], .008);   // aircraft return
-      tube('tras-icu', [V(-2.8415, 1.474, .03), V(-2.80, 1.476, .03), V(-2.40, 1.482, .03), V(-1.60, 1.482, .03), V(-1.30, 1.478, .029), V(-1.245, 1.474, .028), V(-1.231, 1.462, .028), V(-1.23, 1.4455, .028)]);   // ICU SUPPLY to the DCU
-      tube('tras-dcu', [V(-1.295, 1.4455, -.025), V(-1.296, 1.46, -.025), V(-1.315, 1.472, -.026), V(-1.40, 1.474, -.028), V(-2.40, 1.474, -.03), V(-2.80, 1.474, -.03), V(-2.8415, 1.474, -.03)]);   // DCU return to the ICU
+      tube('tras-icu', [V(-2.9585, 1.476, .015), V(-2.99, 1.476, .015), V(-3.02, 1.50, .022), V(-3.04, 1.56, .03), V(-3.05, 1.63, .035), V(-3.05, 1.66, .035)], .008);   // aircraft supply
+      tube('tras-icu', [V(-2.955, 1.408, -.032), V(-2.98, 1.408, -.032), V(-3.03, 1.43, -.045), V(-3.07, 1.52, -.055), V(-3.09, 1.62, -.06), V(-3.09, 1.66, -.06)], .008);   // aircraft return
+      tube('tras-icu', [V(-2.8415, 1.474, .01), V(-2.80, 1.476, .01), V(-2.60, 1.48, .022), V(-2.40, 1.482, .03), V(-1.60, 1.482, .03), V(-1.30, 1.478, .029), V(-1.245, 1.474, .028), V(-1.231, 1.462, .028), V(-1.23, 1.4455, .028)]);   // ICU SUPPLY to the DCU
+      tube('tras-dcu', [V(-1.295, 1.4455, -.025), V(-1.296, 1.46, -.025), V(-1.315, 1.472, -.026), V(-1.40, 1.474, -.028), V(-2.40, 1.474, -.03), V(-2.60, 1.474, -.038), V(-2.80, 1.474, -.05), V(-2.8415, 1.474, -.05)]);   // DCU return to the ICU
       for (const [k, xp, yt] of [[2, -1.25, 1.30], [1, -1.17, 1.32]]) { const T = V(xp, yt, -.08);                          // stow, deploy
         tube('tras-dcu', [V(xp, 1.39, -.0545), V(xp, 1.39, -.068), V(xp, 1.375, -.078), V(xp, yt + .03, -.08), T], .006);
         tube('tras-dcu', [T, V(xp + .005, yt - .03, -.10), V(xp + .03, yt - .10, -.135), V(-1.20 + (k - 2) * -.04, 1.14, -.165)].concat(door(k, -1)), .006);
@@ -1259,9 +1259,9 @@
         s < 0 ? V(-1.42, 1.42, -.045) : V(-1.47, 1.40, .02), s < 0 ? V(-1.42, 1.45, -.032) : V(-1.48, 1.445, -.015), V(s < 0 ? -1.42 : -1.48, 1.474, -.028)]), .006);   // each door's return
       /* wiring: the ICU's solenoid and inhibit sensors and the DCU's solenoid and pressure sensor, up into the pylon's wiring */
       const harn = pts => line('tras-icu', pts, .0045, 'harness', { clamps: 0, ends: false });
-      const sol = line('tras-icu', [V(-2.9, 1.4978, .1719), V(-2.9, 1.515, .17), V(-2.885, 1.55, .15), V(-2.86, 1.60, .12)], .005, 'harness', { clamps: 0, ends: false });
-      harn([V(-2.8768, 1.423, .0448), V(-2.865, 1.423, .06), V(-2.85, 1.43, .095), V(-2.85, 1.47, .105), V(-2.86, 1.50, .12), sol.getPointAt(.45)]);   // inhibit sensors, into the solenoid's lead
-      harn([V(-2.9008, 1.40, .0448), V(-2.88, 1.40, .065), V(-2.844, 1.41, .11), V(-2.844, 1.47, .119), V(-2.85, 1.51, .13), sol.getPointAt(.6)]);
+      const sol = line('tras-icu', [V(-2.9, 1.4978, .1519), V(-2.9, 1.515, .148), V(-2.885, 1.55, .13), V(-2.86, 1.60, .10)], .005, 'harness', { clamps: 0, ends: false });
+      harn([V(-2.8768, 1.423, .0248), V(-2.865, 1.423, .04), V(-2.85, 1.43, .075), V(-2.85, 1.47, .085), V(-2.86, 1.50, .10), sol.getPointAt(.45)]);   // inhibit sensors, into the solenoid's lead
+      harn([V(-2.9008, 1.40, .0248), V(-2.88, 1.40, .045), V(-2.844, 1.41, .09), V(-2.844, 1.47, .099), V(-2.85, 1.51, .11), sol.getPointAt(.6)]);
       for (const pts of [[V(-.987, 1.426, .018), V(-.987, 1.44, .018), V(-.975, 1.452, .01), V(-.96, 1.458, 0)], [V(-1.0176, 1.4108, -.012), V(-1.0176, 1.425, -.012), V(-1.0, 1.442, -.01), V(-.975, 1.452, -.006)],
         [V(-1.0176, 1.3908, -.028), V(-1.0176, 1.425, -.028), V(-1.0, 1.445, -.024), V(-.975, 1.455, -.018)]]) line('tras-dcu', pts, .0045, 'harness', { clamps: 0, ends: false }); }
 

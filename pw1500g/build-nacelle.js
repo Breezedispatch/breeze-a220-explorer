@@ -266,7 +266,7 @@
         m.position.copy(G.onRing(xx, rOut(xx) - .045, a)); m.rotation.x = a; PW.add(pid, m, sg < 0 ? 'darkBox' : 'steel', { solid: true, into: hinge });   // latch body / keeper inside the edge
         if (sg < 0) { const ah = a + deg(1.3);                                                                   // the flush handle in the left cowl's skin, as on the reverser
           for (const [w, t, l, dr, mat] of [[.156, .003, .04, -.0005, 'darkBox'], [.15, .003, .034, .0008, 'greyPrimer']]) { const hd = new THREE.Mesh(G.roundedBox(w, t, l, .0015)); hd.position.copy(G.onRing(xx, rOut(xx) + dr, ah)); hd.rotation.x = ah; PW.add(pid, hd, mat, { solid: true, into: hinge }); } }
-        const hm = new THREE.Mesh(G.roundedBox(.08, .06, .03, .006)); hm.position.set(xx, yh - .02, sg * .22); PW.add(pid, hm, 'lime', { solid: true, into: hinge }); }
+        const hm = new THREE.Mesh(G.roundedBox(.08, .04, .022, .005)); hm.position.set(xx, yh - .05, sg * .221); PW.add(pid, hm, 'lime', { solid: true, into: hinge }); }   // hinge fitting, under the skin beside the pylon's keel
       /* two hold-open rods per cowl (p.12-15, the hangar photos). The forward rod pivots on a bracket about 30 deg up the cowl's side and
          is stowed hanging down and aft along it, its free end in the hold-open rod clip near the bottom edge (p.13). The aft rod pivots
          near the bottom edge at the aft end and is stowed forward along the bottom; the two cross, as p.15 view A draws them, the aft
@@ -299,7 +299,7 @@
         if (sg > 0) flushPanel(pid, hinge, fx(.45), G.clock(2.4), .26, .3, { seam: '#051640', lw: .0016, round: .02 });   // the door's gap, darker than a panel seam, and its frame's fasteners
         for (const xx of [xJ1 - .004, xJ2 + .004]) PW.add(pid, G.revolve([[xx + .012, rOut(xx) - .028], [xx - .012, rOut(xx) - .028], [xx - .012, rOut(xx) - .033], [xx + .012, rOut(xx) - .033]], { seg: 72, thetaStart: t0, thetaLength: tl }), 'rubber', { into: hinge });   // wear strips
         for (const f of [.2, .5, .8]) { const xx = fx(f);
-          Kt.cyl(pid, Kt.frame(pid, xx, 0, 1, { into: hinge }), [0, yh - .02 - 1, sg * .22], 'x', .007, .1, 'steel');                     // hinge pin through the hinge
+          Kt.cyl(pid, Kt.frame(pid, xx, 0, 1, { into: hinge }), [0, yh - .05 - 1, sg * .221], 'x', .007, .1, 'steel');                    // hinge pin through the hinge
           if (sg > 0) { const g = Kt.frame(pid, xx + .075, hs(5.97), rOut(xx) - .045, { into: hinge }); Kt.cyl(pid, g, [0, 0, .006], 'z', .006, .024, 'steel'); Kt.cone(pid, g, [0, 0, .026], 'z', .002, .006, .016, 'steel'); } } }
       /* the placards and stencils in the photo, on the inboard cowl (the outboard one taken to carry the same): two white placards with red
          print a hand's width under the hinge line at mid-length, and two small stencils just below the strake's line, one ahead of it */
@@ -535,7 +535,10 @@
         const f = PW.kit.frame('tr-latch-access-door', -1.34, 6.1, rOut(-1.34));
         PW.kit.box('tr-latch-access-door', f, [0, .0002, 0], [.326, .003, .1], 'darkBox', { round: .002 }); PW.kit.box('tr-latch-access-door', f, [0, .0016, 0], [.32, .004, .094], 'nacellePaint', { round: .008 });
         for (const s of [-1, 1]) PW.kit.box('tr-latch-access-door', f, [s * .12, .0036, .03], [.026, .002, .016], 'greyPrimer', { round: .003 }); }
-      { const a = sg > 0 ? t0 : t0 + tl, m = new THREE.Mesh(G.roundedBox(1.5, .05, .04, .01)); m.position.copy(G.onRing(-1.75, yhT + .03, a)); m.rotation.x = a; PW.add(pid, m, 'nickel', { solid: true, into: hinge }); }
+      { /* the hinge beam along the door's top edge, just inside its skin, which follows the nacelle's taper (until 2026-10-12 a straight
+           bar whose aft end stood out of the skin once the pylon no longer covered it) */
+        const a = sg > 0 ? t0 + deg(1.6) : t0 + tl - deg(1.6), pts = []; for (let i = 0; i <= 10; i++) { const xx = -1.0 - 1.45 * i / 10; pts.push(G.onRing(xx, rOut(xx) - .036, a)); }
+        PW.add(pid, G.tube(pts, .015, { radial: 10 }), 'nickel', { solid: false, into: hinge }); }
       /* actuation (p.334-351, p.347): on the torque box at the forward end of the door, the locking feedback actuator in the upper section
          and the locking actuator in the lower one, joined round the ring by the flexible drive shaft and the deploy tube, with the stow,
          deploy and return lines coming down from the hinge beam. The bodies run aft between the cascade boxes; the rods belong to the
@@ -683,31 +686,152 @@
       PW.kit.box('ifs-acc-scoop', f, [.064, .014, 0], [.004, .02, .062], 'darkBox', { round: .003 }); }
 
     /* ============================== PYLON (lower part) ============================== */
-    PW.part('pylon', { parent: 'nacelle', label: 'Pylon (lower part)', src: 'TTM ch. 01 Fig. 28, ch. 54; p.44-49',
-      info: 'The pylon hangs the engine from the wing on the forward and aft engine mounts, carries the fan cowl hinges and the reverser hinge beams, and routes the fuel, hydraulic, bleed and electrical services. Only its lower part is shown here.' });
-    /* widths from the explorer's pylon (measured off a photo from directly below, aircraft X = model x + 5.984), top line from TTM Fig. 28
-       and Fig. 23, aft fairing depth below the wing from the explorer's DEP table; the wing itself is not drawn, so the pylon stops at its
-       lower surface (about y 1.65 here) */
+    PW.part('pylon', { parent: 'nacelle', label: 'Pylon (lower part)', src: 'TTM ch. 01 Fig. 28, ch. 54 Fig. 1-3; p.9, p.44-49; photos',
+      info: 'The pylon hangs the engine from the wing on the forward and aft engine mounts, carries the fan cowl hinges and the reverser hinge beams, and routes the fuel, hydraulic, bleed and electrical services. Fairings enclose it (ch. 54). Ahead of the wing a rounded spine runs from the inlet joint along the top of the nacelle, and the fan cowls and reverser doors close flush against its sides; a blue panel fills between the fan cowls round its nose. Behind the reverser the aft fairing is a slim fin under the wing that flares at the bottom into a saddle over the core cowl and the exhaust, covered by the heat shield; it encloses the aft engine mount, and the deployed reverser sleeves slide past its narrow middle. The isolation control unit sits in its upper part behind access panels on both sides. Only the lower part is shown: the wing is not drawn.' });
+    /* TTM ch. 01 Fig. 28 draws the pylon in side view with its stations: the fore tip at ZS 679.1 on the inlet joint, the top rising over
+       the fan cowls to ZS 731.7 and on to the wing's leading edge notch at ZS 795.2, the aft fairing's lower forward corner at ZS 806.7, the
+       aft tip at ZS 910.8. ch. 54 Fig. 1 and 3, p.9 and photos of Breeze aircraft show the forward fairing as a rounded spine whose base is
+       the fan cowl and reverser door hinge line (10 deg either side of the crown), so the cowls and doors meet it flush, with a blue panel
+       between the fan cowls round its tapered white nose (photo). A photo of an A220 engine from straight aft shows the aft fairing: a
+       slim fin flaring at the bottom into the heat shield, which sits right on the core nozzle. The drawing's heights cannot be used as
+       they stand (its aft fairing would reach into the core), so the wing's lower surface stays at the explorer's y 1.66; the saddle's
+       width is the explorer's, measured from below (aircraft X = model x + 5.984). Until 2026-10-12 the whole pylon was one boxy loft
+       0.42-0.50 m wide sitting on the nacelle, which left gaps at its nose and along the reverser doors and clashed with the deployed
+       sleeves, and its aft fairing hung 0.1 m higher over the exhaust (the explorer's depth table). */
     { const sh = 5.9844, WID = [[.478, .012], [.6, .03], [.9, .06], [1.245, .10], [1.5, .15], [1.77, .21], [2.15, .29], [2.53, .37], [2.8, .43], [3.05, .48], [3.44, .50], [4.0, .47], [5.0, .46], [6.0, .42], [6.2, .34], [6.3, .24], [6.363, .10]].map(([X, w]) => [X - sh, w]);
-      const DEP = [[.478, 0], [1.245, .87], [1.77, 1.08], [2.53, 1.15], [3.05, 1.10]].map(([X, d]) => [X - sh, d]), yWing = 1.66;
-      const TOP = [[.379, 1.265], [.016, 1.365], [-.957, 1.475], [-2.48, yWing], [-5.6, yWing]];
-      /* underside: 1.125 over the fan case, where the forward mount's beam sits between the mount ring and the pylon (p.45-47); 1.02
-         over the core; then the aft fairing down over the exhaust */
-      const bot = xx => (xx > -.95 ? 1.125 : xx > -1.05 ? 1.02 + .105 * (xx + 1.05) / .1 : xx > -2.62 ? 1.02 : Math.min(yWing - .01, yWing - G.interp(DEP, xx)));
-      const secs = []; for (let i = 0; i <= 60; i++) { const xx = .379 - (5.48 + .379) * Math.pow(i / 60, 1.05);
-        secs.push({ x: xx, yb: Math.min(bot(xx), G.interp(TOP, xx) - .03), yt: G.interp(TOP, xx), hw: Math.max(.006, G.interp(WID, xx) / 2) }); }
-      PW.add('pylon', G.loft(secs, { n: 40, exp: 6 }), 'whitePaint');
-      // aft fairing heat shield: bare metal on the underside over the hot core, about 0.55 m wide (photos)
-      const hsSecs = []; for (let i = 0; i <= 24; i++) { const xx = -2.66 - 1.9 * i / 24; hsSecs.push({ x: xx, yb: bot(xx) - .012, yt: bot(xx) + .05, hw: Math.min(.275, G.interp(WID, xx) / 2 + .015) }); }
-      PW.add('pylon', G.loft(hsSecs, { n: 32, exp: 8 }), 'bareCowl');
+      const yWing = 1.66;
+      /* the white spine's rounded nose starts about 0.17 m behind the inlet joint (the photo); ahead of it, from the pylon's fore tip at
+         the joint (Fig. 28), the blue panel fills between the fan cowls */
+      const SIN = Math.sin(deg(10)), xTip = xJ1 - .17, xFull = -.06, xLE = x(795.2), KEEL = .155;
+      const ss = t => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
+      /* a smooth (monotone cubic) curve through [x, y] points, so the gloss runs clean along the spine */
+      const mono = pts => { const P = pts.slice().sort((a, b) => a[0] - b[0]), n = P.length, d = [], m = [];
+        for (let i = 0; i < n - 1; i++) d.push((P[i + 1][1] - P[i][1]) / (P[i + 1][0] - P[i][0]));
+        m.push(d[0]); for (let i = 1; i < n - 1; i++) m.push(d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2); m.push(d[n - 2]);
+        for (let i = 0; i < n - 1; i++) { if (d[i] === 0) { m[i] = m[i + 1] = 0; continue; } const a = m[i] / d[i], b = m[i + 1] / d[i], s = a * a + b * b;
+          if (s > 9) { const t = 3 / Math.sqrt(s); m[i] = t * a * d[i]; m[i + 1] = t * b * d[i]; } }
+        return xx => { if (xx <= P[0][0]) return P[0][1]; if (xx >= P[n - 1][0]) return P[n - 1][1]; let i = 0; while (xx > P[i + 1][0]) i++;
+          const h = P[i + 1][0] - P[i][0], t = (xx - P[i][0]) / h, t2 = t * t, t3 = t2 * t;
+          return (2 * t3 - 3 * t2 + 1) * P[i][1] + (t3 - 2 * t2 + t) * h * m[i] + (-2 * t3 + 3 * t2) * P[i + 1][1] + (t3 - t2) * h * m[i + 1]; }; };
+      /* the top line: Fig. 28's quick rise over the fan cowls, then steadily up to the wing at the leading edge notch; high enough over
+         the reverser for the DCU-to-ICU lines that run along the top inside */
+      const TOPF = mono([[xTip, 1.209], [xTip - .015, 1.232], [xTip - .05, 1.258], [.10, 1.285], [0, 1.315], [-.4, 1.385], [-.96, 1.47], [-1.25, 1.507], [-1.6, 1.545], [-2.2, 1.613], [xLE, yWing], [-5.6, yWing]]);
+      /* underside of the keel inside the nacelle: 1.125 over the fan case, where the forward mount's beam sits between the mount ring
+         and the pylon (p.45-47); 1.02 over the core */
+      const bot = xx => (xx > -.95 ? 1.125 : xx > -1.05 ? 1.02 + .105 * (xx + 1.05) / .1 : 1.02);
+      /* the spine's section at station xx: base yc on the cowl and door hinge line (the outer skin), half-width hw there, top yt,
+         superellipse power n, the nose tapering ahead of xFull. Just behind the reverser it narrows into the aft fairing's fin */
+      const sec = xx => { const xs = Math.max(xx, xTE), yt = TOPF(xx), n = 2.6 + 3.4 * ss((-2.2 - xx) / .45), r = rOut(Math.min(xs, xJ1));
+        const hw = Math.max(.02, r * SIN * (xs >= xTip ? 0 : xs <= xFull ? 1 : Math.sqrt(1 - Math.pow((xs - xFull) / (xTip - xFull), 2))));
+        return { yc: Math.sqrt(r * r - hw * hw), hw, yt, n }; };
+      /* a point on the body's arch at parameter t (-1 at the left base corner, 0 on top, 1 at the right) */
+      const arch = (s, t) => { const f = (1 - Math.min(1, Math.abs(t))) * Math.PI / 2, c = Math.cos(f), sn = Math.sin(f);
+        return [s.yc + (s.yt - s.yc) * Math.pow(sn, 2 / s.n), Math.sign(t) * s.hw * Math.pow(c, 2 / s.n)]; };
+      /* a closed loft through sections that each carry an open ring of [y, z] points (all the same length), closed underneath by a flat
+         strip with its own vertices, so the shading stays clean at the base corners */
+      const loftArch = (secs, NA) => { const pos = [], idx = [], rings = secs.map(s => { const R = []; for (let i = 0; i <= NA; i++) R.push(arch(s, -1 + 2 * i / NA)); return R; }), n = NA + 1;
+        rings.forEach((R, k) => R.forEach(([y, z]) => pos.push(secs[k].x, y, z)));
+        for (let k = 0; k < secs.length - 1; k++) for (let i = 0; i < NA; i++) { const a = k * n + i, b = a + 1, c = a + n, d = b + n; idx.push(a, c, b, b, c, d); }
+        const top = new THREE.BufferGeometry(); top.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); top.setIndex(idx); top.computeVertexNormals();
+        const p2 = [], i2 = [];   // underside strip and the two end caps (fans from the base's mid point)
+        secs.forEach(s => { p2.push(s.x, s.yc, -s.hw, s.x, s.yc, 0, s.x, s.yc, s.hw); });                     // its mid line matches the caps' fans
+        for (let k = 0; k < secs.length - 1; k++) for (let j = 0; j < 2; j++) { const a = 3 * k + j, b = a + 1, c = a + 3, d = a + 4; i2.push(a, b, c, b, d, c); }
+        for (const [k, flip] of [[0, false], [secs.length - 1, true]]) { const base = p2.length / 3, s = secs[k]; p2.push(s.x, s.yc, 0); rings[k].forEach(([y, z]) => p2.push(s.x, y, z));
+          for (let i = 0; i < NA; i++) flip ? i2.push(base, base + 2 + i, base + 1 + i) : i2.push(base, base + 1 + i, base + 2 + i); }
+        const bottom = new THREE.BufferGeometry(); bottom.setAttribute('position', new THREE.Float32BufferAttribute(p2, 3)); bottom.setIndex(i2); bottom.computeVertexNormals();
+        const g = G.merge([top, bottom]); G.orientOutward(g); g.computeVertexNormals(); g.userData.solid = true; return g; };
+      const XS = []; for (let i = 0; i <= 56; i++) XS.push(xTip - (xTip - (xTE - .03)) * Math.pow(i / 56, 1.15));   // denser at the nose
+      PW.add('pylon', loftArch(XS.map(xx => Object.assign({ x: xx }, sec(xx))), 40), 'whitePaint');
+      /* the keel under it inside the nacelle: the fan cowl support beam and the reverser hinge beams, to the end of the upper bifurcation */
+      const xB = xTE + .25;
+      const kb = xx => Math.min(bot(xx), sec(xx).yc - .05), kt = xx => Math.min(sec(xx).yc + .012, Math.sqrt(Math.pow(rOut(xx) - .025, 2) - KEEL * KEEL));
+      const KS = []; for (let i = 0; i <= 44; i++) { const xx = (xJ1 - .01) - (xJ1 - .01 - (xB + .05)) * i / 44; KS.push({ x: xx, yb: kb(xx), yt: kt(xx), hw: KEEL }); }
+      PW.add('pylon', G.loft(KS, { n: 32, exp: 8 }), 'whitePaint');
+      /* a closed loft through sections whose outline is made of faces (polylines of [y, z] points, the same length in every section),
+         each lofted with its own vertices so the edges between faces stay crisp, and closed at the ends by fans. The outline runs up the
+         left (-z) side, over the top and down the right, so every face points outward */
+      const loftFaces = (secs, caps) => { const parts = [];
+        secs[0].faces.forEach((_, f) => { const n = secs[0].faces[f].length, pos = [], idx = [];
+          secs.forEach(s => s.faces[f].forEach(([y, z]) => pos.push(s.x, y, z)));
+          for (let k = 0; k < secs.length - 1; k++) for (let i = 0; i < n - 1; i++) { const a = k * n + i, b = a + 1, c = a + n, d = b + n; idx.push(a, c, b, b, c, d); }
+          const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); parts.push(g); });
+        if (caps !== false) for (const [k, front] of [[0, true], [secs.length - 1, false]]) { const s = secs[k], out = [].concat(...s.faces.map(fc => fc.slice(0, -1))), N = out.length;
+          const pos = [s.x, out.reduce((a, p) => a + p[0], 0) / N, out.reduce((a, p) => a + p[1], 0) / N], idx = [];
+          out.forEach(([y, z]) => pos.push(s.x, y, z)); for (let i = 0; i < N; i++) front ? idx.push(0, 1 + i, 1 + (i + 1) % N) : idx.push(0, 1 + (i + 1) % N, 1 + i);
+          const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); parts.push(g); }
+        const g = G.merge(parts); g.userData.solid = caps !== false; return g; };
+      /* the aft fairing behind the reverser, from where the upper bifurcation ends (Fig. 28, p.9, a photo of an A220 engine from straight
+         aft): a fin under the wing, 0.31 m wide (0.33 m round the ICU), standing on a base that widens in a full curve onto the core cowl
+         and the core nozzle. Between the reverser's trailing edge and Fig. 28's lower forward corner of the aft fairing (ZS 806.7) the base
+         is tall, enclosing the aft mount (p.49), and narrows to the fin's width below the deployed sleeves' upper edges, which pass either
+         side; aft of that corner it is a low skirt over the core exhaust whose underside stays just over it and curves up into the sloping
+         trailing edge (Fig. 28's lower edge, lowest about ZS 830-845). The base is as wide as the explorer measured the pylon from below.
+         Only the skirt's lower part is the bare-metal heat shield (Fig. 28's unriveted lower panel). Until 2026-10-12 a box hung here, as
+         wide at the top as at the bottom, its heat shield 0.5 m up its sides */
+      const rbA = mono([[xCN, rIFS(xCN + .004) + .004], [-3.45, .41], [-3.8, .45], [-4.21, .55], [x(880.6), .79], [-5.2, 1.3], [-5.5, 1.645]]);
+      const rb = xx => xx > xCN + .004 ? rIFS(xx) + .004 : rbA(xx);                        // the base's underside, a circle round the engine axis
+      const xC6 = x(806.7), xHS = x(880.6), HS = .17;                                       // the heat shield runs between them, HS up the skirt
+      const aft = xx => { const W2 = G.interp(WID, xx) / 2, ws = xx > xTE + .02 ? G.lerp(.13, G.interp(WID, xTE + .02) / 2, ss((xB - xx) / (xB - xTE - .02))) : W2;
+        const r = rb(xx), ysd = Math.sqrt(Math.max(0, r * r - ws * ws)), yTop = TOPF(xx), yt = xx > xTE ? sec(xx).yc + .01 : yTop;
+        const hT = Math.min(G.lerp(Math.max(.1, Math.min(.45, .86 - ysd)), .26, ss((xC6 + .03 - xx) / .12)), (yTop - ysd) * .5), yF = ysd + hT;
+        const tf = Math.max(.04, Math.min(1, G.lerp(1, .62, ss((-3.15 - xx) / .7)), W2 / .1));
+        const ICU = ss((-2.62 - xx) / .1) * (1 - ss((-3.12 - xx) / .1)), wLo = .155 * tf, wHi = G.lerp(sec(xTE).hw, .155 + .01 * ICU, ss((xTE - xx) / .3)) * tf;   // as wide as the spine at the reverser's trailing edge
+        const wFin = y => Math.min(wHi, Math.max(wLo, (.1763 * y - .006) * tf));   // the deployed sleeves' top edges run up the 10 deg line (0.176 y out): just inside it
+        const w = y => { const wf = wFin(y); if (y >= yF) return wf; return wf + (ws - wf) * Math.pow(Math.max(0, 1 - (y - ysd) / hT), .75); };
+        return { ws, ysd, yt, yTop, yF, hT, w, r }; };
+      /* its outline at station xx: the left side up, a rounded cap over the top, the right side down, the underside back across */
+      const aftFaces = (xx, off) => { const A = aft(xx), o = off || 0, M = 18, cap = Math.min(.06, (A.yt - A.ysd) * .25), yC = A.yt - cap, side = [], top = [], arc = [];
+        for (let j = 0; j <= M; j++) { const y = A.ysd + (yC - A.ysd) * Math.pow(j / M, 1.5); side.push([y, A.w(y) + o]); }
+        const wC = A.w(yC) + o; for (let j = 0; j <= 12; j++) { const t = -1 + j / 6, f = (1 - Math.abs(t)) * Math.PI / 2; top.push([yC + (cap + o) * Math.pow(Math.sin(f), .8), Math.sign(t) * wC * Math.pow(Math.cos(f), .8)]); }
+        for (let j = 0; j <= 12; j++) { const z = (A.ws + o) * (1 - 2 * j / 12); arc.push([Math.sqrt(Math.max(0, Math.pow(A.r - o, 2) - z * z)), z]); }
+        return { A, left: side.map(([y, z]) => [y, -z]), top, right: side.slice().reverse(), arc }; };
+      const AX = []; for (let i = 0; i <= 72; i++) AX.push((xB + .03) - (xB + .03 + 5.48) * Math.pow(i / 72, 1.25));
+      PW.add('pylon', loftFaces(AX.map(xx => { const F = aftFaces(xx); return { x: xx, faces: [F.left, F.top, F.right, F.arc] }; })), 'whitePaint');
+      /* the heat shield: the underside and the lower HS of the skirt, 2 mm proud of the fairing */
+      { const HX = [], o = .002; for (let i = 0; i <= 40; i++) HX.push(xC6 - (xC6 - xHS) * i / 40);
+        PW.add('pylon', loftFaces(HX.map(xx => { const A = aft(xx), yE = Math.sqrt(Math.max(0, Math.pow(A.r - o, 2) - Math.pow(A.ws + o, 2))), up = [], arc = [];
+          for (let j = 0; j <= 8; j++) { const y = j ? A.ysd + Math.min(HS, A.hT) * j / 8 : yE; up.push([y, A.w(Math.max(y, A.ysd)) + o]); }
+          for (let j = 0; j <= 12; j++) { const z = (A.ws + o) * (1 - 2 * j / 12); arc.push([Math.sqrt(Math.max(0, Math.pow(A.r - o, 2) - z * z)), z]); }
+          return { x: xx, faces: [up.map(([y, z]) => [y, -z]), up.slice().reverse(), arc] }; }), false), 'bareCowl', { solid: false }); }
+      /* panel joints and fastener rows, as Fig. 28 and p.9 draw them: flush heads in the white paint along the spine's base, a row midway
+         up its panels over the reverser and double rows at its joints (ZS 731.7, 749.2, 767.4); on the aft fairing a row under the wing,
+         one above the heat shield and double rows at its joints (ZS 813.4, 836.0, 857.8, 873.8), and a row of bare heads along the heat
+         shield's top edge. Each joint is also a fine seam */
+      { const R = [], RH = [], SEAMS = [], at = (s, t) => { const p = arch(s, t), e = .004, a = arch(s, Math.max(-1, t - e)), b = arch(s, Math.min(1, t + e)), dy = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dy, dz) || 1;
+          let ny = dz / L, nz = -dy / L; if (ny * (p[0] - s.yc + .05) + nz * p[1] < 0) { ny = -ny; nz = -nz; } return [p[0], p[1], ny, nz]; };
+        const tAt = (s, y, side) => { const u = Math.max(0, Math.min(1, (y - s.yc) / (s.yt - s.yc))), f = Math.asin(Math.pow(u, s.n / 2)); return side * (1 - f / (Math.PI / 2)); };
+        const onAft = (xx, y, side) => { const A = aft(xx), e = .005, z = A.w(y), d = (A.w(y + e) - A.w(y - e)) / (2 * e), L = Math.hypot(1, d); return [xx, y, side * z, -d / L, side / L]; };
+        for (let xx = xTip - .05; xx >= xTE + .02; xx -= .045) { const s = sec(xx); if (s.yt - s.yc < .03) continue; for (const sd of [-1, 1]) { const p = at(s, tAt(s, s.yc + .016, sd)); R.push([xx, ...p]); } }
+        for (let xx = -.97; xx >= xTE + .03; xx -= .05) { const s = sec(xx); for (const sd of [-1, 1]) { const p = at(s, tAt(s, s.yc + .5 * (s.yt - s.yc), sd)); R.push([xx, ...p]); } }
+        for (const zs of [731.7, 749.2, 767.4]) { const xj = x(zs); SEAMS.push(['spine', xj]); for (const dx of [-.012, .012]) { const s = sec(xj + dx); for (let t = -.96; t <= .961; t += .055) R.push([xj + dx, ...at(s, t)]); } }
+        for (let xx = xTE - .05; xx >= -5.15; xx -= .05) { const A = aft(xx); if (A.yTop - A.ysd < .2) continue; for (const sd of [-1, 1]) R.push(onAft(xx, A.yTop - .075, sd)); }
+        for (let xx = xC6 - .02; xx >= xHS + .03; xx -= .05) { const A = aft(xx); for (const sd of [-1, 1]) { R.push(onAft(xx, A.ysd + HS + .025, sd)); RH.push(onAft(xx, A.ysd + HS - .015, sd)); } }
+        SEAMS.push(['aft', xTE - .03]);                                                     // where the aft fairing meets the spine
+        for (const zs of [813.4, 836.0, 857.8, 873.8]) { const xj = x(zs); SEAMS.push(['aft', xj]); for (const dx of [-.012, .012]) { const A = aft(xj + dx);
+          for (let y = A.ysd + HS + .03; y <= A.yTop - .08; y += .045) for (const sd of [-1, 1]) R.push(onAft(xj + dx, y, sd)); } }
+        const heads = (pts, mat, over) => { const m = new THREE.InstancedMesh(new THREE.CylinderGeometry(.0027, .0027, .0008, 10), null, pts.length), ob = new THREE.Object3D(), up = new THREE.Vector3(0, 1, 0);
+          pts.forEach(([xx, y, z, ny, nz], i) => { const nv = new THREE.Vector3(0, ny, nz).normalize(); ob.position.set(xx, y + ny * .0003, z + nz * .0003); ob.quaternion.setFromUnitVectors(up, nv); ob.updateMatrix(); m.setMatrixAt(i, ob.matrix); });
+          return PW.add('pylon', m, mat, { mat: over, solid: false, shadow: false }); };
+        heads(R, 'whitePaint', { color: '#d3d7dc', clearcoatRoughness: .3 }); heads(RH, 'bareCowl', { color: '#8d8f90' });
+        /* the seams: a 1.5 mm grey line round the section at each joint, just proud of the skin */
+        const seamG = []; for (const [kind, xj] of SEAMS) { const ring = [];
+          if (kind === 'spine') { const s = sec(xj); for (let t = -1; t <= 1.0001; t += .05) ring.push(at(s, t)); }
+          else { const A = aft(xj); for (let j = 0; j <= 20; j++) { const y = A.ysd + HS + (A.yTop - .03 - A.ysd - HS) * j / 20; ring.push([y, -A.w(y), 0, -1]); } for (let j = 20; j >= 0; j--) { const y = A.ysd + HS + (A.yTop - .03 - A.ysd - HS) * j / 20; ring.push([y, A.w(y), 0, 1]); } }
+          const pos = [], idx = []; ring.forEach(([y, z, ny, nz]) => { for (const dx of [-.0011, .0011]) pos.push(xj + dx, y + ny * .0008, z + nz * .0008); });
+          for (let i = 0; i < ring.length - 1; i++) { const a = 2 * i; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+          const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); seamG.push(g); }
+        PW.add('pylon', G.merge(seamG), 'whitePaint', { mat: { color: '#6f767d', side: THREE.DoubleSide, clearcoat: 0, roughness: .8 }, solid: false, shadow: false }); }
+      /* the blue panel between the fan cowls from the inlet joint, round and under the spine's nose (photo of a Breeze No. 2 engine) */
+      { const fp = []; for (let i = 0; i <= 8; i++) { const xx = (xJ1 - .002) - (xJ1 - .002 - xFull + .01) * i / 8; fp.push([xx, rOut(xx)]); }
+        PW.add('pylon', G.revolve(G.shellProfile(fp, fp.map(([xx, r]) => [xx, r - .02])), { seg: 12, thetaStart: TAU - deg(9.92), thetaLength: deg(19.84) }), 'nacellePaint'); }
+      PW.pylon = { sec, arch, aft, KEEL, kb };                                             // for the audit scripts
       /* the aft mount fitting: pylon structure from the aft mount's main beam (r 0.64) up into the pylon box (p.45, p.49) */
       { const xa = D.GEN.nacelle.engineAftMountPlane.x, f = PW.kit.frame('pylon', xa, 12, .40); PW.kit.box('pylon', f, [0, .43, 0], [.11, .38, .15], 'greyPrimer', { round: .012 }); }
       /* the access panels on both sides of the aft pylon over the thrust reverser isolation control unit (p.344), each laid on the
-         side skin (the loft's section is a superellipse of power 6) and tilted to its slope */
-      { const xx = -2.9, yt = G.interp(TOP, xx), yb = Math.min(bot(xx), yt - .03), cy = (yb + yt) / 2, hh = (yt - yb) / 2, hw = G.interp(WID, xx) / 2, yc = 1.40;
-        const side = y => hw * Math.pow(1 - Math.pow(Math.abs((y - cy) / hh), 6), 1 / 6), tilt = Math.atan((side(yc + .01) - side(yc - .01)) / .02);
-        for (const s of [-1, 1]) { const f = PW.kit.frame('pylon', xx, 12, yc); f.position.z = s * side(yc); f.rotateX(s * tilt);
-          PW.kit.box('pylon', f, [0, 0, s * .0005], [.266, .206, .003], 'darkBox', { round: .002 }); PW.kit.box('pylon', f, [0, 0, s * .0018], [.26, .2, .003], 'whitePaint', { round: .012 }); } }
+         side skin (the section's upper part is a superellipse) and tilted to its slope */
+      { const xx = -2.9, yc = 1.40, side = aft(xx).w, tilt = Math.atan((side(yc + .01) - side(yc - .01)) / .02);
+        for (const sg of [-1, 1]) { const f = PW.kit.frame('pylon', xx, 12, yc); f.position.z = sg * side(yc); f.rotateX(sg * tilt);
+          PW.kit.box('pylon', f, [0, 0, sg * .0005], [.266, .206, .003], 'darkBox', { round: .002 }); PW.kit.box('pylon', f, [0, 0, sg * .0018], [.26, .2, .003], 'whitePaint', { round: .012 }); } }
     }
 
     /* the door sequences, as the manual gives them. Fan cowls (p.14): lift the cowl to 55 deg, fit the forward hold-open rod, then the
