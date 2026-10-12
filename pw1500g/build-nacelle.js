@@ -318,9 +318,11 @@
           aimLink(S.blockers[S.blockers.length - 1], 0, 0); } }
       /* p.374-375: the lockout pin hole in the sleeve's lower edge near its forward end, covered by a blanking plate unless the reverser
          is locked out; the pin then goes down through it into the lug on the latch beam */
-      { const fb = PW.kit.frame(sid, xJ2 - .10, hOf(173.4), rOut(xJ2 - .10));
-        PW.kit.box(sid, fb, [0, .0008, 0], [.036, .0016, .024], 'greyPrimer', { round: .008 });
-        for (const s of [-1, 1]) PW.kit.hex(sid, fb, [s * .011, .0021, 0], 'y', .0024, .0012, 'steel'); }
+      { const fb = PW.kit.frame(sid, xJ2 - .10, hOf(173.4), rOut(xJ2 - .10)), bp = PW.kit.sub(fb, [0, 0, 0]);
+        PW.kit.box(sid, bp, [0, .0008, 0], [.036, .0016, .024], 'greyPrimer', { round: .008 });
+        for (const s of [-1, 1]) PW.kit.hex(sid, bp, [s * .011, .0021, 0], 'y', .0024, .0012, 'steel');
+        PW.kit.cyl(sid, fb, [0, .0002, 0], 'y', .0047, .0004, 'darkBox');                                                       // the pin hole under it
+        const L = PW.lockout = PW.lockout || { on: 0 }; (L.groups = L.groups || []).push([bp, false]); }
       /* the IFS half: white composite wall facing the fan stream, quilted stainless blanket facing the core, bare metal aft core cowl */
       const iid = `${pid}-ifs`;
       PW.part(iid, { parent: pid, label: `${side === 'left' ? 'Left' : 'Right'} inner fixed structure (IFS)`, attach: hinge, src: 'p.18-23; photos',
@@ -404,11 +406,17 @@
         /* p.372-375: reverser lockout, for MEL dispatch or maintenance. With the ICU's inhibit lever pinned, a lockout pin goes down
            through the stowed sleeve's lower edge into this lug, so the sleeve cannot deploy. The two pins live in sockets in the bay at
            the latch access panel; when they are fitted, the sleeves' blanking plates are stowed there instead */
+        const LG = (PW.lockout = PW.lockout || { on: 0 }).groups = PW.lockout.groups || [];
         { const fu = Kt.frame(lb, xJ2 - .10, hOf(173.4), rOut(xJ2 - .10) - .035);
-          Kt.box(lb, fu, [0, 0, 0], [.03, .024, .028], 'steel', { round: .004 }); Kt.cyl(lb, fu, [0, .0125, 0], 'y', .0055, .002, 'darkBox'); }
+          Kt.box(lb, fu, [0, 0, 0], [.03, .024, .028], 'steel', { round: .004 }); Kt.cyl(lb, fu, [0, .0125, 0], 'y', .0055, .002, 'darkBox');
+          const pin = Kt.sub(fu, [0, 0, 0]); pin.visible = false; LG.push([pin, true]);                                         // fitted: down through the sleeve into the lug
+          Kt.cyl(lb, pin, [0, .015, 0], 'y', .0045, .04, 'steel'); Kt.box(lb, pin, [0, .0368, .007], [.014, .003, .03], 'steel', { round: .006 }); }
         if (sg < 0) for (const dx of [0, .032]) { const fp = Kt.frame(lb, -1.45 - dx, hB + .07, rOut(-1.46) - .06);
           Kt.box(lb, fp, [0, .005, 0], [.024, .01, .024], 'steel', { round: .003 });                                                 // stowage socket
-          Kt.cyl(lb, fp, [0, .03, 0], 'y', .0045, .042, 'steel'); Kt.box(lb, fp, [0, .053, .007], [.014, .004, .03], 'steel', { round: .006 }); }   // the pin and its teardrop head
+          const stow = Kt.sub(fp, [0, 0, 0]); LG.push([stow, false]);                                                              // the pin and its teardrop head
+          Kt.cyl(lb, stow, [0, .03, 0], 'y', .0045, .042, 'steel'); Kt.box(lb, stow, [0, .053, .007], [.014, .004, .03], 'steel', { round: .006 });
+          const plate = Kt.sub(fp, [0, .014, .03]); plate.visible = false; LG.push([plate, true]);                               // a sleeve's blanking plate, stowed here while its pin is fitted
+          Kt.box(lb, plate, [0, 0, 0], [.036, .0016, .024], 'greyPrimer', { round: .008 }); }
         }
       /* the latch access door on the bottom of the left door, ahead of the drain mast (p.31) */
       if (sg < 0) { PW.part('tr-latch-access-door', { parent: pid, attach: hinge, label: 'Latch access door', src: 'p.24, p.30-31, p.50',
@@ -597,9 +605,14 @@
       { label: 'Closed', on: true, apply: () => { S.want.fan = 0; S.want.tr = 0; } },
       { label: 'Fan cowls open', apply: () => { S.want.fan = 1; S.want.tr = 0; } },
       { label: 'All open', apply: () => { S.want.fan = 1; S.want.tr = 1; S.want.sleeve = 0; } }]);
+    /* p.372-375, MEL dispatch lockout: the ICU's inhibit lever pinned in INHIBIT (built with the ICU) and a lockout pin down through each
+       stowed sleeve into its latch beam lug, the sleeves' blanking plates stowed where the pins were */
+    const LO = PW.lockout = PW.lockout || { on: 0 };
+    PW.anim.push(() => { const on = !!LO.on; if (LO.nac === on) return; LO.nac = on; for (const [g, whenOn] of LO.groups || []) g.visible = whenOn === on; });
     PW.addControl && PW.addControl('Reverser', [
-      { label: 'Stowed', on: true, apply: () => { S.want.sleeve = 0; } },
-      { label: 'Deployed', apply: () => { S.want.sleeve = 1; S.want.tr = 0; } }]);
+      { label: 'Stowed', on: true, apply: () => { S.want.sleeve = 0; LO.on = 0; } },
+      { label: 'Deployed', apply: () => { S.want.sleeve = 1; S.want.tr = 0; LO.on = 0; } },
+      { label: 'Locked out', apply: () => { S.want.sleeve = 0; S.want.tr = 0; LO.on = 1; } }]);
   }
 
   /* ---- the exploded view, from the outside in ----
