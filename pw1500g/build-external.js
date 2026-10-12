@@ -461,9 +461,10 @@
       fbox('aoc', f, 0, -.002, 0, .17, .08, .32, 'darkBox', .004);                                                                          // finned matrix
       for (let i = 0; i < 22; i++) fbox('aoc', f, 0, 0, -.152 + i * .304 / 21, .17, .086, .003, 'nickel', .0005);
       for (const s of [1, -1]) { fbox('aoc', f, s * .15, 0, 0, .13, .12, .34, 'steel', .025); fbox('aoc', f, s * .15, .057, 0, .09, .012, .27, 'darkBox', .01); }   // inlet and exhaust plenums with their openings
-      /* the photos: a thick orange silicone gasket round each opening seals it against the IFS window's frame when the door is closed */
-      for (const s of [1, -1]) for (const [dx, dz, w, d] of [[0, .145, .11, .02], [0, -.145, .11, .02], [.055, 0, .02, .29], [-.055, 0, .02, .29]])
-        fbox('aoc', f, s * .15 + dx, .066, dz, w, .01, d, 'gasketOrange', .004);
+      /* the photos: a thick orange silicone gasket round the exhaust plenum's opening seals it against the IFS window's plain aft frame
+         when the door is closed; the inlet joint's gasket is on the door */
+      for (const [dx, dz, w, d] of [[0, .145, .11, .02], [0, -.145, .11, .02], [.055, 0, .02, .29], [-.055, 0, .02, .29]])
+        fbox('aoc', f, -.15 + dx, .066, dz, w, .01, d, 'gasketOrange', .004);
       for (const dx of [.12, -.12]) PW.add('aoc', G.rod(P(ax + dx, 10.6, .46), P(ax + dx, 11.0, .30), .006), 'steel');                        // support rods to the case
       line('aoc', [P(-1.60, 10.35, .44), P(-1.55, 10.3, .43), P(-1.515, 10.15, .41)], .016, 'tube', { clamps: 0 }); }                         // oil on to the VFG oil/oil cooler
     PW.part('vfgoohx', { parent: 'oil', label: 'VFG oil/oil heat exchanger (VFGOOHX)', src: 'p.212-217, p.232-233',

@@ -494,13 +494,27 @@
           PW.add(iid, G.tube(arc, .013, { radial: 12 }), 'siliconeSeal'); }
         for (let xx = -1.08; xx >= -2.15; xx -= .0825) along.push(G.onRing(xx, rIFS(xx) - .03, ha));             // aft of the fuel supply hose and forward of the thrust links
         PW.add(iid, G.tube(along, .013, { radial: 12 }), 'siliconeSeal'); }
-      /* the photos: thick orange silicone gaskets frame the openings on the core side: the oil tank access and precooler exhaust doors on
-         the right, the air/oil cooler window on the left (its partner frame is on the cooler) */
-      { const frame = (x0, x1, h, half) => { const a = G.clock(h), w = .04, ri = xx => rIFS(xx) - .033, ro = xx => rIFS(xx) - .045, n = 6;
-          for (const xx of [x0, x1]) PW.add(iid, G.revolve([[xx + w / 2, ri(xx)], [xx - w / 2, ri(xx)], [xx - w / 2, ro(xx)], [xx + w / 2, ro(xx)]], { seg: 16, thetaStart: a - half - w / .55, thetaLength: 2 * half + 2 * w / .55 }), 'gasketOrange');
+      /* the openings and doors seen from the core side (photos from below and aft). On the left the air/oil cooler window shows as two
+         openings side by side over the cooler's plenums: the forward (inlet) one framed by a thick orange silicone gasket, the aft
+         (exhaust) one by a plain metal frame; the cooler carries the exhaust joint's gasket. On the right the oil tank access and
+         precooler exhaust doors are closed panels, so only their raised outlines show, with the hinges and latch. Until 2026-10-12 all
+         three had orange gaskets and the left one framed the whole cooler */
+      { const frame = (x0, x1, h, half, mat, w, dr) => { const a = G.clock(h), ri = xx => rIFS(xx) - .033, ro = xx => rIFS(xx) - .033 - dr, n = 6;
+          for (const xx of [x0, x1]) PW.add(iid, G.revolve([[xx + w / 2, ri(xx)], [xx - w / 2, ri(xx)], [xx - w / 2, ro(xx)], [xx + w / 2, ro(xx)]], { seg: 16, thetaStart: a - half - w / .55, thetaLength: 2 * half + 2 * w / .55 }), mat);
           for (const s of [-1, 1]) { const pr = []; for (let i = 0; i <= n; i++) { const xx = x0 + (x1 - x0) * i / n; pr.push([xx, ri(xx)]); } for (let i = n; i >= 0; i--) { const xx = x0 + (x1 - x0) * i / n; pr.push([xx, ro(xx)]); }
-            PW.add(iid, G.revolve(pr, { seg: 2, thetaStart: s > 0 ? a + half : a - half - w / .55, thetaLength: w / .55 }), 'gasketOrange'); } };
-        if (sg > 0) { frame(-1.80, -2.06, 2.62, .21); frame(-2.21, -2.39, 2.4, .17); } else frame(-1.55, -1.94, 9.9, .30); }          // the window's frame round the cooler's plenums, clear of the fire element, the scupper drain and the VFG oil line
+            PW.add(iid, G.revolve(pr, { seg: 2, thetaStart: s > 0 ? a + half : a - half - w / .55, thetaLength: w / .55 }), mat); } };
+        const hole = (x0, x1, h, half) => { const a = G.clock(h), xs = []; for (let i = 0; i <= 6; i++) xs.push(x0 + (x1 - x0) * i / 6);
+          PW.add(iid, G.revolve(xs.map(xx => [xx, rIFS(xx) - .0322]).concat(xs.map(xx => [xx, rIFS(xx) - .0332]).reverse()), { seg: 12, thetaStart: a - half, thetaLength: 2 * half }), 'darkBox'); };
+        const fit = (xx, h, dr, l, w, t) => { const f = PW.kit.frame(iid, xx, h, rIFS(xx) - .032); PW.kit.box(iid, f, [0, -dr, 0], [l, t, w], 'steel', { round: Math.min(l, t, w) * .3 }); };
+        if (sg > 0) { frame(-1.80, -2.06, 2.62, .21, 'blanket', .022, .005); frame(-2.21, -2.39, 2.4, .17, 'blanket', .022, .005);   // clear of the scupper drain
+          for (const [xx, h] of [[-1.86, 2.2], [-2.00, 2.2], [-2.25, 2.05], [-2.35, 2.05]]) fit(xx, h, .007, .04, .018, .01);           // hinges along the upper edges
+          fit(-1.93, 3.03, .006, .05, .02, .008); fit(-2.30, 2.74, .006, .04, .02, .008);                                                 // latches on the lower edges
+          /* the round port at 1:36 where the ACC duct from the scoop meets the door, its orange seal ring round the duct's end */
+          const a = G.clock(1.6), rP = rIFS(-1.62) - .032;
+          PW.add(iid, new THREE.TorusGeometry(.046, .009, 10, 28).rotateX(a - Math.PI / 2).translate(...G.onRing(-1.62, rP - .009, a).toArray()), 'gasketOrange', { solid: true });
+          PW.add(iid, new THREE.CylinderGeometry(.038, .038, .002, 24).rotateX(a).translate(...G.onRing(-1.62, rP - .0005, a).toArray()), 'darkBox'); }
+        else { frame(-1.545, -1.645, 9.9, .26, 'gasketOrange', .03, .012); hole(-1.545, -1.645, 9.9, .26);                           // clear of the VFG oil line at x -1.51
+          frame(-1.845, -1.945, 9.9, .26, 'plateAl', .016, .005); hole(-1.845, -1.945, 9.9, .26); } }
       /* p.20-23: three core scoop vents on each IFS half, small scoops in the fan stream that ram air into the core compartment to
          ventilate it; positions measured off p.23 (fraction of the IFS length, clock) */
       { const L0 = xI0, L1 = xTE - .02;
