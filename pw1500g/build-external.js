@@ -395,22 +395,22 @@
         else { Kt.fitting('oil-rear', g, [0, .008, 0], 'y', .009); e = .008 + .009 * 1.45; }
         return [L(0, e + .022, 0), L(0, e, 0)]; };
       const n4p = pad(-2.13, 5.15, .385, -1.4, true), n4s = pad(-2.13, 5.45, .385, -1.4, false);          // No. 4: pressure through its strainer, scavenge
-      const n5p = pad(-2.549, 5.9, .437, -1.18, true), n5s = pad(-2.549, 6.1, .437, -1.18, false);         // No. 5/6
+      const n5p = pad(-2.549, 6.1, .437, -1.18, true), n5s = pad(-2.549, 5.9, .437, -1.18, false);         // No. 5/6: supply left of 6 o'clock, scavenge right (A Nahas photo from below)
       const Ls = FL(mx0, 4.85, .40), Lo = FL(mx1, 4.9, .40);                                                 // the LSOP's and OCM's frames
       /* the tee behind the OCM: a forged body on the pressure tube, its branch toward 6 o'clock */
       const T = FL(-1.875, 5.2, .368), tg = Kt.frame('oil-rear', -1.875, 5.2, .368);
       Kt.cyl('oil-rear', tg, [0, 0, 0], 'x', .0085, .036, 'steel', { edge: .002 }); Kt.cyl('oil-rear', tg, [0, 0, .011], 'z', .0075, .022, 'steel', { edge: .002 });
       line('oil-rear', [Lo(-.13595, -.04, .04), P(-1.81, 5.125, .3635), P(-1.835, 5.18, .366), T(.015, 0, 0)], .005, 'tube', { clamps: 0 });
       line('oil-rear', [T(-.015, 0, 0), P(-1.93, 5.19, .372), P(-1.99, 5.165, .385), P(-2.03, 5.15, .395)].concat(n4p), .005, 'tube', { clamps: 1 });   // to No. 4, under the tank's outlet
-      line('oil-rear', [T(0, 0, .019), P(-1.878, 5.36, .369), P(-1.90, 5.42, .37), P(-1.95, 5.51, .374), P(-2.0, 5.6, .38), P(-2.05, 5.7, .39), P(-2.09, 5.78, .41), P(-2.12, 5.84, .443),
-        P(-2.14, 5.875, .465), P(-2.17, 5.915, .487), P(-2.20, 5.945, .503), P(-2.25, 5.95, .515), P(-2.32, 5.95, .512), P(-2.39, 5.95, .504), P(-2.45, 5.93, .487)].concat(n5p), .005, 'tube', { clamps: 4 });   // to No. 5/6
+      line('oil-rear', [T(0, 0, .019), P(-1.878, 5.36, .369), P(-1.90, 5.42, .37), P(-1.95, 5.51, .374), P(-2.0, 5.6, .38), P(-2.05, 5.7, .39), P(-2.09, 5.78, .41), P(-2.12, 5.88, .438),
+        P(-2.15, 5.98, .462), P(-2.18, 6.03, .487), P(-2.21, 6.05, .503), P(-2.25, 6.05, .515), P(-2.32, 6.05, .512), P(-2.39, 6.05, .504), P(-2.45, 6.07, .487)].concat(n5p), .005, 'tube', { clamps: 4 });   // to No. 5/6, crossing under the scavenge tube
       /* scavenge: No. 4 from the pump's outer fitting, No. 5/6 from its inner one, out round the hydraulic pump's flange, aft under the
          gearbox and the oil control module's harness, between the ignition cables, then down under the oil tank */
       line('oil-rear', [Ls(.04, .02, .0845), Ls(.04, .021, .108), P(-1.452, 5.35, .465), P(-1.462, 5.355, .498), P(-1.50, 5.355, .51), P(-1.60, 5.355, .512), P(-1.70, 5.355, .512),
         P(-1.77, 5.355, .507), P(-1.817, 5.36, .50), P(-1.86, 5.37, .493), P(-1.92, 5.385, .478), P(-1.98, 5.405, .455), P(-2.03, 5.425, .428)].concat(n4s), .007, 'tube', { clamps: 3 });
       line('oil-rear', [Ls(.04, -.02, .0845), Ls(.04, -.019, .118), P(-1.45, 5.47, .435), P(-1.462, 5.475, .49), P(-1.50, 5.475, .513), P(-1.60, 5.475, .516), P(-1.70, 5.475, .516),
-        P(-1.77, 5.478, .51), P(-1.808, 5.49, .505), P(-1.835, 5.5, .503), P(-1.88, 5.52, .498), P(-1.94, 5.55, .495), P(-2.0, 5.64, .492), P(-2.06, 5.8, .488), P(-2.11, 5.94, .49),
-        P(-2.16, 6.03, .497), P(-2.20, 6.05, .507), P(-2.25, 6.05, .515), P(-2.32, 6.05, .512), P(-2.39, 6.05, .504), P(-2.45, 6.07, .488)].concat(n5s), .007, 'tube', { clamps: 5 }); }
+        P(-1.77, 5.478, .51), P(-1.808, 5.49, .505), P(-1.835, 5.5, .503), P(-1.88, 5.52, .498), P(-1.94, 5.55, .495), P(-2.0, 5.64, .492), P(-2.06, 5.8, .488), P(-2.11, 5.88, .492),
+        P(-2.16, 5.92, .499), P(-2.20, 5.95, .507), P(-2.25, 5.95, .515), P(-2.32, 5.95, .512), P(-2.39, 5.95, .504), P(-2.45, 5.93, .488)].concat(n5s), .007, 'tube', { clamps: 5 }); }
     /* p.214-219: the front bearing compartment (FDGS, No. 1, 1.5 and 2) and No. 3 are served by tubes running forward under the HPC
        from the gearbox's front face to bosses on the CIC cone; passages through the case and its struts carry the oil on in. The
        manual gives the circuit, not the routes: here six tubes side by side at r 0.318, 6:09 to 6:42, under the core harnesses and over
