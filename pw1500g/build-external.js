@@ -431,9 +431,9 @@
     /* p.214-219: the front bearing compartment (FDGS, No. 1, 1.5 and 2) and No. 3 are served by tubes running forward under the HPC
        from the gearbox's front face to bosses on the CIC cone; passages through the case and its struts carry the oil on in. The
        manual gives the circuit, not the routes: here six tubes side by side at r 0.318, 6:09 to 6:42, under the core harnesses and over
-       the HPC vane levers. The auxiliary oil pressure sensor sits on the fan oil pump's return tube */
+       the HPC vane levers. The auxiliary oil pressure sensor is up on the fire seal cone at 5 o'clock (p.248) */
     PW.part('oil-front', { parent: 'oil', label: 'Front compartment and No. 3 oil tubes, aux oil pressure sensor', src: 'p.212-221, p.230, p.240',
-      info: 'Six tubes run forward under the HPC from the gearbox\'s front face to the compressor intermediate case, where passages through its struts carry the oil to the front bearing compartment (the fan drive gear system and the No. 1, 1.5 and 2 bearings) and the No. 3 bearing. From the 6 o\'clock side: the front compartment\'s scavenge to its pump stage (chip collector FBC), the main oil to the bearings and gear teeth, the journal bearing supply from the VORV/JOSV, the fan oil pump\'s return to the JOSV, the No. 3 supply (with the active oil damper valve\'s flow), and the No. 3 scavenge (chip collector BC3). Last-chance strainers in the supply lines guard the bearing oil jets.\n\nThe fan drive gear system has its own fan-driven oil pump: if main oil pressure falls (windmilling, negative g), the journal oil shuttle valve switches the journal bearings to it. The auxiliary oil pressure sensor on its return tube proves the pump and the shuttle valve work on every flight; a pump or JOSV failure shows at the next engine start, and a failed sensor gives the AUX OIL PRESS MON INOP info message (p.218, 240). The PHMU monitors it.\n\nThe manual gives the circuit; the tube routes here are inferred.' });
+      info: 'Six tubes run forward under the HPC from the gearbox\'s front face to the compressor intermediate case, where passages through its struts carry the oil to the front bearing compartment (the fan drive gear system and the No. 1, 1.5 and 2 bearings) and the No. 3 bearing. From the 6 o\'clock side: the front compartment\'s scavenge to its pump stage (chip collector FBC), the main oil to the bearings and gear teeth, the journal bearing supply from the VORV/JOSV, the fan oil pump\'s return to the JOSV, the No. 3 supply (with the active oil damper valve\'s flow), and the No. 3 scavenge (chip collector BC3). Last-chance strainers in the supply lines guard the bearing oil jets.\n\nThe fan drive gear system has its own fan-driven oil pump: if main oil pressure falls (windmilling, negative g), the journal oil shuttle valve switches the journal bearings to it. The auxiliary oil pressure sensor, at 5 o\'clock on the fan intermediate case by the pump\'s outlet (p.248), proves the pump and the shuttle valve work on every flight; a pump or JOSV failure shows at the next engine start, and a failed sensor gives the AUX OIL PRESS MON INOP info message (p.218, 240). The PHMU monitors it.\n\nThe manual gives the circuit; the tube routes here are inferred.' });
     { const rb = .318, xb = -.95 - (.515 - rb) * .83, m0 = GB.mainGearboxBody.x_from;
       const tubes = [[6.15, .007], [6.26, .006], [6.37, .006], [6.48, .006], [6.59, .005], [6.70, .006]];             // [clock, tube radius], as listed in the info
       tubes.forEach(([h, tr]) => { const s = tr + .001;
@@ -442,11 +442,14 @@
         line('oil-front', [P(m0 + .013 + s * 1.45, h, rb), P(-1.42, h, rb), P(-1.30, h, rb), P(-1.20, h, rb), P(xb - .016 - s * 1.45, h, rb)], tr, 'tube', { clamps: 0 }); });
       /* multi-tube clamp blocks holding the six together */
       for (const xx of [-1.21, -1.36]) { const f = Kt.frame('oil-front', xx, 6.425, rb); Kt.box('oil-front', f, [0, 0, 0], [.018, .024, .116], 'clampOrange', { round: .006 }); }
-      /* the auxiliary oil pressure sensor on a tee in the fan oil pump's return, its lead into the core harness junction below the gearbox */
-      const fa = Kt.frame('oil-front', -1.30, 6.48, rb), La = FLa(-1.30, 6.48, rb);
-      Kt.cyl('oil-front', fa, [0, 0, 0], 'x', .0095, .03, 'steel', { edge: .002 }); Kt.cyl('oil-front', fa, [0, .018, 0], 'y', .008, .024, 'steel');
-      Kt.hex('oil-front', fa, [0, .03, 0], 'y', .0095, .006, 'steel'); Kt.connector('oil-front', fa, [0, .034, 0], 'y', .006, { lead: '-x' });
-      line('oil-front', [La(-.0108, .034 + .0114, 0), P(-1.33, 6.6, .37), P(-1.345, 6.8, .405), P(-1.35, 6.9, .42)], .004, 'harness', { clamps: 0, ends: false }); }
+      /* the auxiliary oil pressure sensor "at the 5 o'clock position on the fan intermediate case" (p.248): on the fire seal cone near its
+         rim, by the fan oil pump's outlet (its drive gear is at 5:20, p.239); a body on a two-ear flange (p.249 D). Its lead runs down
+         the cone into WC08. Until 2026-10-12 it sat on a tee in the pump's return tube under the HPC */
+      const fa = Kt.frame('oil-front', -1.01, 5.33, .443, { rz: .88 }), La = FLa(-1.01, 5.33, .443, .88);                   // as near the rim as the IFS, 3 cm off the cone here, allows
+      Kt.box('oil-front', fa, [0, .003, 0], [.022, .006, .05], 'steel', { round: .004 }); for (const s of [-1, 1]) Kt.hex('oil-front', fa, [0, .0075, s * .019], 'y', .0035, .003, 'steel');
+      Kt.cyl('oil-front', fa, [0, .022, 0], 'y', .012, .032, 'steel', { edge: .002 }); Kt.cyl('oil-front', fa, [0, .04, 0], 'y', .009, .006, 'steel');
+      Kt.connector('oil-front', fa, [0, .044, 0], 'y', .007, { lead: '-x' });
+      line('oil-front', [La(-.0126, .0573, 0), La(-.03, .052, 0), P(-1.08, 5.31, .42), P(-1.095, 5.3, .38), P(-1.108, 5.3, .352), P(-1.115, 5.31, .34)], .004, 'harness', { clamps: 0, ends: false }); }
     /* thermal management (p.212-217, 232-233): three heat exchangers on the upper left of the core. The EEC's bypass valve splits the
        cooled oil between the fuel/oil and air/oil coolers on fuel temperature, normally about 75 / 25 */
     /* p.233, measured against the HPC vane lever rows: FOHX x -1.05 to -1.41 with its bypass valve at the forward end, VFGOOHX -1.43 to
