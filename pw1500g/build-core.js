@@ -11,6 +11,7 @@
 
   /* materials for this module (real finishes from the photos in PHOTOS-LOCAL.md) */
   Object.assign(PW.MAT, {
+    hotNut:      () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#4a4642'), roughness: .48, metalness: .7 }),   // the dark, heat-coloured flange nuts on the hot cases (photos)
     /* photos: the blades are glossy blue-black and pick up bright reflections of the hangar lights; the titanium leading edge reads as a
        matte pale sage band about 3 cm wide head-on (teal-green in sunlight) */
     fanBladePU:  () => new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#141922'), roughness: .38, metalness: .15, clearcoat: .45, clearcoatRoughness: .22 }),   // black polyurethane erosion paint (p.58)
@@ -75,10 +76,11 @@
     const prof = t > 0 ? G.shellProfile(outer, inner) : G.shellProfile(inner, outer);
     return PW.add(id, G.revolve(prof, { seg: o.seg || 128, crease: 28 }), mat, { mat: o.matOver });
   }
-  /* a bolted flange ring with its bolt circle */
-  function flange(id, x, r0, r1, w, n, mat) {
+  /* a bolted flange ring with its bolt circle; o.size and o.nut set the nut size and material */
+  function flange(id, x, r0, r1, w, n, mat, o) {
+    o = o || {}; const s = o.size || .0045;
     PW.add(id, G.ring(x + w / 2, x - w / 2, r0, r1, { seg: 128 }), mat || 'nickel');
-    if (n) PW.add(id, G.boltCircle(PW.partMat(id, 'steel'), x + w / 2 + .002, (r0 + r1) / 2 + (r1 - r0) * .2, n, .0045), null);
+    if (n) PW.add(id, G.boltCircle(PW.partMat(id, o.nut || 'steel'), x + w / 2 + s * .35, (r0 + r1) / 2 + (r1 - r0) * .2, n, s), null);
   }
   /* a stator ring: vanes plus inner and outer bands */
   function statorRow(id, row, o) {
@@ -350,9 +352,11 @@
     buildShafts(SP);
     const owner = n => /^D /.test(n) || /^A /.test(n) ? null : /aft step/.test(n) ? 'fic' : /LPC case rear/.test(n) ? 'lpc-case' : /CIC front/.test(n) ? 'cic' : /^E /.test(n) || /^H /.test(n) ? 'hpc-case'
       : /^M /.test(n) ? 'diffuser-case' : /HPT case rear/.test(n) ? 'hpt-case' : /^N /.test(n) ? 'tic' : /^N1 /.test(n) || /^P /.test(n) ? 'lpt-case' : /^T[oi] /.test(n) ? 'exhaust' : null;
+    /* the photos show the case flanges' nuts close together, about 3 cm apart and about 13 mm across, dark on the hot section (they were
+       4.5 cm apart and 9 mm across until 2026-10-12) */
     for (const f of D.GEN.flanges) { const pid = owner(f.name); if (!pid || !PW.parts.has(pid)) continue;
-      const hot = /hpt|tic|lpt|exhaust|diffuser/.test(pid), n = Math.max(24, Math.round(TAU * f.r_out / .045 / 4) * 4);
-      flange(pid, f.x, f.r_in, f.r_out, .009, /^Ti /.test(f.name) ? 0 : n, hot ? 'hotCase' : 'nickel'); }
+      const hot = /hpt|tic|lpt|exhaust|diffuser/.test(pid), n = Math.max(32, Math.round(TAU * f.r_out / .03 / 4) * 4);
+      flange(pid, f.x, f.r_in, f.r_out, .009, /^Ti /.test(f.name) ? 0 : n, hot ? 'hotCase' : 'nickel', { size: .0065, nut: hot ? 'hotNut' : 'steel' }); }
     PW.CENTER_X = -1.1;
   }
 

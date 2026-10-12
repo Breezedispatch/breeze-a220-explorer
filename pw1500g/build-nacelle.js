@@ -7,19 +7,29 @@
   (PW.builders = PW.builders || []).push(build);
   const deg = d => d * Math.PI / 180;
 
-  /* quilted stainless thermal blanket (the core side of the reverser doors in the photos): diamond quilting with stud dots */
-  const quiltTex = () => PW.tex.quilt || (PW.tex.quilt = PW.tex.canvas(256, 256, (c, w, h) => {
-    c.fillStyle = '#9a9a9a'; c.fillRect(0, 0, w, h);
-    for (let i = 0; i < 4000; i++) { c.fillStyle = `rgba(${Math.random() < .5 ? '255,255,255' : '0,0,0'},.05)`; c.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
-    c.strokeStyle = '#4a4a4a'; c.lineWidth = 3;
-    for (let k = -1; k <= 2; k++) { c.beginPath(); c.moveTo(k * w / 2, 0); c.lineTo(k * w / 2 + w, h); c.stroke(); c.beginPath(); c.moveTo(k * w / 2 + w, 0); c.lineTo(k * w / 2, h); c.stroke(); }
-    c.fillStyle = '#3a3a3a'; for (const [x, y] of [[0, 0], [w / 2, h / 2], [w, 0], [0, h], [w, h]]) { c.beginPath(); c.arc(x, y, 7, 0, TAU); c.fill(); }
+  /* woven stainless thermal blanket (the core side of the reverser doors in the photos): a fine basket weave, 16 strands to a 0.1 m tile.
+     The IFS blanket's texture coordinates are in metres x 10 (see metricUV), so the weave repeats every 10 cm; until 2026-10-12 one
+     diamond of an older quilt texture spanned the whole door */
+  const quiltTex = () => PW.tex.weave || (PW.tex.weave = PW.tex.canvas(256, 256, (c, w, h) => {
+    c.fillStyle = '#6e6e6e'; c.fillRect(0, 0, w, h);
+    const n = 16, s = w / n;
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const cx = (i + .5) * s, cy = (j + .5) * s, hor = (i + j) % 2 === 0;
+      const g = c.createRadialGradient(cx, cy, 0, cx, cy, s * .62); g.addColorStop(0, '#d8d8d8'); g.addColorStop(.65, '#a4a4a4'); g.addColorStop(1, '#5a5a5a');
+      c.fillStyle = g; c.beginPath(); c.ellipse(cx, cy, hor ? s * .56 : s * .34, hor ? s * .34 : s * .56, 0, 0, TAU); c.fill(); }
+    for (let i = 0; i < 3000; i++) { c.fillStyle = `rgba(${Math.random() < .5 ? '255,255,255' : '0,0,0'},.07)`; c.fillRect(Math.random() * w, Math.random() * h, 1.5, 1.5); }
   }));
+  /* texture coordinates in metres x 10 on a revolved surface (arc length round the axis from t0, and x), turned 45 deg so the weave runs
+     on the diagonal as in the photos */
+  const metricUV = (g, t0) => { const p = g.attributes.position, uv = g.attributes.uv, k = Math.SQRT1_2;
+    for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), r = Math.hypot(y, z), th = ((Math.atan2(z, y) - t0) % TAU + TAU) % TAU;
+      const u = th * r * 10, v = x * 10; uv.setXY(i, (u + v) * k, (v - u) * k); }
+    uv.needsUpdate = true; return g; };
   Object.assign(PW.MAT, {
     cowlWhite: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#e3e6e8'), roughness: .55, metalness: .02 }),
     inletLining: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#2a2f31'), roughness: .6, metalness: .2, bumpMap: PW.tex.perf(), bumpScale: .0008 }),
-    blanket: () => { const t = quiltTex(); return new THREE.MeshStandardMaterial({ color: new THREE.Color('#c9cacb'), roughness: .42, metalness: .85, bumpMap: t, bumpScale: .004, roughnessMap: t }); },
-    siliconeSeal: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#b8553a'), roughness: .7, metalness: 0 }),
+    blanket: () => { const t = quiltTex(); return new THREE.MeshStandardMaterial({ color: new THREE.Color('#d3d5d6'), roughness: .62, metalness: .72, bumpMap: t, bumpScale: .0011, roughnessMap: t }); },
+    siliconeSeal: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#9a4430'), roughness: .5, metalness: 0 }),         // the red-brown bulb fire seals (photos)
+    gasketOrange: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#cf6a3e'), roughness: .55, metalness: 0 }),        // orange silicone gaskets round the IFS openings (photos)
     cascadeGrey: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#4b5056'), roughness: .5, metalness: .5 }),
     bareCowl: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#a9a59b'), roughness: .45, metalness: .85, roughnessMap: PW.tex.noise('cast', 256, 14, .55, 1) }),
     horGrey: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#4b5157'), roughness: .42, metalness: .55 }),   // the dark grey hold-open rods (photos)
@@ -451,7 +461,46 @@
       for (const [xa, xb, a0, al, n] of [[xI0, xB, it0, itl, 20], [xB, xTE - .02, t0, tl, 6]]) {
         const ifo = []; for (let i = 0; i <= n; i++) { const xx = xa + (xb - xa) * i / n; ifo.push([xx, rIFS(xx)]); }
         PW.add(iid, G.revolve(G.shellProfile(ifo, ifo.map(([xx, r]) => [xx, r - .02])), { seg: 72, thetaStart: a0, thetaLength: al }), 'cowlWhite');
-        PW.add(iid, G.revolve(G.shellProfile(ifo.map(([xx, r]) => [xx, r - .02]), ifo.map(([xx, r]) => [xx, r - .032])), { seg: 72, thetaStart: a0 + deg(1), thetaLength: al - deg(2) }), 'blanket', { mat: { bumpMap: quiltTex(), roughnessMap: quiltTex() } }); }
+        PW.add(iid, metricUV(G.revolve(G.shellProfile(ifo.map(([xx, r]) => [xx, r - .02]), ifo.map(([xx, r]) => [xx, r - .032])), { seg: 72, thetaStart: a0 + deg(1), thetaLength: al - deg(2) }), a0), 'blanket'); }
+      /* photos: the blanket is made up in panels with raised hems, held by round stainless studs (a washer with the stud's nut standing
+         in the middle) along the hems and across the panels, about 0.19 m apart; none over the openings, the fire elements or the
+         bifurcation edges. Hems run round the engine at every other stud row and fore and aft along every third stud column */
+      { const holes = sg > 0 ? [[-1.79, -2.07, 2.15, 3.35], [-2.20, -2.40, 2.1, 2.7], [-1.53, -1.71, 1.35, 1.65]] : [[-1.42, -2.08, 9.0, 10.6], [-2.34, -2.54, 8.65, 9.35]];
+        const fireX = [-1.43, side === 'right' ? -2.115 : -2.16], clk = th => (th / (Math.PI / 6) % 12 + 12) % 12, rB = xx => rIFS(xx) - .032;
+        const inHole = (xx, th, pad) => holes.some(([xa, xb, ha, hb]) => xx <= xa + pad && xx >= xb - pad && clk(th) >= ha - pad * 6 && clk(th) <= hb + pad * 6);
+        const btn = [], nut = [], hems = [], cols = []; for (let th = it0 + deg(9); th < it0 + itl - deg(8); th += .33) cols.push(th);
+        /* a hem is a flat fold about 18 mm wide standing 3 mm off the blanket, broken where it would cross an opening or a fire element */
+        const hem = pts => { let run = []; const flush = () => { if (run.length > 1) { const [xa, ta] = run[0], [xb, tb] = run[run.length - 1];
+            if (xa === xb) { const r = rB(xa), lo = Math.min(ta, tb), hi = Math.max(ta, tb);
+              hems.push(G.revolve([[xa + .009, r + .001], [xa + .005, r - .003], [xa - .005, r - .003], [xa - .009, r + .001]], { seg: Math.max(2, Math.round((hi - lo) / deg(2))), thetaStart: lo, thetaLength: hi - lo })); }
+            else { const pr = run.map(([xx]) => [xx, rB(xx) - .003]).concat(run.map(([xx]) => [xx, rB(xx) + .001]).reverse()), dth = .014 / rB(xa);
+              hems.push(G.revolve(pr, { seg: 2, thetaStart: ta - dth / 2, thetaLength: dth })); } } run = []; };
+          for (const [xx, th] of pts) { if (inHole(xx, th, .03) || fireX.some(f => Math.abs(xx - f) < .03)) flush(); else run.push([xx, th]); } flush(); };
+        let row = 0;
+        for (let xx = -1.06; xx > xTE - .06; xx -= .19, row++) { if (fireX.some(f => Math.abs(xx - f) < .045)) continue;
+          for (const th of cols) { if (inHole(xx, th, 0)) continue;
+            const place = (g, dr) => g.rotateX(th).translate(...G.onRing(xx, rB(xx) - dr, th).toArray());
+            btn.push(place(new THREE.CylinderGeometry(.019, .023, .004, 20), .002)); nut.push(place(new THREE.CylinderGeometry(.0062, .0062, .007, 6), .0075)); }
+          if (row % 2) { const pts = []; for (let th = it0 + deg(4); th <= it0 + itl - deg(4); th += deg(2)) pts.push([xx, th]); hem(pts); } }
+        for (let k = 2; k < cols.length - 1; k += 3) { const pts = []; for (let xx = -1.02; xx > xTE - .04; xx -= .02) pts.push([xx, cols[k]]); hem(pts); }
+        PW.add(iid, G.merge(btn), 'plateAl', { solid: true }); PW.add(iid, G.merge(nut), 'steel', { solid: true }); PW.add(iid, metricUV(G.merge(hems), it0), 'blanket'); }
+      /* p.21 and the photos: red-brown bulb fire seals along the IFS half's forward edge, where it closes against the firewall, and along
+         its hinge beam edge */
+      { const ha = sg > 0 ? it0 + deg(2) : it0 + itl - deg(2), along = [], gaps = sg > 0 ? [] : [8.2, 9.17];   // gaps where the VFG oil lines pass the firewall
+        const a0 = it0 + deg(2), a1 = it0 + itl - deg(2), cuts = [a0];
+        for (const g of gaps) cuts.push(G.clock(g - .12), G.clock(g + .12)); cuts.push(a1);
+        for (let k = 0; k < cuts.length; k += 2) { const arc = [], n = Math.max(2, Math.round((cuts[k + 1] - cuts[k]) / deg(5)));
+          for (let i = 0; i <= n; i++) arc.push(G.onRing(xI0 - .011, rIFS(xI0 - .011) - .028, cuts[k] + (cuts[k + 1] - cuts[k]) * i / n));
+          PW.add(iid, G.tube(arc, .013, { radial: 12 }), 'siliconeSeal'); }
+        for (let xx = -1.08; xx >= -2.15; xx -= .0825) along.push(G.onRing(xx, rIFS(xx) - .03, ha));             // aft of the fuel supply hose and forward of the thrust links
+        PW.add(iid, G.tube(along, .013, { radial: 12 }), 'siliconeSeal'); }
+      /* the photos: thick orange silicone gaskets frame the openings on the core side: the oil tank access and precooler exhaust doors on
+         the right, the air/oil cooler window on the left (its partner frame is on the cooler) */
+      { const frame = (x0, x1, h, half) => { const a = G.clock(h), w = .04, ri = xx => rIFS(xx) - .033, ro = xx => rIFS(xx) - .045, n = 6;
+          for (const xx of [x0, x1]) PW.add(iid, G.revolve([[xx + w / 2, ri(xx)], [xx - w / 2, ri(xx)], [xx - w / 2, ro(xx)], [xx + w / 2, ro(xx)]], { seg: 16, thetaStart: a - half - w / .55, thetaLength: 2 * half + 2 * w / .55 }), 'gasketOrange');
+          for (const s of [-1, 1]) { const pr = []; for (let i = 0; i <= n; i++) { const xx = x0 + (x1 - x0) * i / n; pr.push([xx, ri(xx)]); } for (let i = n; i >= 0; i--) { const xx = x0 + (x1 - x0) * i / n; pr.push([xx, ro(xx)]); }
+            PW.add(iid, G.revolve(pr, { seg: 2, thetaStart: s > 0 ? a + half : a - half - w / .55, thetaLength: w / .55 }), 'gasketOrange'); } };
+        if (sg > 0) { frame(-1.80, -2.06, 2.62, .21); frame(-2.21, -2.39, 2.4, .17); } else frame(-1.55, -1.94, 9.9, .30); }          // the window's frame round the cooler's plenums, clear of the fire element, the scupper drain and the VFG oil line
       /* p.20-23: three core scoop vents on each IFS half, small scoops in the fan stream that ram air into the core compartment to
          ventilate it; positions measured off p.23 (fraction of the IFS length, clock) */
       { const L0 = xI0, L1 = xTE - .02;
@@ -461,11 +510,12 @@
           PW.kit.box(iid, fv, [.031, .0065, 0], [.004, .008, .03], 'darkBox', { round: .002 }); } }                                  // its mouth, facing forward
       /* TTM p.268-269: two fire detection elements on each core cowl, forward and aft, each a pair of sensing tubes (loops A and B)
          clipped to the blanket and running round the core; they open with the door. On the right the aft pair runs just aft of the oil
-         tank, clear of the oil tank access door */
+         tank, clear of the oil tank access door; on the left just aft of the starter air valve, clear of the air/oil cooler window (it
+         crossed the window at x -1.98 until 2026-10-12) */
       if (PW.parts.has('fire')) { const fid = `fire-${side}`;
         PW.part(fid, { parent: 'fire', label: `Fire detection elements, ${side} core cowl`, attach: hinge, src: 'TTM ch. 26 (p.268-269)',
           info: 'Two sensing elements of fire loops A and B on the inside of this core cowl, one forward and one aft, each a pair of tubes running round the core on clips. They are part of the reverser door and open with it.' });
-        for (const xx of [-1.43, side === 'right' ? -2.115 : -1.98]) for (const dx of [-.011, .011]) { const pts = []; for (let i = 0; i <= 18; i++) pts.push(G.onRing(xx + dx, rIFS(xx) - .042, it0 + deg(6) + (itl - deg(12)) * i / 18));
+        for (const xx of [-1.43, side === 'right' ? -2.115 : -2.16]) for (const dx of [-.011, .011]) { const pts = []; for (let i = 0; i <= 18; i++) pts.push(G.onRing(xx + dx, rIFS(xx) - .042, it0 + deg(6) + (itl - deg(12)) * i / 18));
           const g = G.tube(pts, .0035, { radial: 6 }), m = PW.add(fid, g, 'steel'); m.userData.isLine = true;
           if (dx < 0) { const c = PW.add(fid, G.alongCurve(g.userData.curve, [.1, .3, .5, .7, .9], () => new THREE.BoxGeometry(.035, .008, .012)), 'steel'); c.userData.isLine = true; } } }
       const ac = []; for (let i = 0; i <= 10; i++) { const xx = xTE - .02 + (xCN + .004 - (xTE - .02)) * i / 10; ac.push([xx, rIFS(xx)]); }
