@@ -250,8 +250,8 @@
       const xe = bi[bi.length - 1][0];
       for (let i = 0; i < 6; i++) { const a = seg('bypassInner', xs - .05, xe, 20);
         PW.add('fan-exit-liner', G.revolve(G.shellProfile(a, a.map(([x, r]) => [x, r - .008])), { seg: 24, thetaStart: i / 6 * TAU + .004, thetaLength: TAU / 6 - .008 }), 'mint'); }
-      /* louvred grilles: 2.5 bleed exits (two per side, p.61; photos) */
-      for (const c of [2.2, 3.8, 8.2, 9.8]) { const a = G.clock(c), xg = -.79, rg = rAt('bypassInner', xg) + .002;
+      /* louvred grilles: 2.5 bleed exits (p.60-61; photos). The louvred fairing low on the left is the VFG air/oil cooler's, built with it */
+      for (const c of [2.2, 3.8, 9.8]) { const a = G.clock(c), xg = -.79, rg = rAt('bypassInner', xg) + .002;
         for (let k = 0; k < 7; k++) { const sl = new THREE.Mesh(G.roundedBox(.11, .004, .012, .0015));
           sl.position.copy(G.onRing(xg, rg, a + (k - 3) * .022)); sl.rotation.x = a + (k - 3) * .022; sl.rotateZ(.35); PW.add('fan-exit-liner', sl, 'darkBox', { solid: true }); } }
       /* the core casing behind the splitter, to the LPC */
