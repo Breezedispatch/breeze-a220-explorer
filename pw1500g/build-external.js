@@ -1066,7 +1066,10 @@
         Kt.box('n1-probe', f, [0, .02, .006], [.056, .024, .036], 'castAl', { round: .006 });
         for (const s of [-1, 1]) Kt.connector('n1-probe', f, [s * .014, .02, .025], 'z', .0085, { lead: 'z', boot: true });
         Kt.plate('n1-probe', f, [0, .0322, .0], 'y', 'z', .04, .018);
-        Kt.cyl('n1-probe', f, [0, -.012, 0], 'y', .0095, .024, 'steel'); Kt.cyl('n1-probe', f, [0, -.1, 0], 'y', .0055, .16, 'steel'); Kt.cyl('n1-probe', f, [0, -.185, 0], 'y', .0045, .012, 'steel'); }
+        /* the stem, about 20 cm (p.114), slopes forward and in through the case and the gas path to sit over the coupling nut's teeth
+           behind the third LPC rotor (x -0.897, r 0.245) */
+        const sd = [-.085, -.996, 0]; Kt.cyl('n1-probe', f, [0, -.012, 0], 'y', .0095, .024, 'steel');
+        Kt.cyl('n1-probe', f, [-.0094, -.11, 0], sd, .0055, .18, 'steel'); Kt.cyl('n1-probe', f, [-.0179, -.2102, 0], sd, .0045, .022, 'steel'); }
       /* p.108-113: the fan speed (Nf) probe, on the No. 1 and No. 1.5 bearing support housing at 1 o'clock, its tip over the toothed front
          shaft gear on the FDGS gearbox shaft. Its semi-rigid lead (p.109, p.113) runs aft over the support's flange and the FIC hub, out
          through a core inlet strut, aft between the LPC case and the fan exit liner, over the 2.5 bleed valve, to a bulkhead receptacle on

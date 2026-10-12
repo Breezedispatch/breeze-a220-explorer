@@ -602,5 +602,13 @@
       PW.add(pid, G.ring(x + .018, x - .018, r - .006, r, { seg: 64 }), 'steel'); PW.add(pid, G.ring(x + .018, x - .018, r + .018, r + .026, { seg: 64 }), 'steel');
       const el = type === 'ball' ? new THREE.SphereGeometry(.011, 12, 8) : new THREE.CylinderGeometry(.009, type === 'tapered roller' ? .007 : .009, .03, 12).rotateZ(Math.PI / 2);
       el.translate(0, r + .01, 0); el.userData.solid = true; PW.add(pid, G.ringInstances(el, PW.partMat(pid, 'gearSteel'), Math.round(TAU * (r + .01) / .026), { x }), null); }
+    /* the N1 speed probe's target (p.114-115): the No. 2 bearing coupling nut, "located on the LPC", an annular nut with a castellated
+       rim of 18 teeth, each wider than the gap. Here it closes a short drum aft of the third LPC rotor, in the cavity in front of the
+       compressor intermediate case, where the 20 cm probe from station 2.5 at 4:30 reaches it (the probe is built with the sensors) */
+    PW.part('n1-target', { parent: 'bearings', label: 'No. 2 bearing coupling nut (N1 target)', attach: SP.n1, src: 'p.114-115',
+      info: 'Nut on the LPC whose 18 teeth pass the tip of the N1 speed probe. Each of the probe\'s two coils gives a signal proportional to the nut\'s speed, one per EEC channel; N1 is the primary thrust parameter. The probe tip sits close to the teeth, so take care not to damage it when the probe is removed or installed.' });
+    PW.add('n1-target', G.ring(-.851, -.886, .192, .202, { seg: 96 }), 'titanium');                                                // short drum aft from the third LPC rotor
+    PW.add('n1-target', G.ring(-.886, -.904, .192, .222, { seg: 96 }), 'steel');                                                    // the nut
+    { const t = new THREE.BoxGeometry(.016, .013, .054); t.translate(-.895, .2285, 0); t.userData.solid = true; PW.add('n1-target', G.ringInstances(t, PW.partMat('n1-target', 'steel'), 18), null); }   // its 18 teeth
   }
 })();
