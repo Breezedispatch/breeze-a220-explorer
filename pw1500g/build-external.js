@@ -1095,38 +1095,88 @@
     /* ============================== THRUST REVERSER CONTROL UNITS ============================== */
     /* p.344-345: the ICU in the aft pylon behind access panels on both sides, the DCU in the forward pylon above the core. They are
        inside the pylon, so they show with the nacelle ghosted or off */
-    PW.part('tras-control', { label: 'Thrust reverser control units (ICU, DCU)', explode: [0, .35, 0], src: 'p.326-345',
-      info: 'The thrust reverser actuation system is electrically controlled and hydraulically worked. The EEC opens the isolation control unit to let aircraft hydraulic pressure into the system and the directional control unit to unlock, deploy, stow and lock the sleeves; the CDCs work the track lock valves. Thrust reverse needs the aircraft on the ground (weight on wheels or wheel spin-up), no manual inhibit, no reverser fault and the engine running. Once the sleeves pass 85 percent of travel the thrust levers can go to maximum reverse; an inadvertent deploy brings the engine to idle.' });
-    PW.part('tras-icu', { parent: 'tras-control', label: 'Isolation control unit (ICU)', src: 'p.334-345',
-      info: 'In the aft pylon, reached through access panels on both sides of the pylon. It isolates the thrust reverser actuation system from the aircraft hydraulic system until either EEC channel energizes its dual-channel solenoid, which works a pilot valve onto the isolation spool valve.\n\nThe manual inhibit lever on its side stops the isolation spool valve from operating: it is used to dispatch with a reverser inoperative and to make the system safe for maintenance, it is locked by the inhibit pin stored on the ICU, and dual-channel proximity sensors report its position.' });
-    { const f = Kt.frame('tras-icu', -2.9, 12, 1.25);
-      Kt.box('tras-icu', f, [0, 0, 0], [.16, .1, .12], 'castAl', { round: .012 }); Kt.box('tras-icu', f, [-.03, .065, 0], [.08, .03, .14], 'castAl', { round: .006 });   // body and mounting flange
-      Kt.cyl('tras-icu', f, [.11, .02, -.02], 'x', .022, .07, 'castAl'); Kt.connector('tras-icu', f, [.145, .02, -.02], 'x', .011, { lead: 'y' });   // dual-channel solenoid
-      for (const s of [-1, 1]) Kt.fitting('tras-icu', f, [s * .035, -.05, -.02], '-y', .012);                                    // pressure in, return
-      Kt.box('tras-icu', f, [-.03, -.01, .068], [.03, .12, .008], 'steel', { round: .004, mat: { color: '#c0262b', metalness: .2, roughness: .5 } });   // manual inhibit lever
-      Kt.cyl('tras-icu', f, [.02, .03, .07], 'z', .0055, .03, 'steel'); Kt.rod('tras-icu', f, [.02, .03, .085], [-.01, .045, .07], .0012, 'steel');   // inhibit pin on its lanyard
-      for (const y of [-.02, .02]) { Kt.cyl('tras-icu', f, [-.07, y, .065], 'z', .007, .02, 'steel'); }                       // inhibit proximity sensors
-      Kt.plate('tras-icu', f, [.03, .02, .0605], 'z', 'y', .05, .03); }
-    PW.part('tras-dcu', { parent: 'tras-control', label: 'Directional control unit (DCU)', src: 'p.334-345',
-      info: 'In the forward pylon, above the engine core. Its dual-channel solenoid, worked by either EEC channel, operates the directional control valve onto the directional spool valve, which sends hydraulic pressure to the actuators and the track lock valves to unlock, deploy, stow and lock the sleeves. A dual-channel pressure proximity sensor tells each EEC channel when there is pressure at the ICU outlet.' });
-    { const f = Kt.frame('tras-dcu', -1.35, 12, 1.12);
-      Kt.box('tras-dcu', f, [0, 0, 0], [.22, .07, .08], 'castAl', { round: .01 }); Kt.cyl('tras-dcu', f, [.13, 0, 0], 'x', .02, .05, 'castAl'); Kt.connector('tras-dcu', f, [.16, 0, 0], 'x', .01, { lead: 'y' });
-      for (const z of [-.015, .015]) Kt.connector('tras-dcu', f, [-.06, .035, z], 'y', .007, { lead: '-x' });                 // pressure proximity sensor, two channels
-      for (const xr of [-.08, -.03, .02, .07]) Kt.fitting('tras-dcu', f, [xr, -.035, 0], '-y', .01);                          // pressure, return, deploy, stow
-      Kt.plate('tras-dcu', f, [0, 0, .0405], 'z', 'y', .05, .03); }
-    /* the lines inside the pylon (they show with the nacelle ghosted): the DCU's return, deploy and stow ports out to each door's
-       lines at the hinge beam (the door ends are built with the doors, from 0:21 or 11:39 o'clock); the ICU's outlet forward to the
-       DCU's pressure port; the ICU's supply from the aircraft system above; and the units' connectors into the pylon's wiring. The
-       hinge crossing is a short flexible hose in the aircraft; here the door's half swings away with the door */
-    { const xm = -1.0406, ra = 1.06;
-      for (const [xp, dr, dx] of [[-1.38, .02, -.06], [-1.33, .038, -.072], [-1.28, .056, -.084]]) for (const h of [.35, 11.65]) {   // return, deploy, stow
-        const s = h < 6 ? 1 : -1;
-        line('tras-dcu', [P(xp, 12, 1.0705), P(xp, 12, 1.055), P(xp + .06, 12 + s * .12, 1.06), P(xm + dx - .06, h - s * .05, ra + dr), P(xm + dx, h, ra + dr)], .006, 'tube', { clamps: 0, ends: false }); }
-      line('tras-icu', [P(-2.935, 11.99, 1.1826), P(-2.935, 11.99, 1.15), P(-2.6, 12, 1.135), P(-2.25, 12, 1.13), P(-1.9, 12, 1.08), P(-1.5, 12, 1.055), P(-1.43, 12, 1.056), P(-1.43, 12, 1.0705)], .007, 'tube', { clamps: 0, ends: false });   // ICU outlet to the DCU pressure port
-      line('tras-icu', [P(-2.865, 11.99, 1.1826), P(-2.865, 11.99, 1.16), P(-2.80, 12, 1.40)], .007, 'tube', { clamps: 0, ends: false });   // supply from the aircraft hydraulic system
-      for (const [pid, pts] of [['tras-dcu', [P(-1.171, 12, 1.138), P(-1.16, 12, 1.16), P(-1.10, 12, 1.25)]], ['tras-dcu', [P(-1.423, 11.98, 1.168), P(-1.40, 11.97, 1.20), P(-1.30, 11.97, 1.27)]],
-        ['tras-dcu', [P(-1.423, .02, 1.168), P(-1.40, .03, 1.20), P(-1.30, .03, 1.27)]], ['tras-icu', [P(-2.734, 11.97, 1.29), P(-2.70, 11.97, 1.33), P(-2.60, 11.97, 1.40)]]])
-        line(pid, pts, .005, 'harness', { clamps: 0, ends: false }); }
+    PW.part('tras-control', { label: 'Thrust reverser control units (ICU, DCU)', explode: [0, .35, 0], src: 'p.326-345, p.356-369',
+      info: 'The thrust reverser actuation system is electrically controlled and hydraulically worked, on aircraft hydraulic system 1 for the left engine and system 2 for the right. Aircraft pressure goes through the isolation control unit (ICU) in the aft pylon to the directional control unit (DCU) in the forward pylon, and from the DCU a stow line and a deploy line go down to both reverser doors. On each door they feed the two sleeve actuators, and the stow line feeds the track lock valve. The return comes back through the DCU and ICU to the aircraft.\n\nThe EEC opens the ICU and then the DCU; the CDC opens the track lock valves. Thrust reverse needs the aircraft on the ground (weight on wheels or wheel spin-up), no manual inhibit, no reverser fault and the engine running. Once the sleeves pass 85 percent of travel the thrust levers can go to maximum reverse; an inadvertent deploy brings the engine to idle.' });
+    PW.part('tras-icu', { parent: 'tras-control', label: 'Isolation control unit (ICU)', src: 'p.344-345, p.356-373',
+      info: 'In the aft pylon, reached through access panels on both sides of the pylon. It isolates the thrust reverser actuation system from the aircraft hydraulic system until either EEC channel energizes its dual-channel solenoid, which works the isolation control valve onto the isolation spool valve. It has four ports: A/C SUPPLY in from the aircraft through an inlet screen and A/C RETURN back to it on one face, SUPPLY out to the DCU and RETURN from it on the other.\n\nThe manual inhibit lever on its end stops the isolation spool valve from operating. It is used to dispatch with a reverser inoperative (with the lockout pins on the latch beams as well) and to make the system safe for maintenance, where the AMP needs only the ICU deactivated: move the lever to inhibit and lock it with the inhibit pin, which is stowed on the ICU. Dual-channel proximity sensors report the lever position to the EEC, and the flight deck shows the L (R) REVERSER INHIBIT status message.' });
+    /* p.345, p.373: a block hung from an H-shaped mounting plate on top. The SUPPLY and RETURN ports to and from the DCU are on one face,
+       the A/C SUPPLY and A/C RETURN ports on the other, each name cast beside its port. The dual-channel solenoid sticks out of one end;
+       the manual inhibit lever hangs from a pivot at the top of the other end, over a lower housing that carries the two inhibit
+       proximity sensors (pointing back along the unit) and the inhibit pin's stowage hole beside A/C RETURN. The manual does not say
+       which way the unit faces in the pylon: with the SUPPLY and RETURN face toward the DCU, as here, the renders put the lever at the
+       engine-left end */
+    { const f = Kt.frame('tras-icu', -2.9, 12, 1.47), C = 'castAl', I = 'tras-icu';
+      Kt.box(I, f, [0, 0, 0], [.085, .075, .15], C, { round: .008 });                                                         // body
+      Kt.box(I, f, [0, .0435, 0], [.045, .012, .17], C, { round: .004 });                                                     // mounting plate
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) { Kt.box(I, f, [sx * .045, .0435, sz * .07], [.05, .012, .03], C, { round: .006 });
+        Kt.hex(I, f, [sx * .055, .0525, sz * .07], 'y', .0065, .006, 'steel'); }                                               // its four lugs, bolted up to the pylon
+      Kt.box(I, f, [0, -.058, -.034], [.078, .05, .082], C, { round: .014 });                                                 // lower housing under the lever end
+      /* the dual-channel solenoid: flange with four screws, the coil can, and its square-flanged connector */
+      Kt.box(I, f, [0, .008, .079], [.048, .048, .008], C, { round: .004 });
+      for (const a of [-1, 1]) for (const b of [-1, 1]) Kt.cyl(I, f, [a * .018, .008 + b * .018, .0845], 'z', .0035, .003, 'steel');
+      Kt.cyl(I, f, [0, .008, .108], 'z', .019, .05, C, { edge: .003 }); Kt.cone(I, f, [0, .008, .14], 'z', .013, .019, .014, C);
+      Kt.box(I, f, [0, .008, .149], [.034, .034, .004], C, { round: .003 }); Kt.connector(I, f, [0, .008, .151], 'z', .011, { lead: 'y' });
+      /* ports: SUPPLY and RETURN forward to and from the DCU, A/C SUPPLY (inlet screen inside) and A/C RETURN aft to the aircraft */
+      for (const [z, name] of [[.03, 'SUPPLY'], [-.03, 'RETURN']]) { Kt.fitting(I, f, [.0425, .004, z], 'x', .011); Kt.decal(I, f, [.0428, .0225, z], 'x', 'y', .028, .012, name, C); }
+      Kt.fitting(I, f, [-.0425, .006, .035], '-x', .011); Kt.fitting(I, f, [-.039, -.062, -.012], '-x', .011);
+      for (const [y, z, w, name] of [[.013, .058, .018, 'A/C'], [.002, .058, .018, 'SUPPLY'], [-.05, -.036, .02, 'A/C'], [-.061, -.036, .02, 'RETURN']])
+        Kt.decal(I, f, [z > 0 ? -.0428 : -.0393, y, z], '-x', 'y', w, .009, name, C);
+      Kt.plate(I, f, [-.0428, .008, -.035], '-x', 'y', .045, .024);
+      /* the two inhibit proximity sensors out of the lower housing, toward the solenoid end */
+      for (const [x, y] of [[.012, -.047], [-.012, -.07]]) { Kt.cyl(I, f, [x, y, .02], 'z', .0068, .026, 'steel'); Kt.hex(I, f, [x, y, .012], 'z', .0085, .005, 'steel');
+        Kt.connector(I, f, [x, y, .033], 'z', .0062, { lead: 'x' }); }
+      /* the manual inhibit lever on its pivot (operational: hanging, its pad swung aft), INHIBIT cast along it */
+      Kt.cyl(I, f, [0, .018, -.079], 'z', .013, .008, C);
+      const lv = Kt.sub(f, [0, .018, -.087]); lv.rotation.z = -.26;
+      Kt.box(I, lv, [0, 0, 0], [.03, .03, .006], C, { round: .01 }); Kt.box(I, lv, [.002, -.062, 0], [.016, .1, .006], C, { round: .003 });
+      Kt.box(I, lv, [.004, -.122, -.001], [.03, .028, .009], C, { round: .004 }); Kt.hex(I, lv, [0, 0, -.005], '-z', .006, .004, 'steel');
+      Kt.cyl(I, lv, [0, -.02, -.0031], 'z', .003, .0004, 'darkBox'); Kt.decal(I, lv, [.002, -.068, -.0031], '-z', 'x', .07, .012, 'INHIBIT', C);
+      /* the inhibit pin in its stowage hole, on a lanyard */
+      Kt.cyl(I, f, [-.0405, -.062, -.06], '-x', .0075, .003, 'steel'); Kt.cyl(I, f, [-.047, -.062, -.06], '-x', .0045, .01, 'steel');
+      Kt.rod(I, f, [-.044, -.068, -.06], [-.046, -.09, -.07], .0009, 'steel'); Kt.rod(I, f, [-.046, -.09, -.07], [-.042, -.07, -.076], .0009, 'steel'); }
+    PW.part('tras-dcu', { parent: 'tras-control', label: 'Directional control unit (DCU)', src: 'p.344-345, p.356-369; TTM p.931',
+      info: 'In the forward pylon, on top of the pylon structure under its upper fairing. Its dual-channel solenoid, worked by either EEC channel, operates the directional control valve onto the directional spool valve. Pressure from the ICU comes in past the dual-channel pressure proximity sensor, which tells each EEC channel that the ICU has opened (and, after a stow, that the pressure is gone).\n\nThe stow line has pressure whenever the ICU is open. To deploy, the spool sends pressure to the deploy line as well, and the larger piston area on the deploy side drives the actuators out; to stow, it connects the deploy line to return. The two side ports feed the stow and deploy lines to both reverser doors; the return goes back to the ICU, and each door\'s track lock return joins it on the way.' });
+    /* p.345, TTM p.931: a long manifold block with the solenoid and the pressure sensor's boss at one end and a round end cap at the
+       other, two ports on top (the dash-dot lines in p.345 join them to the ICU), two on the side, two mounting lugs, a nameplate and a
+       data-matrix label on top */
+    { const g = Kt.frame('tras-dcu', -1.2, 12, 1.40), C = 'castAl', D = 'tras-dcu';
+      Kt.box(D, g, [0, 0, 0], [.24, .062, .08], C, { round: .009 });
+      Kt.box(D, g, [.124, .008, .018], [.008, .042, .042], C, { round: .004 }); Kt.cyl(D, g, [.152, .008, .018], 'x', .017, .048, C, { edge: .003 });   // the solenoid
+      Kt.cone(D, g, [.183, .008, .018], 'x', .012, .017, .014, C); Kt.box(D, g, [.192, .008, .018], [.004, .03, .03], C, { round: .003 });
+      Kt.connector(D, g, [.194, .008, .018], 'x', .01, { lead: 'y' });
+      Kt.box(D, g, [.13, -.008, -.02], [.03, .04, .04], C, { round: .006 });                                                  // the pressure proximity sensor's boss
+      for (const [y, z] of [[0, -.012], [-.02, -.028]]) { Kt.cyl(D, g, [.158, y, z], 'x', .0065, .026, 'steel'); Kt.connector(D, g, [.171, y, z], 'x', .006, { lead: 'y' }); }
+      Kt.cyl(D, g, [-.131, -.004, 0], 'x', .028, .022, C, { edge: .004 }); Kt.hex(D, g, [-.145, -.004, 0], 'x', .01, .006, 'steel');   // end cap
+      Kt.box(D, g, [.095, .027, .055], [.035, .008, .03], C, { round: .004 }); Kt.hex(D, g, [.095, .034, .058], 'y', .006, .005, 'steel');   // mounting lugs
+      Kt.box(D, g, [-.10, -.045, -.034], [.03, .03, .008], C, { round: .004 }); Kt.hex(D, g, [-.10, -.05, -.04], '-z', .006, .005, 'steel');
+      Kt.fitting(D, g, [-.03, .031, .028], 'y', .01); Kt.fitting(D, g, [-.095, .031, -.025], 'y', .01);                           // inlet from the ICU, return to it
+      Kt.fitting(D, g, [-.05, -.01, -.04], '-z', .01); Kt.fitting(D, g, [.03, -.01, -.04], '-z', .01);                           // stow, deploy
+      Kt.plate(D, g, [0, .0315, -.012], 'y', 'x', .045, .022); Kt.label(D, g, [.06, .0313, -.015], 'y', 'x', .02, .02, 'white'); }
+    /* the lines in the pylon (they show with the nacelle ghosted), as the p.357 schematic joins them: the aircraft supply and return
+       down to the ICU; the ICU's SUPPLY forward to the DCU's inlet and the DCU's return back to the ICU's RETURN, along the top of the
+       pylon; the DCU's stow and deploy ports down to a tee each and on to both doors' lines at the hinge beam; and each door's return
+       (its track lock valve's return to the aircraft) up into the DCU-to-ICU return. The door ends are built with the doors, from 0:21
+       or 11:39 o'clock. The hinge crossing is a short flexible hose in the aircraft; here the door's half swings away with the door */
+    { const xm = -1.0406, ra = 1.06, tube = (pid, pts, r) => line(pid, pts, r || .007, 'tube', { clamps: 0, ends: false });
+      const door = (k, s) => { const [dr, dx] = [[.02, -.06], [.038, -.072], [.056, -.084]][k], h = s > 0 ? .35 : 11.65;          // k: return, deploy, stow
+        return [P(xm + dx - .06, h - s * .05, ra + dr), P(xm + dx, h, ra + dr)]; };
+      tube('tras-icu', [V(-2.9585, 1.476, .035), V(-2.99, 1.476, .035), V(-3.02, 1.50, .04), V(-3.04, 1.56, .045), V(-3.05, 1.63, .05), V(-3.05, 1.66, .05)], .008);   // aircraft supply
+      tube('tras-icu', [V(-2.955, 1.408, -.012), V(-2.98, 1.408, -.012), V(-3.03, 1.43, -.03), V(-3.07, 1.52, -.045), V(-3.09, 1.62, -.05), V(-3.09, 1.66, -.05)], .008);   // aircraft return
+      tube('tras-icu', [V(-2.8415, 1.474, .03), V(-2.80, 1.476, .03), V(-2.40, 1.482, .03), V(-1.60, 1.482, .03), V(-1.30, 1.478, .029), V(-1.245, 1.474, .028), V(-1.231, 1.462, .028), V(-1.23, 1.4455, .028)]);   // ICU SUPPLY to the DCU
+      tube('tras-dcu', [V(-1.295, 1.4455, -.025), V(-1.296, 1.46, -.025), V(-1.315, 1.472, -.026), V(-1.40, 1.474, -.028), V(-2.40, 1.474, -.03), V(-2.80, 1.474, -.03), V(-2.8415, 1.474, -.03)]);   // DCU return to the ICU
+      for (const [k, xp, yt] of [[2, -1.25, 1.30], [1, -1.17, 1.32]]) { const T = V(xp, yt, -.08);                          // stow, deploy
+        tube('tras-dcu', [V(xp, 1.39, -.0545), V(xp, 1.39, -.068), V(xp, 1.375, -.078), V(xp, yt + .03, -.08), T], .006);
+        tube('tras-dcu', [T, V(xp + .005, yt - .03, -.10), V(xp + .03, yt - .10, -.135), V(-1.20 + (k - 2) * -.04, 1.14, -.165)].concat(door(k, -1)), .006);
+        tube('tras-dcu', [T, V(xp, yt - .01, -.04), V(xp + .01, yt - .03, .04), V(xp + .03, yt - .10, .13), V(-1.20 + (k - 2) * -.04, 1.14, .165)].concat(door(k, 1)), .006); }
+      for (const s of [-1, 1]) tube('tras-dcu', door(0, s).reverse().concat([V(-1.21, 1.075, s * .16), V(-1.32, 1.15, s * .135), V(-1.40 - (s + 1) * .01, 1.30, s * .09 - (s > 0 ? .01 : 0)),
+        s < 0 ? V(-1.42, 1.42, -.045) : V(-1.47, 1.40, .02), s < 0 ? V(-1.42, 1.45, -.032) : V(-1.48, 1.445, -.015), V(s < 0 ? -1.42 : -1.48, 1.474, -.028)]), .006);   // each door's return
+      /* wiring: the ICU's solenoid and inhibit sensors and the DCU's solenoid and pressure sensor, up into the pylon's wiring */
+      const harn = pts => line('tras-icu', pts, .0045, 'harness', { clamps: 0, ends: false });
+      const sol = line('tras-icu', [V(-2.9, 1.4978, .1719), V(-2.9, 1.515, .17), V(-2.885, 1.55, .15), V(-2.86, 1.60, .12)], .005, 'harness', { clamps: 0, ends: false });
+      harn([V(-2.8768, 1.423, .0448), V(-2.865, 1.423, .06), V(-2.85, 1.43, .095), V(-2.85, 1.47, .105), V(-2.86, 1.50, .12), sol.getPointAt(.45)]);   // inhibit sensors, into the solenoid's lead
+      harn([V(-2.9008, 1.40, .0448), V(-2.88, 1.40, .065), V(-2.844, 1.41, .11), V(-2.844, 1.47, .119), V(-2.85, 1.51, .13), sol.getPointAt(.6)]);
+      for (const pts of [[V(-.987, 1.426, .018), V(-.987, 1.44, .018), V(-.975, 1.452, .01), V(-.96, 1.458, 0)], [V(-1.0176, 1.4108, -.012), V(-1.0176, 1.425, -.012), V(-1.0, 1.442, -.01), V(-.975, 1.452, -.006)],
+        [V(-1.0176, 1.3908, -.028), V(-1.0176, 1.425, -.028), V(-1.0, 1.445, -.024), V(-.975, 1.455, -.018)]]) line('tras-dcu', pts, .0045, 'harness', { clamps: 0, ends: false }); }
 
     /* ============================== BORESCOPE PORTS ============================== */
     /* p.70-73: every port with its clock position and what it looks at. Each sits in the gap behind the first row it names, as a plugged

@@ -189,7 +189,10 @@
     return faceQuad(pid, f, add(pos, dir(n), .00045), n, up, w * .98, h * .98, 'plateAl', { map: t, color: '#ffffff', metalness: 0, roughness: .6 }); };
   /* raised cast lettering (FILL, OIL...) on a part's own surface: a bump-mapped quad in the surface colour */
   K.decal = (pid, f, pos, n, up, w, h, text, mat) => {
-    const t = plateTex('decal-' + text, (c, W, H) => { c.fillStyle = '#000000'; c.fillRect(0, 0, W, H); c.fillStyle = '#ffffff'; c.font = 'bold 84px Arial'; c.textAlign = 'center'; c.fillText(text, W / 2, H * .78); });
+    const CH = Math.round(Math.max(24, Math.min(128, 256 * h / w)));                                                    // canvas shaped like the decal, so letters keep their proportions
+    const t = plateTex('decal-' + text + '-' + CH, (c, W, H) => { c.fillStyle = '#000000'; c.fillRect(0, 0, W, H); c.fillStyle = '#ffffff'; c.textAlign = 'center';
+      let fs = Math.round(H * .66); c.font = `bold ${fs}px Arial`; const k = Math.min(1, (W - 12) / c.measureText(text).width);
+      if (k < 1) { fs = Math.floor(fs * k); c.font = `bold ${fs}px Arial`; } c.fillText(text, W / 2, H / 2 + fs * .36); }, 256, CH);
     return faceQuad(pid, f, pos, n, up, w, h, mat || 'castAl', { bumpMap: t, bumpScale: .0015, transparent: true, alphaMap: t }); };
 })();
 

@@ -549,9 +549,12 @@
       PW.add('pylon', G.loft(hsSecs, { n: 32, exp: 8 }), 'bareCowl');
       /* the aft mount fitting: pylon structure from the aft mount's main beam (r 0.64) up into the pylon box (p.45, p.49) */
       { const xa = D.GEN.nacelle.engineAftMountPlane.x, f = PW.kit.frame('pylon', xa, 12, .40); PW.kit.box('pylon', f, [0, .43, 0], [.11, .38, .15], 'greyPrimer', { round: .012 }); }
-      /* the access panels on both sides of the aft pylon over the thrust reverser isolation control unit (p.344) */
-      for (const s of [-1, 1]) { const hw = G.interp(WID, -2.9) / 2, f = PW.kit.frame('pylon', -2.9, 12, 1.25);
-        PW.kit.box('pylon', f, [0, 0, s * (hw + .0005)], [.266, .206, .003], 'darkBox', { round: .002 }); PW.kit.box('pylon', f, [0, 0, s * (hw + .0018)], [.26, .2, .003], 'whitePaint', { round: .012 }); }
+      /* the access panels on both sides of the aft pylon over the thrust reverser isolation control unit (p.344), each laid on the
+         side skin (the loft's section is a superellipse of power 6) and tilted to its slope */
+      { const xx = -2.9, yt = G.interp(TOP, xx), yb = Math.min(bot(xx), yt - .03), cy = (yb + yt) / 2, hh = (yt - yb) / 2, hw = G.interp(WID, xx) / 2, yc = 1.40;
+        const side = y => hw * Math.pow(1 - Math.pow(Math.abs((y - cy) / hh), 6), 1 / 6), tilt = Math.atan((side(yc + .01) - side(yc - .01)) / .02);
+        for (const s of [-1, 1]) { const f = PW.kit.frame('pylon', xx, 12, yc); f.position.z = s * side(yc); f.rotateX(s * tilt);
+          PW.kit.box('pylon', f, [0, 0, s * .0005], [.266, .206, .003], 'darkBox', { round: .002 }); PW.kit.box('pylon', f, [0, 0, s * .0018], [.26, .2, .003], 'whitePaint', { round: .012 }); } }
     }
 
     /* the nacelle animation: hinges, sleeves and blocker doors follow the toolbar state; the first part of the explode slider swings
