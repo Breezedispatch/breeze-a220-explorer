@@ -104,15 +104,56 @@
     const X = D.zsToX, Z = D.ZS, x = zs => X(zs);
     const nac = D.nacOuter();                                         // outer line [x, r], forward to aft
     const rOut = xx => G.interp(nac, xx);
-    /* flush fastener heads in rows, painted over with the skin (a shade darker where the paint dips into them): one instanced mesh per
-       call. A row is { x, a0, a1 } round the skin at station x, or { a, x0, x1 } along it at angle a (radians from 12 o'clock toward
-       the right); d is how far inside the skin's outer line the head sits (0 on it) */
-    const fasteners = (pid, into, rows, step) => { const pts = [];
+    /* flush fastener heads in rows. On the composite cowls they are painted over with the skin and show only as faint dull dots where the
+       paint dips into them (photos of A220 nacelles: no rows show from a few metres), so the heads take the paint a shade darker with a
+       duller clear coat. One instanced mesh per call. A row is { x, a0, a1 } round the skin at station x, or { a, x0, x1 } along it at
+       angle a (radians from 12 o'clock toward the right); d is how far inside the skin's outer line the head sits (0 on it), and
+       o.xf(x, a) moves a head along the engine (the inlet's rake) */
+    const PAINTED = { color: '#0a3283', clearcoatRoughness: .32 };
+    const fasteners = (pid, into, rows, step, o) => { o = o || {}; const pts = [];
       for (const r of rows) { if (r.x !== undefined) { const n = Math.max(1, Math.round(Math.abs(r.a1 - r.a0) * rOut(r.x) / step)); for (let i = 0; i <= n; i++) pts.push([r.x, r.a0 + (r.a1 - r.a0) * i / n, r.d || 0]); }
         else { const n = Math.max(1, Math.round(Math.abs(r.x1 - r.x0) / step)); for (let i = 0; i <= n; i++) pts.push([r.x0 + (r.x1 - r.x0) * i / n, r.a, r.d || 0]); } }
-      const m = new THREE.InstancedMesh(new THREE.CylinderGeometry(.0034, .0034, .0008, 10), null, pts.length), o = new THREE.Object3D();
-      pts.forEach(([xx, a, d], i) => { o.position.copy(G.onRing(xx, rOut(xx) - d + .0002, a)); o.rotation.set(a, 0, 0); o.updateMatrix(); m.setMatrixAt(i, o.matrix); });
-      return PW.add(pid, m, 'nacellePaint', { into, mat: { color: '#0a3080', roughness: .5 }, solid: false, shadow: false }); };
+      const m = new THREE.InstancedMesh(new THREE.CylinderGeometry(o.size || .0034, o.size || .0034, .0008, 10), null, pts.length), ob = new THREE.Object3D();
+      pts.forEach(([xx, a, d], i) => { const r = (o.rAt || rOut)(xx) - d + .0002; ob.position.copy(G.onRing(o.xf ? o.xf(xx, a) : xx, r, a)); ob.rotation.set(a, 0, 0); ob.updateMatrix(); m.setMatrixAt(i, ob.matrix); });
+      return PW.add(pid, m, o.mat || 'nacellePaint', { into, mat: o.over || (o.mat ? undefined : PAINTED), solid: false, shadow: false }); };
+    /* a patch laid on the skin, centred at station x and angle a, w along the engine by h round it, carrying a texture with transparency:
+       painted markings and the seams of flush panels. It reads upright from beside the engine (forward to aft on the left side) */
+    const skinPatch = (pid, into, xx, a, w, h, map, o) => { o = o || {}; const s = Math.sin(a) < 0 ? -1 : 1, nu = 8, nv = 6, pos = [], uv = [], idx = [];
+      for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) { const u = i / nu, v = j / nv, px = xx + s * (u - .5) * w, aa = a - s * (v - .5) * h / rOut(px);
+        const p = G.onRing(o.xf ? o.xf(px, aa) : px, rOut(px) + (o.lift || .0006), aa); pos.push(p.x, p.y, p.z); uv.push(u, v); }
+      for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) { const k = j * (nu + 1) + i; idx.push(k, k + 1, k + nu + 2, k, k + nu + 2, k + nu + 1); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
+      return PW.add(pid, g, 'nacellePaint', { into, solid: false, shadow: false, mat: { color: '#ffffff', map, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 } }); };
+    /* flush access panels and doublers (p.11, p.13; photos, where they barely show): a fine seam round a rounded rectangle l along the
+       engine by w round it, the skin itself being the panel, with a row of painted-over fasteners just inside the edge (o.step 0: none);
+       o.holes are the sling's screw holes on a hoist doubler, [along, round] from its centre */
+    const seamTex = (l, w, o) => PW.tex.canvas(512, Math.max(32, Math.min(512, Math.round(512 * w / l))), (c, W, H) => { if (!c || !c.fillRect) return;
+      const k = W / l, lw = Math.max(1.5, (o.lw || .0011) * k), e = lw / 2 + 1, rr = Math.min((o.round || .012) * k, W / 2 - e, H / 2 - e);
+      c.strokeStyle = o.seam || '#061c4c'; c.lineWidth = lw; c.beginPath(); c.moveTo(e + rr, e); c.arcTo(W - e, e, W - e, H - e, rr); c.arcTo(W - e, H - e, e, H - e, rr);
+      c.arcTo(e, H - e, e, e, rr); c.arcTo(e, e, W - e, e, rr); c.closePath(); c.stroke();
+      c.fillStyle = '#0c1118'; for (const [p, q] of o.holes || []) { c.beginPath(); c.arc(W / 2 + p * k, H / 2 - q * k, .0045 * k, 0, TAU); c.fill(); } }, { srgb: true });
+    const flushPanel = (pid, into, xx, a, l, w, o) => { o = o || {}; const r = rOut(xx), e = .011, c = .024, da = (w / 2 - e) / r, dc = (w / 2 - c) / r;
+      skinPatch(pid, into, xx, a, l + .003, w + .003, seamTex(l + .003, w + .003, o), o);
+      if (o.step !== 0) fasteners(pid, into, [{ x: xx + l / 2 - e, a0: a - dc, a1: a + dc }, { x: xx - l / 2 + e, a0: a - dc, a1: a + dc },
+        { a: a - da, x0: xx - l / 2 + c, x1: xx + l / 2 - c }, { a: a + da, x0: xx - l / 2 + c, x1: xx + l / 2 - c }], o.step || .034, { xf: o.xf }); };
+    /* stencils and placards, placed from Brian's photo of a Breeze No. 2 engine in flight (its inboard side): white stencilled lettering
+       on the inlet, the fan cowls and the reverser doors, and a pair of white placards with red print high on each fan cowl. The photo is
+       too small to read them, so the print is drawn as unreadable letter strokes; words: the letters in each word, line by line */
+    let seed = 7; const rnd = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+    const STROKES = ['LTB', 'LTM', 'LRM', 'LB', 'TC', 'LRB', 'LTRB', 'LTMB', 'C', 'LRT', 'TMBR', 'LTMR'];
+    const markTex = (words, ink, paper, aspect) => PW.tex.canvas(512, Math.max(24, Math.min(256, Math.round(512 / aspect))), (c, W, H) => { if (!c || !c.fillRect) return;
+      if (paper) { c.fillStyle = paper; c.fillRect(0, 0, W, H); }
+      const lh = H / words.length, ch = lh * .56, sw = Math.max(1.5, ch * .17), cw = ch * .64, m = W * (paper ? .06 : .02);
+      c.fillStyle = ink;
+      words.forEach((line, j) => { const len = line.reduce((s, n) => s + n * (cw + sw * 1.3), 0) + (line.length - 1) * cw * .8, k = Math.min(1, (W - 2 * m) / len), y = lh * j + (lh - ch) / 2;
+        let xx = 0; c.save(); c.translate(m, 0); c.scale(k, 1);
+        for (const n of line) { for (let i = 0; i < n; i++) { for (const s of STROKES[Math.floor(rnd() * STROKES.length)]) {
+            if (s === 'L') c.fillRect(xx, y, sw, ch); if (s === 'R') c.fillRect(xx + cw - sw, y, sw, ch); if (s === 'C') c.fillRect(xx + (cw - sw) / 2, y, sw, ch);
+            if (s === 'T') c.fillRect(xx, y, cw, sw); if (s === 'M') c.fillRect(xx, y + (ch - sw) / 2, cw * .9, sw); if (s === 'B') c.fillRect(xx, y + ch - sw, cw, sw); }
+          xx += cw + sw * 1.3; } xx += cw * .8; }
+        c.restore(); }); }, { srgb: true });
+    const mark = (pid, into, xx, a, w, h, words, o) => { o = o || {}; return skinPatch(pid, into, xx, a, w, h, markTex(words, o.ink || '#eef1f4', o.paper, w / h), Object.assign({ lift: .0008 }, o)); };
+    const PLACARD = { paper: '#f3f3ef', ink: '#c41e2a' };
     const xHL = x(Z.inletHighlight), xJ1 = x(Z.inletFanCowl), xJ2 = x(Z.fanCowlTR), xTE = x(Z.sleeveTE), xCN = D.GEN.nacelle.coreNozzleExit.x;
     const fA = D.GEN.flanges.find(f => /^A /.test(f.name));
     PW.NACELLE_IDS = ['inlet', 'fan-cowls', 'thrust-reverser', 'pylon'];
@@ -125,6 +166,7 @@
     {
       const rHL = 1.072, rTh = .942, rFF = G.interp(D.GEN.lines.fanCaseInner, fA.x);
       const lipTop = [[xHL, rHL]], k = 10;
+      const rake = (xx, a) => xx - .0533 * (1 - Math.cos(a)) / 2 * Math.max(0, Math.min(1, 1 - (xHL - xx) / .9));   // where scarf() moves a point of the outer barrel at angle a
       /* lip: an elliptical nose from the throat round the highlight onto the outer barrel */
       const lipPts = []; for (let i = 0; i <= k; i++) { const a = -Math.PI / 2 + Math.PI * i / k, ex = .085, er = (rOut(xHL - .09) - rTh) / 2, cr = rTh + er;
         lipPts.push([xHL - ex + ex * Math.cos(a) * (a < 0 ? 1 : 1), cr + er * Math.sin(a)]); }
@@ -133,8 +175,13 @@
       PW.part('inlet-lip', { parent: 'inlet', label: 'Inlet lip', src: 'p.8-11; TTM ch. 30; photos',
         info: 'Aluminium lip skin, anti-iced from inside by hot bleed air sprayed from a piccolo tube in the D-duct behind it. Dents, erosion and bird strike damage are assessed against the AMM limits.' });
       PW.add('inlet-lip', scarf(G.revolve(lipOut.concat(lipIn.reverse()), { seg: 160, crease: 70 }), xHL), 'lipAl');
+      /* on the outside the lip skin carries on aft over the anti-ice D-duct to about 0.18 m behind the highlight, where it meets the painted
+         outer barrel: p.9 draws the joint there, and photos of Breeze aircraft show a bare metal band about that wide (p.11 draws it
+         narrower) */
+      const xLip = xHL - .18, lb = [[xHL - .085, rOut(xHL - .09)]]; for (let i = 1; i <= 6; i++) { const xx = xHL - .085 - .095 * i / 6; lb.push([xx, rOut(xx)]); }
+      PW.add('inlet-lip', scarf(G.revolve(G.shellProfile(lb, lb.map(([xx, r]) => [xx, r - .004])), { seg: 160 }), xHL), 'lipAl');
       // outer barrel (painted), from the lip to the inlet / fan cowl joint
-      const ob = []; for (let i = 0; i <= 20; i++) { const xx = (xHL - .085) + (xJ1 - (xHL - .085)) * i / 20; ob.push([xx, rOut(xx)]); }
+      const ob = []; for (let i = 0; i <= 20; i++) { const xx = xLip + (xJ1 - xLip) * i / 20; ob.push([xx, rOut(xx)]); }
       PW.part('inlet-outer-barrel', { parent: 'inlet', label: 'Inlet outer barrel', src: 'p.8-11; photos', info: 'Painted outer skin of the inlet cowl, Breeze blue on Breeze aircraft. It carries the NACA scoop, the P2T2 access panel, the cowl anti-ice access panel and exhaust slots, and the hoist points.' });
       PW.add('inlet-outer-barrel', scarf(G.revolve(G.shellProfile(ob, ob.map(([xx, r]) => [xx, r - .005])), { seg: 160 }), xHL), 'nacellePaint');
       // inner barrel: acoustic sandwich from the throat to flange A
@@ -147,9 +194,15 @@
       PW.add('inlet', G.ring(fA.x + .02, fA.x + .004, fA.r_in + .02, fA.r_out, { seg: 160 }), 'lime');
       // piccolo tube in the D-duct
       PW.add('inlet', scarf(G.revolve([[xHL - .10, rHL - .052], [xHL - .115, rHL - .052], [xHL - .115, rHL - .037], [xHL - .10, rHL - .037]], { seg: 128 }), xHL), 'steel');
-      // features on the outer barrel (clock positions ALF; p.10-11)
-      const onBarrel = (pid, label, info, xx, h, w, l, mat) => { PW.part(pid, { parent: 'inlet', label, info, src: 'p.10-11' }); const a = G.clock(h);
-        const m = new THREE.Mesh(G.roundedBox(l, .006, w, .01)); m.position.copy(G.onRing(xx, rOut(xx) + .001, a)); m.rotation.x = a; PW.add(pid, m, 'nacellePaint', { mat: { color: '#123f97' }, solid: true }); return m; };
+      /* the lip skin's joint with the outer barrel (p.9, p.11): a hairline, with the lip's countersunk fasteners in a row just forward of
+         it, bare metal like the lip. Both follow the inlet's rake */
+      { const xL = xLip, rL = rOut(xLip);
+        PW.add('inlet-outer-barrel', scarf(G.revolve([[xL + .0015, rL + .0003], [xL - .0015, rL + .0003], [xL - .0015, rL - .002], [xL + .0015, rL - .002]], { seg: 160 }), xHL), 'darkBox');
+        fasteners('inlet-lip', PW.parts.get('inlet-lip').obj, [{ x: xL + .012, a0: 0, a1: TAU - .001, d: .0004 }], .042, { xf: rake, size: .0028, mat: 'lipAl', over: { color: '#9aa0a7', roughness: .35 } }); }
+      /* features on the outer barrel (clock positions ALF; p.10-11): access panels flush with the skin, a fine seam round them, the
+         countersunk fasteners round the edge (p.11 draws twelve on the P2T2 panel) */
+      const onBarrel = (pid, label, info, xx, h, w, l) => { PW.part(pid, { parent: 'inlet', label, info, src: 'p.10-11' });
+        flushPanel(pid, PW.parts.get(pid).obj, xx, G.clock(h), l, w, { xf: rake, round: .01 }); };
       onBarrel('inlet-p2t2-panel', 'P2/T2 probe access panel', 'Access panel at 11 o\'clock over the P2/T2 probe, its harness and its heater lead.', xHL - .45, 11, .16, .22);
       onBarrel('inlet-cai-panel', 'Cowl anti-ice duct access panel', 'Access panel at 5 o\'clock over the cowl anti-ice duct where it enters the inlet.', xJ1 + .25, 5, .16, .24);
       { PW.part('inlet-naca', { parent: 'inlet', label: 'NACA scoop', src: 'p.10', info: 'Flush NACA-type air scoop at 1 o\'clock near the front of the outer barrel, used for fan compartment cooling (p.10).' });
@@ -161,8 +214,12 @@
       { const Kt = PW.kit;
         for (const xx of [xJ1 + .2, xJ1 + .25, xJ1 + .3]) Kt.cyl('inlet-outer-barrel', Kt.frame('inlet-outer-barrel', xx, 5.62, rOut(xx)), [0, .0004, 0], 'y', .005, .0012, 'darkBox');
         for (const h of [2.0, 8.0]) { PW.add('inlet-outer-barrel', G.revolve([[xJ1 + .005, rOut(xJ1 + .005) + .0004], [xHL - .3, rOut(xHL - .3) + .0004], [xHL - .3, rOut(xHL - .3) - .001], [xJ1 + .005, rOut(xJ1 + .005) - .001]], { seg: 1, thetaStart: G.clock(h) - .0015, thetaLength: .003 }), 'darkBox');   // joint line
-          for (const xx of [xJ1 + .03, xHL - .45]) { const f = Kt.frame('inlet-outer-barrel', xx, h, rOut(xx));
-            Kt.box('inlet-outer-barrel', f, [0, .0004, 0], [.05, .0012, .03], 'greyPrimer', { round: .005 }); Kt.cyl('inlet-outer-barrel', f, [0, .0012, 0], 'y', .006, .0012, 'darkBox'); } } }
+          for (const xx of [xJ1 + .03, xHL - .45])   // painted-over doubler, its edge showing faintly, and the sling's screw hole
+            flushPanel('inlet-outer-barrel', PW.parts.get('inlet-outer-barrel').obj, xx, G.clock(h), .054, .034, { step: 0, seam: '#0a2a72', lw: .0008, round: .006, holes: [[0, 0]], xf: rake }); } }
+      /* the stencils in the photo, either side of the crown about 0.4 m behind the lip: one line just right of it, two lines just left */
+      { const io = PW.parts.get('inlet-outer-barrel').obj;
+        mark('inlet-outer-barrel', io, .62, deg(8), .11, .013, [[4, 7]], { xf: rake });
+        mark('inlet-outer-barrel', io, .627, deg(352.3), .085, .024, [[4, 7], [6, 2]], { xf: rake }); }
       { PW.part('inlet-p2t2', { parent: 'inlet', label: 'P2/T2 probe', src: 'p.10, p.102-105',
           info: 'Inlet probe on the inner barrel at 11 o\'clock, reached through the access panel above it. P2 is the inlet total pressure (single channel, to EEC channel B); T2 the inlet total temperature (dual channel, to both). The EEC uses them to check the aircraft air data and in its place when that is invalid; T2 replaces it on the ground below 60 kt.\n\nThe probe is heated from AC BUS 1 on the left engine and AC BUS 2 on the right, switched on by the EEC above idle below 9 deg C (48 deg F). A heater failure gives the 73 L(R) ENGINE FAULT - P2/T2 HEATER INOP info message. If the probe fails too, the EEC uses defaults: 14.7 psi, 17,000 ft pressure altitude and a synthesized inlet temperature.' });
         /* p.105: a rectangular four-bolt flange on the back of the acoustic barrel, the sensor body with its signal connector on top and
@@ -196,9 +253,12 @@
       const t0 = sg > 0 ? deg(10) : Math.PI + deg(1), tl = Math.PI - deg(11);
       const outer = [], inner = []; for (let i = 0; i <= 18; i++) { const xx = xJ1 - .002 + (xJ2 + .002 - xJ1) * i / 18; outer.push([xx, rOut(xx)]); inner.push([xx, rOut(xx) - .028]); }
       PW.add(pid, G.revolve(outer.concat(inner.slice().reverse()), { seg: 144, thetaStart: sg > 0 ? t0 : Math.PI + deg(.08), thetaLength: tl + deg(.92) }), 'nacellePaint', { into: hinge });   // the skins meet at the bottom split line
-      /* p.13: the outer skin's fasteners, two staggered rows along the hinge line and a row round each stiffener frame */
-      { const Ad = d => (sg > 0 ? deg(d) : TAU - deg(d)), xs = [xJ1 - .03, (xJ1 + xJ2) / 2, xJ2 + .03];
-        fasteners(pid, hinge, [{ a: Ad(12), x0: xJ1 - .04, x1: xJ2 + .04 }, { a: Ad(13.3), x0: xJ1 - .07, x1: xJ2 + .07 }].concat(xs.map(xx => ({ x: xx, a0: Ad(15), a1: Ad(176) }))), .065); }
+      /* the outer skin's fasteners (p.9, p.13): two staggered rows along the hinge line, a dense row along the forward and the aft edge,
+         and round the mid stiffener frame on the lower part of the cowl only, where p.13 draws them */
+      { const Ad = d => (sg > 0 ? deg(d) : TAU - deg(d));
+        fasteners(pid, hinge, [{ a: Ad(12), x0: xJ1 - .04, x1: xJ2 + .04 }, { a: Ad(13.3), x0: xJ1 - .062, x1: xJ2 + .062 }], .045);
+        fasteners(pid, hinge, [{ x: xJ1 - .018, a0: Ad(14), a1: Ad(177) }, { x: xJ2 + .018, a0: Ad(14), a1: Ad(177) }], .038);
+        fasteners(pid, hinge, [{ x: (xJ1 + xJ2) / 2, a0: Ad(122), a1: Ad(176) }], .05); }
       PW.add(pid, G.revolve(inner.map(([xx, r]) => [xx, r]).concat(inner.map(([xx, r]) => [xx, r - .003]).reverse()), { seg: 72, thetaStart: t0, thetaLength: tl }), 'cowlWhite', { into: hinge });
       for (const xx of [xJ1 - .03, (xJ1 + xJ2) / 2, xJ2 + .03]) PW.add(pid, G.revolve([[xx + .015, rOut(xx) - .03], [xx - .015, rOut(xx) - .03], [xx - .015, rOut(xx) - .075], [xx + .015, rOut(xx) - .075]], { seg: 72, thetaStart: t0, thetaLength: tl }), 'cowlWhite', { into: hinge });   // stiffener frames, white like the skin inside (photos); only the fittings are lime green
       // three latches at the bottom edge (keepers on the right cowl, hooks on the left), three hinges at the top
@@ -232,23 +292,29 @@
          strips round the forward and aft edges; the hinge pins with their retaining clips; and on the keeper side the alignment pins that
          enter holes beside the latches as the cowls close (p.14-15) */
       { const Kt = PW.kit, hs = c => sg > 0 ? c : 12 - c, fx = f => xJ1 + (xJ2 - xJ1) * f;
-        for (const [f, h] of [[.3, 3.9], [.7, 3.9], [.6, 5.3]]) { const xx = fx(f), g = Kt.frame(pid, xx, hs(h), rOut(xx), { into: hinge });
-          Kt.box(pid, g, [0, .0004, 0], [.046, .0012, .116], 'darkBox', { round: .006 }); Kt.box(pid, g, [0, .0011, 0], [.04, .0012, .11], 'greyPrimer', { round: .006 });
-          for (const s of [-1, 1]) Kt.cyl(pid, g, [0, .0016, s * .03], 'y', .0065, .0012, 'darkBox'); }
+        for (const [f, h] of [[.3, 3.9], [.7, 3.9], [.6, 5.3]])   // painted-over doubler with its edge showing faintly and the sling's two screw holes, as in photos
+          flushPanel(pid, hinge, fx(f), G.clock(hs(h)), .048, .118, { step: 0, seam: '#0a2a72', lw: .0008, round: .007, holes: [[0, -.03], [0, .03]] });
         for (const f of [.22, .5, .78]) { const xx = fx(f), g = Kt.frame(pid, xx, hs(5.9), rOut(xx), { into: hinge });
           Kt.cyl(pid, g, [0, .0004, 0], 'y', .0045, .0012, 'darkBox'); }
-        if (sg > 0) { const xx = fx(.45), g = Kt.frame(pid, xx, 2.4, rOut(xx), { into: hinge });
-          Kt.box(pid, g, [0, .0004, 0], [.266, .0012, .306], 'darkBox', { round: .02 }); Kt.box(pid, g, [0, .0011, 0], [.26, .0012, .3], 'nacellePaint', { round: .02 });
-          for (let i = 0; i < 22; i++) { const t = i / 22 * TAU, c = Math.cos(t), s = Math.sin(t);
-            Kt.hex(pid, g, [Math.sign(c) * Math.min(1, Math.abs(c) * 1.5) * .118, .0017, Math.sign(s) * Math.min(1, Math.abs(s) * 1.5) * .138], 'y', .003, .001, 'steel'); } }
+        if (sg > 0) flushPanel(pid, hinge, fx(.45), G.clock(2.4), .26, .3, { seam: '#051640', lw: .0016, round: .02 });   // the door's gap, darker than a panel seam, and its frame's fasteners
         for (const xx of [xJ1 - .004, xJ2 + .004]) PW.add(pid, G.revolve([[xx + .012, rOut(xx) - .028], [xx - .012, rOut(xx) - .028], [xx - .012, rOut(xx) - .033], [xx + .012, rOut(xx) - .033]], { seg: 72, thetaStart: t0, thetaLength: tl }), 'rubber', { into: hinge });   // wear strips
         for (const f of [.2, .5, .8]) { const xx = fx(f);
           Kt.cyl(pid, Kt.frame(pid, xx, 0, 1, { into: hinge }), [0, yh - .02 - 1, sg * .22], 'x', .007, .1, 'steel');                     // hinge pin through the hinge
           if (sg > 0) { const g = Kt.frame(pid, xx + .075, hs(5.97), rOut(xx) - .045, { into: hinge }); Kt.cyl(pid, g, [0, 0, .006], 'z', .006, .024, 'steel'); Kt.cone(pid, g, [0, 0, .026], 'z', .002, .006, .016, 'steel'); } } }
+      /* the placards and stencils in the photo, on the inboard cowl (the outboard one taken to carry the same): two white placards with red
+         print a hand's width under the hinge line at mid-length, and two small stencils just below the strake's line, one ahead of it */
+      { const Ad = d => (sg > 0 ? deg(d) : TAU - deg(d));
+        mark(pid, hinge, -.36, Ad(14.4), .15, .026, [[5, 4, 7]], PLACARD);
+        mark(pid, hinge, -.37, Ad(16), .16, .026, [[6, 3, 5]], PLACARD);
+        mark(pid, hinge, .15, Ad(65), .06, .012, [[3, 4]]);
+        mark(pid, hinge, -.66, Ad(65), .06, .012, [[5, 3]]); }
     }
-    { // strake on the inboard (left) cowl, about 30 deg above the horizontal (10 o'clock), about 36 in long
-      const a = G.clock(10), xa = xJ1 - .25, xb = xa - .91, h = .14, p = PW.parts.get('fan-cowl-left').obj.children[0];
-      const sh = new THREE.Shape(); sh.moveTo(0, 0); sh.lineTo(-.91, 0); sh.lineTo(-.82, h * .55); sh.lineTo(-.12, h); sh.lineTo(0, 0);
+    { /* strake on the inboard (left) cowl, about 30 deg above the horizontal (10 o'clock), about 36 in long. Its aft end is about 8 cm
+         short of the reverser joint, as p.9 and the photo of a Breeze engine show. p.9 draws it rising from a sharp leading edge, its outer
+         edge gently convex, to its full height of about 0.22 m at the square-cut aft end (until 2026-10-12 it sat 0.11 m further forward
+         and was drawn 0.14 m high, tallest at the front) */
+      const a = G.clock(10), xa = xJ1 - .36, xb = xa - .91, h = .22, p = PW.parts.get('fan-cowl-left').obj.children[0];
+      const sh = new THREE.Shape(); sh.moveTo(0, 0); for (let i = 1; i <= 10; i++) { const t = i / 10; sh.lineTo(-.91 * t, h * (1 - Math.pow(1 - t, 1.6))); } sh.lineTo(-.91, 0); sh.lineTo(0, 0);
       const g = new THREE.ExtrudeGeometry(sh, { depth: .008, bevelEnabled: false }); g.translate(0, 0, -.004);
       const m = new THREE.Mesh(g); m.position.copy(G.onRing(xa, rOut(xa) - .002, a)); m.rotation.x = a; m.rotateZ(0); PW.add('fan-cowl-left', m, 'nacellePaint', { solid: true, into: p });
       /* p.13: its base flange, fastened to the cowl along both sides */
@@ -325,11 +391,14 @@
         for (let i = 0; i <= 12; i++) { const xx = xSI + (xTE - xSI) * i / 12; sw.push([xx, rDuct(xx) + .004]); }
         PW.add(sid, G.revolve(G.shellProfile(sw, sw.map(([xx, r]) => [xx, r - .004])), SP), 'cowlWhite');                                         // inner wall: the duct's outer wall
         PW.add(sid, G.revolve([[xSk + .002, rOut(xSk) + .0004], [xSk - .002, rOut(xSk) + .0004], [xSk - .002, rOut(xSk) - .002], [xSk + .002, rOut(xSk) - .002]], SP), 'darkBox');   // skin joint, ZS 771
-        /* TTM 78 fig. 3: an access panel over each actuator's rod end */
-        for (const th of [45, 135]) { const xx = xBH + .04, f = PW.kit.frame(sid, xx, hOf(th), rOut(xx));
-          PW.kit.box(sid, f, [0, .0004, 0], [.206, .0012, .146], 'darkBox', { round: .02 }); PW.kit.box(sid, f, [0, .0011, 0], [.2, .0012, .14], 'nacellePaint', { round: .02 });
-          for (let i = 0; i < 12; i++) { const t = i / 12 * TAU, c = Math.cos(t), s = Math.sin(t);
-            PW.kit.hex(sid, f, [Math.sign(c) * Math.min(1, Math.abs(c) * 1.6) * .088, .0017, Math.sign(s) * Math.min(1, Math.abs(s) * 1.6) * .058], 'y', .0028, .001, 'steel'); } } }
+        fasteners(sid, PW.parts.get(sid).obj, [{ x: xSk + .011, a0: A(11), a1: A(173) }, { x: xSk - .011, a0: A(11), a1: A(173) }], .038);   // a row each side of the joint (p.9)
+        /* TTM 78 fig. 3: an access panel over each actuator's rod end, its fasteners painted over */
+        for (const th of [45, 135]) flushPanel(sid, sl, xBH + .04, A(th), .2, .14, { round: .02 });
+        /* the photo's markings on the door: a small white placard and a stencil high up just aft of the fan cowl, two lines above the
+           upper actuator access panel */
+        mark(sid, sl, xJ2 - .065, A(13.5), .085, .022, [[3, 5], [4, 6]], { paper: '#f2f2ee', ink: '#30343a' });
+        mark(sid, sl, xJ2 - .07, A(16.4), .045, .01, [[4, 2]]);
+        mark(sid, sl, -1.62, A(33), .075, .02, [[5, 4], [3, 6]]); }
       /* five blocker doors (p.332-333): curved composite panels hinged on clevises in the sleeve's inner wall just aft of the torque box,
          flush with it when stowed; the split lines are measured off the p.333 deployed view. Each narrows toward its free edge, so that
          deployed the five close the duct like slices of a ring. As the sleeve moves aft, each door's fixed-length drag link, anchored on a
