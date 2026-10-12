@@ -494,12 +494,25 @@
         /* the track lock unit on the latch beam (p.354-355, p.377): block on a pad, the bolt's boss facing aft, two proximity sensors and the
            two hydraulic ports on top */
         const ft = Kt.frame(aid, -1.93, hT, 1.0);
-        Kt.box(aid, ft, [0, 0, 0], [.09, .05, .045], 'steel', { round: .006 }); Kt.cyl(aid, ft, [-.06, 0, 0], 'x', .008, .03, 'steel');
+        Kt.box(aid, ft, [0, 0, 0], [.09, .05, .045], 'steel', { round: .006 });
+        Kt.box(aid, ft, [0, -.027, 0], [.11, .006, .07], 'steel', { round: .004 });                                             // mounting pad, bolted to the latch beam
+        for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) Kt.hex(aid, ft, [a * .046, -.022, b * .029], 'y', .004, .004, 'steel');
+        Kt.cyl(aid, ft, [-.05, 0, 0], 'x', .016, .012, 'steel'); Kt.box(aid, ft, [-.07, 0, 0], [.03, .008, .018], 'steel', { round: .002 });   // the track lock blade on its boss
         for (const z of [-.012, .012]) { Kt.cyl(aid, ft, [-.022, .035, z], 'y', .007, .02, 'steel'); Kt.connector(aid, ft, [-.022, .045, z], 'y', .007, { lead: 'x' }); Kt.fitting(aid, ft, [.025, .025, z], 'y', .006); }   // sensors aft, hydraulic ports forward
+        /* p.355, p.377: the unlocking bolt and position indicator on one side, under a lockwire; on the other, the Goodrich TRACK LOCK
+           plate with the manual unlock pinning hole, and the manual lock lever, turned a quarter turn to unlock; the fluid placard on top */
+        Kt.box(aid, ft, [.02, 0, .0235], [.03, .03, .002], 'steel', { round: .002 }); for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) Kt.hex(aid, ft, [.02 + a * .011, b * .011, .0248], 'z', .0022, .002, 'steel');
+        Kt.hex(aid, ft, [.02, 0, .0285], 'z', .006, .008, 'steel'); Kt.rod(aid, ft, [.02, .006, .033], [.033, .013, .026], .0007, 'steel'); Kt.rod(aid, ft, [.033, .013, .026], [.031, .011, .0245], .0007, 'steel');
+        Kt.plate(aid, ft, [-.018, -.006, -.0228], '-z', 'y', .036, .026, 'TRACK LOCK'); Kt.cyl(aid, ft, [-.041, .012, -.0228], '-z', .0035, .001, 'darkBox');
+        Kt.hex(aid, ft, [.026, .006, -.0245], '-z', .005, .004, 'steel'); Kt.box(aid, ft, [.036, .006, -.0262], [.022, .006, .003], 'steel', { round: .0015 });
+        Kt.label(aid, ft, [.002, .0252, 0], 'y', 'x', .016, .012, 'white');
         /* the track lock valve on the torque box (p.352-353): block body with its solenoid and connector on top, the supply from the
            locking actuator and the return to the aircraft on the side toward the actuator, the lines to the track lock unit aft */
         const fv = Kt.frame(aid, xm - .025, hV, 1.075);
         Kt.box(aid, fv, [0, 0, 0], [.05, .036, .05], 'castAl', { round: .005 }); Kt.cyl(aid, fv, [0, .028, 0], 'y', .012, .022, 'darkBox'); Kt.connector(aid, fv, [0, .045, 0], 'y', .007, { lead: '-x' });
+        Kt.box(aid, fv, [0, .022, 0], [.03, .01, .03], 'castAl', { round: .003 });                                               // square solenoid housing
+        for (const [x, z] of [[.032, -.018], [.032, .018], [-.032, 0]]) { Kt.box(aid, fv, [x, -.015, z], [.016, .005, .014], 'castAl', { round: .004 }); Kt.cyl(aid, fv, [x, -.015, z], 'y', .003, .0052, 'darkBox'); }   // three mounting lugs
+        Kt.decal(aid, fv, [0, 0, -.0256 * zh], zh > 0 ? '-z' : 'z', 'y', .04, .02, 'PHOSPHATE ESTER', 'castAl');                  // fluid placard (p.353)
         for (const y of [.008, -.008]) Kt.fitting(aid, fv, [0, y, .025 * zh], zh > 0 ? 'z' : '-z', .006);
         for (const z of [-.012, .012]) Kt.fitting(aid, fv, [-.025, 0, z], '-x', .006); }
       /* the door opening (PDOS) locking actuator (p.32, p.36, p.41, p.43): connected between the fan case and the torque box, it lies
