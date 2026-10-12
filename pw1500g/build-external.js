@@ -809,9 +809,11 @@
         Kt.box('fav', f, [.03, .207, 0], [.05, .03, .036], 'darkBox', { round: .005 });                                  // electrical control head
         Kt.connector('fav', f, [.05, .224, 0], 'y', .01);
         Kt.fitting('fav', f, [-.045, .153, -.004], '-x', .007); }
-      Kt.fitting('precooler', pf, [.10, .045, -.0835], '-z', .006);                                                     // tap for the valve's tube
-      line('fav', [V(-1.393, .8842, -.004), V(-1.41, .88, -.015), V(-1.47, .865, -.05), V(-1.57, .84, -.075), V(-1.67, .805, -.09), V(-1.735, .77, -.099), V(-1.757, .74, -.098),
-        V(-1.765, .725, -.097), V(-1.7676, .7172, -.0922)], .005, 'tube', { clamps: 3 });   // aft along the top left of the duct to the precooler tap
+      Kt.fitting('precooler', pf, [.10, .045, .0835], 'z', .006);                                                       // tap for the valve's tube, on the right side plate
+      /* the valve's pressure sense line: aft over the top of the duct and down its right side to the tap on the precooler (the A Nahas
+         photo of the core's right side labels it there; it ran down the left until 2026-10-12) */
+      line('fav', [V(-1.393, .8842, -.004), V(-1.41, .882, .005), V(-1.47, .868, .03), V(-1.57, .842, .058), V(-1.67, .806, .085), V(-1.735, .77, .099), V(-1.757, .74, .098),
+        V(-1.765, .725, .097), V(-1.7676, .7172, .0922)], .005, 'tube', { clamps: 3 });
       line('fav', [V(-1.306, 1.0072, 0), V(-1.3058, 1.012, .002), V(-1.3055, 1.017, .004)], .006, 'harness', { clamps: 0, ends: false });   // up into the pylon
 
       PW.part('bts', { parent: 'precooler', label: 'Bleed temperature sensor (BTS)', src: 'TTM ch. 36 (p.576-579); p.297',
