@@ -105,7 +105,8 @@
     const ATS_R = .43, VFG_R = .435;
     { const th0 = G.clock(4.4), th1 = G.clock(9.1);
       /* section from the p.53 outline (drawn at 6 o'clock): bottom about 0.47; the top at r 0.285 under the heat shield leaves the
-         5 cm gap to the core that p.237 shows the deoiler vent duct crossing in (it was 0.27 until 2026-10-07, with no room for it) */
+         5 cm gap to the core (it was 0.27 until 2026-10-07; the gap was made for the deoiler vent duct, read from p.237 as crossing
+         there, which runs aft to the TEC instead since 2026-10-12) */
       const sec = [[mx0 + .008, .29], [mx0 + .008, .445], [mx0 - .008, .462], [xm, .472], [mx1 + .01, .458], [mx1 - .008, .44], [mx1 - .008, .305], [mx1 + .01, .287], [mx0 - .01, .285]];
       PW.add('mgb', G.revolve(sec, { seg: 44, thetaStart: th0, thetaLength: th1 - th0, crease: 35 }), 'castTan');
       for (const [a0, a1] of [[G.clock(3.95), th0], [th1, G.clock(9.55)]])                                            // the arms rising up the sides of the core
@@ -308,16 +309,19 @@
       Kt.cyl('ocm', f, [.10, .045, -.08], '-z', .011, .018, 'steel'); Kt.connector('ocm', f, [.10, .045, -.09], '-z', .009, { lead: '-x' });
       /* the scavenge return to the tank (outboard) and the pressure tube to the No. 4 and No. 5/6 bearings leave the underside, aft */
       Kt.fitting('ocm', f, [-.125, .05, .095], 'z', .011); Kt.fitting('ocm', f, [-.125, .012, .095], 'z', .009); }
-    acc('deoiler', 'Deoiler', 'Self-contained centrifugal deoiler in the right arm of the MGB, on its aft face, driven by a gear. It takes breather air from the gearbox, the No. 3 bearing compartment and the oil tank\'s deaerator, spins the oil out of it back into the gearbox, and vents the air overboard through the deoiler vent duct, which crosses over the top of the gearbox, between it and the core, to its flattened outlet at the left end. Its drive oil seal is line-replaceable.', 'p.66-67, p.236-237');
-    /* p.237: a drum on the aft face of the right arm; the vent duct turns in over the top of the gearbox (between the heat shield and the
-       core) and runs across to the left end, where it ends in a flattened outlet. p.237 draws the duct leaving the drum's aft end; here it
-       leaves the drum's inner side, because the secondary fuel manifold runs just behind the drum */
-    { const f = Kt.frame('deoiler', mx1, 4.2, .34);
+    acc('deoiler', 'Deoiler', 'Self-contained centrifugal deoiler in the right arm of the MGB, on its aft face, driven by a gear. It takes breather air from the gearbox, the No. 3 bearing compartment and the oil tank\'s deaerator, spins the oil out of it back into the gearbox, and vents the air overboard through the deoiler vent duct. The duct runs aft under the oil tank and along the bottom of the turbine cases to a flattened outlet at 6 o\'clock just forward of the turbine exhaust case, between the No. 5/6 bearing oil tubes, where the air leaves with the core compartment\'s exhaust flow. Its drive oil seal is line-replaceable.', 'p.66-67, p.236-237; A Nahas p.20 (overboard breather) and photo from below');
+    /* p.237: a drum on the aft face of the right arm, the vent duct leaving its aft end. The A Nahas CAD (p.20, both sides) and the photo
+       from below show where it goes: aft under the oil tank and along the bottom of the turbine cases to a flattened outlet pointing aft
+       at 6 o'clock just forward of the TEC, between the No. 5/6 oil fittings. Until 2026-10-12 the model ran it over the top of the
+       gearbox to an outlet at its left end, inside the core compartment */
+    { const f = Kt.frame('deoiler', mx1, 4.2, .34), Ld = FLa(mx1, 4.2, .34);
       Kt.flange('deoiler', f, [-.008, 0, 0], '-x', .03, .06, .012, 8, 'castTan'); Kt.cyl('deoiler', f, [-.025, 0, 0], 'x', .032, .025, 'castAl');
-      Kt.flange('deoiler', f, [-.025, -.034, 0], '-y', .011, .022, .006, 4, 'steel');                                            // the duct's bolted flange
-      line('deoiler', [FLa(mx1, 4.2, .34)(-.025, -.03, 0), P(-1.68, 4.22, .29), P(-1.678, 4.32, .272), P(-1.668, 4.5, .265), P(-1.655, 4.7, .262), P(-1.648, 4.85, .261), P(-1.644, 4.95, .261), P(-1.641, 5.4, .261), P(-1.641, 6.0, .261), P(-1.641, 6.6, .261),
-        P(-1.641, 7.2, .261), P(-1.641, 7.8, .261), P(-1.641, 8.4, .261), P(-1.646, 8.85, .263), P(-1.665, 9.12, .276), P(-1.672, 9.3, .296)], .011, 'tube', { clamps: 3, ends: false });
-      const g = Kt.frame('deoiler', -1.672, 9.35, .30); Kt.box('deoiler', g, [0, .013, 0], [.02, .026, .05], 'tube', { round: .005 }); }   // flattened outlet
+      Kt.flange('deoiler', f, [-.039, 0, .017], '-x', .012, .022, .006, 4, 'steel');                                            // the duct's bolted flange, low on the aft end
+      line('deoiler', [Ld(-.042, 0, .017), Ld(-.055, .006, .02), P(-1.74, 4.38, .356), P(-1.80, 4.46, .356), P(-1.87, 4.55, .352), P(-1.925, 4.75, .348), P(-1.945, 5.0, .345), P(-1.955, 5.25, .34),
+        P(-1.965, 5.5, .342), P(-1.98, 5.72, .355), P(-2.0, 5.88, .37), P(-2.04, 5.97, .41), P(-2.09, 6.0, .458), P(-2.14, 6.0, .494), P(-2.20, 6.0, .516), P(-2.25, 6.0, .523), P(-2.32, 6.0, .523),
+        P(-2.38, 6.0, .516), P(-2.415, 6.0, .50)], .015, 'tube', { clamps: 4, ends: false });
+      /* the flattened outlet, 5 cm wide, its mouth facing aft */
+      const g = Kt.frame('deoiler', -2.44, 6.0, .492); Kt.box('deoiler', g, [0, 0, 0], [.05, .018, .05], 'tube', { round: .006 }); Kt.box('deoiler', g, [-.0245, 0, 0], [.002, .01, .04], 'darkBox', { round: .002 }); }
 
     /* ============================== OIL SYSTEM ============================== */
     PW.part('oil', { label: 'Oil system', explode: [0, 0, .45], src: 'p.212-255; TTM ch. 79',
@@ -406,7 +410,7 @@
         else { Kt.fitting('oil-rear', g, [0, .008, 0], 'y', .009); e = .008 + .009 * 1.45; }
         return [L(0, e + .022, 0), L(0, e, 0)]; };
       const n4p = pad(-2.13, 5.15, .385, -1.4, true), n4s = pad(-2.13, 5.45, .385, -1.4, false);          // No. 4: pressure through its strainer, scavenge
-      const n5p = pad(-2.549, 6.1, .437, -1.18, true), n5s = pad(-2.549, 5.9, .437, -1.18, false);         // No. 5/6: supply left of 6 o'clock, scavenge right (A Nahas photo from below)
+      const n5p = pad(-2.549, 6.15, .437, -1.18, true), n5s = pad(-2.549, 5.85, .437, -1.18, false);       // No. 5/6: supply left of 6 o'clock, scavenge right, the deoiler vent's outlet between them (A Nahas photo from below)
       const Ls = FL(mx0, 4.85, .40), Lo = FLa(-1.575, 3.5, .40);                                            // the LSOP's and OCM's frames
       /* the tee aft of the gearbox: a forged body on the pressure tube, its branch toward 6 o'clock. The tube comes from the OCM's
          underside down behind the gearbox's right arm, aft of the deoiler and forward of igniter A */
@@ -415,15 +419,15 @@
       line('oil-rear', [Lo(-.125, .012, .10805), Lo(-.125, .012, .125), P(-1.715, 4.2, .42), P(-1.74, 4.4, .405), P(-1.765, 4.62, .39), P(-1.79, 4.9, .372), P(-1.81, 5.125, .3635),
         P(-1.835, 5.18, .366), T(.015, 0, 0)], .005, 'tube', { clamps: 1 });
       line('oil-rear', [T(-.015, 0, 0), P(-1.93, 5.19, .372), P(-1.99, 5.165, .385), P(-2.03, 5.15, .395)].concat(n4p), .005, 'tube', { clamps: 1 });   // to No. 4, under the tank's outlet
-      line('oil-rear', [T(0, 0, .019), P(-1.878, 5.36, .369), P(-1.90, 5.42, .37), P(-1.95, 5.51, .374), P(-2.0, 5.6, .38), P(-2.05, 5.7, .39), P(-2.09, 5.78, .41), P(-2.12, 5.88, .438),
-        P(-2.15, 5.98, .462), P(-2.18, 6.03, .487), P(-2.21, 6.05, .503), P(-2.25, 6.05, .515), P(-2.32, 6.05, .512), P(-2.39, 6.05, .504), P(-2.45, 6.07, .487)].concat(n5p), .005, 'tube', { clamps: 4 });   // to No. 5/6, crossing under the scavenge tube
+      line('oil-rear', [T(0, 0, .019), P(-1.878, 5.36, .369), P(-1.90, 5.42, .37), P(-1.95, 5.51, .374), P(-2.0, 5.6, .38), P(-2.05, 5.7, .39), P(-2.09, 5.78, .41), P(-2.12, 5.9, .44),
+        P(-2.15, 6.02, .463), P(-2.18, 6.1, .485), P(-2.21, 6.14, .5), P(-2.25, 6.15, .515), P(-2.32, 6.15, .512), P(-2.39, 6.15, .504), P(-2.45, 6.16, .487)].concat(n5p), .005, 'tube', { clamps: 4 });   // to No. 5/6, crossing under the scavenge tube and the vent duct
       /* scavenge: No. 4 from the pump's outer fitting, No. 5/6 from its inner one, out round the hydraulic pump's flange, aft under the
          gearbox and the oil control module's harness, between the ignition cables, then down under the oil tank */
       line('oil-rear', [Ls(.04, .02, .0845), Ls(.04, .021, .108), P(-1.452, 5.35, .465), P(-1.462, 5.355, .498), P(-1.50, 5.355, .51), P(-1.60, 5.355, .512), P(-1.70, 5.355, .512),
         P(-1.77, 5.355, .507), P(-1.817, 5.36, .50), P(-1.86, 5.37, .493), P(-1.92, 5.385, .478), P(-1.98, 5.405, .455), P(-2.03, 5.425, .428)].concat(n4s), .007, 'tube', { clamps: 3 });
       line('oil-rear', [Ls(.04, -.02, .0845), Ls(.04, -.019, .118), P(-1.45, 5.47, .435), P(-1.462, 5.475, .49), P(-1.50, 5.475, .513), P(-1.60, 5.475, .516), P(-1.70, 5.475, .516),
-        P(-1.77, 5.478, .51), P(-1.808, 5.49, .505), P(-1.835, 5.5, .503), P(-1.88, 5.52, .498), P(-1.94, 5.55, .495), P(-2.0, 5.64, .492), P(-2.06, 5.8, .488), P(-2.11, 5.88, .492),
-        P(-2.16, 5.92, .499), P(-2.20, 5.95, .507), P(-2.25, 5.95, .515), P(-2.32, 5.95, .512), P(-2.39, 5.95, .504), P(-2.45, 5.93, .488)].concat(n5s), .007, 'tube', { clamps: 5 }); }
+        P(-1.77, 5.478, .51), P(-1.808, 5.49, .505), P(-1.835, 5.5, .503), P(-1.88, 5.52, .498), P(-1.94, 5.55, .495), P(-2.0, 5.64, .492), P(-2.06, 5.76, .488), P(-2.11, 5.81, .492),
+        P(-2.16, 5.84, .499), P(-2.20, 5.85, .507), P(-2.25, 5.85, .515), P(-2.32, 5.85, .512), P(-2.39, 5.85, .504), P(-2.45, 5.84, .488)].concat(n5s), .007, 'tube', { clamps: 5 }); }
     /* p.214-219: the front bearing compartment (FDGS, No. 1, 1.5 and 2) and No. 3 are served by tubes running forward under the HPC
        from the gearbox's front face to bosses on the CIC cone; passages through the case and its struts carry the oil on in. The
        manual gives the circuit, not the routes: here six tubes side by side at r 0.318, 6:09 to 6:42, under the core harnesses and over
@@ -843,9 +847,9 @@
       const bs = { thetaStart: G.clock(9.25), thetaLength: TAU - (G.clock(9.25) - G.clock(8.75)) };
       PW.add('tacc', G.revolve([[-1.915, .258], [-2.015, .262], [-2.015, .286], [-1.915, .282]], { seg: 128, crease: 60, ...bs }), 'nickel');                // HPT manifold
       for (const xx of [-1.93, -1.965, -2.0]) PW.add('tacc', G.revolve(circ(xx, .29, .006, 8), { seg: 128, ...bs }), 'nickel');
-      /* the LPT spray rings stop either side of 6 o'clock, their ends closed, leaving the gap the No. 5/6 bearing oil tubes run through
-         (the gap is inferred: the manual's render shows only the top of the manifolds) */
-      { const ga = G.clock(5.85), gb = G.clock(6.15);
+      /* the LPT spray rings stop either side of 6 o'clock, their ends closed, leaving the gap the No. 5/6 bearing oil tubes and the
+         deoiler vent duct run through (the gap is inferred: the manual's render shows only the top of the manifolds) */
+      { const ga = G.clock(5.72), gb = G.clock(6.28);
         for (const xx of [-2.25, -2.32, -2.39]) { const rr = Math.max(rCase(xx), .24) + .025;
           PW.add('tacc', G.revolve([[xx + .012, rr - .012], [xx - .012, rr - .012], [xx - .012, rr + .012], [xx + .012, rr + .012]], { seg: 128, crease: 80, thetaStart: gb, thetaLength: TAU - (gb - ga) }), 'steel'); } }
       { const band = []; for (let i = 0; i <= 8; i++) { const xx = -2.236 - .168 * i / 8; band.push([xx, rCase(xx) + .004]); }                         // the band under the LPT spray tubes
