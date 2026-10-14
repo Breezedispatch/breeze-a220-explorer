@@ -11,7 +11,17 @@
     c.fillStyle = bg; c.fillRect(0, 0, w, h); c.fillStyle = '#1e1e22';
     for (const u of [.22, .72]) for (let y = 14; y < h - 14; y += 9) if ((y * 7) % 5 !== 0) c.fillRect(u * w + ((y * 13) % 3), y, 5 + (y * 11) % 4, 6); }, { srgb: true })); };
 
+  /* the air/oil cooler's matrix face (A Nahas p.18 photo): very fine diagonal louvred fins on olive-khaki, 8 px a fin, repeated about
+     every 5 cm where it is used; and the dense olive-gold fin mesh seen through its inlet plenum's opening */
+  const finTex = () => PW.tex.aocFins || (PW.tex.aocFins = (() => { const t = PW.tex.canvas(128, 128, (c, w, h) => { c.fillStyle = '#857c5f'; c.fillRect(0, 0, w, h);
+    for (const [col, lw, o] of [['rgba(58,52,36,.6)', 2, 0], ['rgba(222,212,172,.4)', 1, 4]]) { c.strokeStyle = col; c.lineWidth = lw;
+      for (let i = -h + o; i < w + h; i += 8) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i + h / 2, h); c.stroke(); } } }, { srgb: true }); t.repeat.set(3.4, 6.4); return t; })());
+  const meshTex = () => PW.tex.aocMesh || (PW.tex.aocMesh = (() => { const t = PW.tex.canvas(64, 64, (c, w, h) => { c.fillStyle = '#2f2c1e'; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#a08a40'; for (let y = 0; y < h; y += 16) for (let x = 0; x < w; x += 8) c.fillRect(x + 1, y + 1, 6, 14); }, { srgb: true }); t.repeat.set(1.9, 6.6); return t; })());
+
   Object.assign(PW.MAT, {
+    aocFins: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#ffffff'), map: finTex(), roughness: .55, metalness: .3 }),
+    aocMesh: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#ffffff'), map: meshTex(), roughness: .5, metalness: .35 }),
     gearboxCast: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#a69e8b'), roughness: .62, metalness: .5, roughnessMap: PW.tex.noise('cast', 256, 14, .55, 1), bumpMap: PW.tex.noise('cast', 256, 14, .55, 1), bumpScale: .0008 }),
     accGrey: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#8b9197'), roughness: .5, metalness: .35 }),
     eecGrey: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#9aa0a6'), roughness: .55, metalness: .2 }),
@@ -613,16 +623,27 @@
     PW.part('aoc', { parent: 'oil', label: 'Air/oil heat exchanger (AOHX)', src: 'p.212-217, p.232-233; p.20-23',
       info: 'Plate-fin cooler standing on the left of the core at about 10 o\'clock, over the rear HPC and diffuser, with the starter below it. Fan air comes in through the forward half of the window in the left IFS, turns aft through the finned matrix between the two plenums and leaves through the aft half. It takes part of the cooled-path oil, at least about 25 percent and up to nearly all of it when the fuel cannot take more heat. The oil is the FOHX bypass valve\'s share, passed on by the fuel/oil manifold through the short tube low on the front of the inlet plenum. It leaves from the top of the plenum for the VFG oil/oil heat exchanger (p.215). If the cooler clogs, a relief valve sends the oil straight to the VFG oil/oil heat exchanger.' });
     { const ax = -1.745, ah = 9.9, f = frame('aoc', ax, ah, .44);
-      fbox('aoc', f, 0, -.002, 0, .17, .08, .32, 'darkBox', .004);                                                                          // finned matrix
-      for (let i = 0; i < 22; i++) fbox('aoc', f, 0, 0, -.152 + i * .304 / 21, .17, .086, .003, 'nickel', .0005);
+      /* A Nahas p.18 photo: the matrix face is light olive-khaki with very fine diagonal louvred fins, between silver rails bolted along
+         its forward and aft edges; dark with 22 bright bars, a radiator grille, until 2026-10-14 (design audit 3) */
+      fbox('aoc', f, 0, -.002, 0, .17, .08, .32, 'chromate', .004);                                                                         // finned matrix
+      { const p = new THREE.Mesh(new THREE.PlaneGeometry(.17, .32).rotateX(-Math.PI / 2)); p.position.set(0, .0385, 0); PW.add('aoc', p, 'aocFins', { into: f, shadow: false }); }
+      for (const s of [1, -1]) { fbox('aoc', f, s * .091, .001, 0, .012, .084, .33, 'steel', .003);                        // the rails
+        for (const z of [-.12, -.04, .04, .12]) Kt.hex('aoc', f, [s * .091, .043, z], 'y', .0045, .004, 'steel'); }
       const fins = [];
-      for (const s of [1, -1]) { fbox('aoc', f, s * .15, 0, 0, .13, .12, .34, 'steel', .025); fbox('aoc', f, s * .15, .057, 0, .09, .012, .27, 'darkBox', .01);   // inlet and exhaust plenums with their openings
-        for (let i = 0; i < 13; i++) fins.push(G.roundedBox(.0012, .012, .25, .0003).translate(s * .15 - .039 + i * .0065, .0578, 0)); }
-      PW.add('aoc', G.merge(fins), 'chromate', { solid: true, into: f });                                                  // the matrix's olive-gold fins seen through each opening (photo)
-      /* the photos: a thick orange silicone gasket round the exhaust plenum's opening seals it against the IFS window's plain aft frame
-         when the door is closed; the inlet joint's gasket is on the door */
-      for (const [dx, dz, w, d] of [[0, .145, .11, .02], [0, -.145, .11, .02], [.055, 0, .02, .29], [-.055, 0, .02, .29]])
-        fbox('aoc', f, -.15 + dx, .066, dz, w, .01, d, 'gasketOrange', .004);
+      for (const s of [1, -1]) { fbox('aoc', f, s * .15, 0, 0, .13, .12, .34, 'steel', .025);                                // inlet and exhaust plenums
+        const ow = s > 0 ? .09 : .06, od = s > 0 ? .27 : .26; fbox('aoc', f, s * .15, .057, 0, ow, .012, od, 'darkBox', .01);  // their openings
+        if (s < 0) for (let i = 0; i < 9; i++) fins.push(G.roundedBox(.0012, .012, .24, .0003).translate(-.15 - .026 + i * .0065, .0578, 0)); }
+      PW.add('aoc', G.merge(fins), 'chromate', { solid: true, into: f });                                                  // the olive-gold fins seen through the exhaust opening (photo)
+      { const p = new THREE.Mesh(new THREE.PlaneGeometry(.086, .266).rotateX(-Math.PI / 2)); p.position.set(.15, .0634, 0); PW.add('aoc', p, 'aocMesh', { into: f, shadow: false }); }   // and the dense fin mesh in the inlet's
+      /* the photos: a fat, ribbed, brick-orange silicone bulb seal round the exhaust plenum's opening, covering the plenum's face, seals it
+         against the IFS window's plain aft frame when the door is closed (a flat 2 cm strip until 2026-10-14); the inlet's gasket is on
+         the door. A rounded-rectangle ring 36 mm thick with three ribs running along its crown */
+      const ring = (a, b, rc, y, rad) => { const s = new THREE.Shape(); s.moveTo(-a + rc, -b); s.lineTo(a - rc, -b); s.absarc(a - rc, -b + rc, rc, -Math.PI / 2, 0); s.lineTo(a, b - rc);
+        s.absarc(a - rc, b - rc, rc, 0, Math.PI / 2); s.lineTo(-a + rc, b); s.absarc(-a + rc, b - rc, rc, Math.PI / 2, Math.PI); s.lineTo(-a, -b + rc); s.absarc(-a + rc, -b + rc, rc, Math.PI, Math.PI * 1.5);
+        const c = new THREE.CatmullRomCurve3(s.getSpacedPoints(160).slice(0, -1).map(p => V(-.15 + p.x, y, p.y)), true);
+        const g = new THREE.TubeGeometry(c, 160, rad, 10, true); g.userData.solid = true; PW.add('aoc', new THREE.Mesh(g), 'gasketOrange', { solid: true, into: f }); };
+      ring(.047, .147, .03, .075, .018);
+      for (const d of [-.0095, 0, .0095]) ring(.047 + d, .147 + d, .03 + d, .075 + Math.sqrt(.018 * .018 - d * d) - .0012, .0032);
       for (const dx of [.12, -.12]) PW.add('aoc', G.rod(P(ax + dx, 10.6, .46), P(ax + dx, 11.0, .30), .006), 'steel');                        // support rods to the case
       line('aoc', [P(-1.60, 10.35, .44), P(-1.55, 10.3, .43), P(-1.515, 10.15, .41)], .016, 'tube', { clamps: 0 });                          // oil on to the VFG oil/oil cooler
       /* oil in (p.215): the bypass valve's share, from the tower on the fuel/oil manifold just forward of the inlet plenum, through a short
