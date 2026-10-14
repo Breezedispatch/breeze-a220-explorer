@@ -815,7 +815,7 @@
       P(-1.138, 10.15, .445), P(-1.112, 10.45, .41), P(-1.10, 10.6, .42), P(-1.095, 10.75, .43), P(-1.088, 11.2, .462), P(-1.10, 11.45, .493), P(-1.11, 11.6, .496), P(-1.114, 11.69, .499), P(-1.117, 11.735, .53),
       P(-1.118, 11.755, .60), P(-1.118, 11.755, .80), P(-1.118, 11.755, 1.04)], .005, 'tube', { clamps: 4 });
     for (const [o, r1] of [[0, 0], [.12, .03]]) {                                                                                               // boost fuel to and from the FOHX
-      line('fuel', [P(-1.12 - o * .25, 11.55 + o, .43), P(-1.115 - o * .25, 11.2, .475), P(-1.125 - o * .25, 10.8, .49), P(-1.13 - o * .25, 10.45, .497 + o * .025), P(-1.16 - o * .28, 10.1 + o * .6, .49), P(-1.25, 9.9 + o * .8, .49 + r1 * .5),
+      line('fuel', [P(-1.12 - o * .25, 11.55 + o, .43), P(-1.115 - o * .25, 11.2, .475), P(-1.125 - o * .25, 10.8, .494), P(-1.13 - o * .25, 10.45, .5015 + o * .028), P(-1.16 - o * .28, 10.1 + o * .6, .49), P(-1.25, 9.9 + o * .8, .49 + r1 * .5),
         P(-1.32, 9.75 + o * .8, .475 + r1), P(-1.40, 9.4 + o * .67, .465 + r1 * .83), P(-1.432 - o * .233, 9.47 + o * .25, .44 + o * .2), P(-1.444 - o * .233, 9.407, .43 + o * .208)], .012, 'tube', { clamps: 2 }); }
     /* metered fuel: two tubes leave the inner face of the FOM near its top end, run up in front of the MGB's left arm under the oil
        tower and the VFG oil/oil cooler, and aft above the arm, under the AOHX, to the primary and secondary manifolds */
@@ -1830,49 +1830,105 @@
     /* ============================== MOUNTS ============================== */
     PW.part('mounts', { label: 'Engine mounts', explode: [0, .5, 0], src: 'p.44-49; TTM ch. 71',
       info: 'The mounts carry all the engine loads into the pylon; the nacelle carries no significant structural load. Forward mount on the fan case mount ring, aft mount on the turbine exhaust case, both at 12 o\'clock; two thrust links from the CIC to the aft mount carry the thrust and keep it from bending the core. Every mount is fail-safe: the secondary load paths have clearance and only take load if a primary one fails. The mounts are disconnected to remove the engine.' });
-    { const xf = NC.engineForwardMountPlane.x, xa = NC.engineAftMountPlane.x;
+    { const xf = NC.engineForwardMountPlane.x, xa = NC.engineAftMountPlane.x, yBB = .18;                                // yBB: the balance beam's link eyes, above the aft mount's frame (r 0.40)
+      /* a flat dog-bone link in frame f, lying in the plane x = xo: round ends of radius re round the bolt centres a and b ([y, z]), waisted
+         to half-width rw between them, t thick (p.47 and p.49: the side, outer and fail-safe links) */
+      const dogbone = (pid, f, xo, a, b, re, rw, t, mat) => { const L = Math.hypot(b[0] - a[0], b[1] - a[1]), sh = new THREE.Shape();
+        sh.moveTo(0, -re); sh.quadraticCurveTo(L / 2, re - 2 * rw, L, -re); sh.absarc(L, 0, re, -Math.PI / 2, Math.PI / 2, false);
+        sh.quadraticCurveTo(L / 2, 2 * rw - re, 0, re); sh.absarc(0, 0, re, Math.PI / 2, 1.5 * Math.PI, false);
+        const g = new THREE.ExtrudeGeometry(sh, { depth: t, bevelEnabled: true, bevelThickness: .001, bevelSize: .001, bevelSegments: 1, curveSegments: 10 }); g.translate(0, 0, -t / 2);
+        const U = V(0, (b[0] - a[0]) / L, (b[1] - a[1]) / L), W = V(1, 0, 0); g.applyMatrix4(new THREE.Matrix4().makeBasis(U, W.clone().cross(U), W).setPosition(xo, a[0], a[1]));
+        g.userData.solid = true; return PW.add(pid, new THREE.Mesh(g), mat, { solid: true, into: f }); };
+      /* a plate or web extruded from a 2D outline (with optional holes), mapped into frame f by basis (X, Y, Z) at pos */
+      const plate = (pid, f, outline, holes, depth, X, Y, Z, pos, mat) => { const sh = new THREE.Shape(outline.map(([u, v]) => new THREE.Vector2(u, v)));
+        for (const h of holes) sh.holes.push(new THREE.Path(h.map(([u, v]) => new THREE.Vector2(u, v))));
+        const g = new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: true, bevelThickness: .0015, bevelSize: .0015, bevelSegments: 1 }); g.translate(0, 0, -depth / 2);
+        g.applyMatrix4(new THREE.Matrix4().makeBasis(V(...X), V(...Y), V(...Z)).setPosition(...pos)); g.userData.solid = true; return PW.add(pid, new THREE.Mesh(g), mat, { solid: true, into: f }); };
       /* forward mount (p.46-47): main beam bolted under the pylon, a side link at each end down to lugs on the mount ring, the fail-safe
          bolt through the beam's centre clevis and the two centre lugs */
       PW.part('mount-fwd', { parent: 'mounts', label: 'Forward engine mount', src: 'p.44-47',
         info: 'On the titanium mount ring at 12 o\'clock. The main beam bolts to the pylon with four bolts in captive barrel nuts, located by two shear pins. A side link at each end carries the side and vertical loads from the mount ring into the beam, each on two bolts. The fail-safe bolt through the centre has clearance and only takes load if a side link fails.' });
-      { const f = Kt.frame('mount-fwd', xf, 12, .97);
-        Kt.box('mount-fwd', f, [0, .145, 0], [.10, .03, .44], 'titanium', { round: .008 }); Kt.box('mount-fwd', f, [0, .113, 0], [.09, .04, .14], 'titanium', { round: .01 });
-        for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) Kt.hex('mount-fwd', f, [a * .03, .127, b * .155], '-y', .009, .008, 'steel');        // the four mount bolts
-        for (const s of [-1, 1]) { Kt.box('mount-fwd', f, [0, .055, s * .18], [.06, .06, .03], 'titanium', { round: .008 });                               // lug on the ring
-          Kt.box('mount-fwd', f, [.035, .1, s * .18], [.014, .11, .045], 'titanium', { round: .01 }); Kt.box('mount-fwd', f, [-.035, .1, s * .18], [.014, .11, .045], 'titanium', { round: .01 });   // side link
-          for (const y of [.065, .14]) { Kt.cyl('mount-fwd', f, [0, y, s * .18], 'x', .007, .1, 'steel'); for (const e of [-1, 1]) Kt.hex('mount-fwd', f, [e * .05, y, s * .18], 'x', .011, .007, 'steel'); } }
+      /* p.47: the beam's top plate is wide over the middle and narrows to a tongue at each end, held between the side link's two plates;
+         under it a deep keel, a web between a rim and ribs with pockets either side of the centre, deepest in the middle, where it is
+         notched over the ring's centre lug. Until 2026-10-14 it was a 3 cm plate on a block, with twin cheek plates for side links */
+      /* the side links stand inside the pylon's width, under the fan cowls' top edges (which come down to r 1.15 at 11 deg) */
+      { const f = Kt.frame('mount-fwd', xf, 12, .97), wE = .021, wM = .055, zL = .17, zE = .195;
+        plate('mount-fwd', f, [[-zE, -wE], [-.145, -wE], [-.12, -wM], [.12, -wM], [.145, -wE], [zE, -wE], [zE, wE], [.145, wE], [.12, wM], [-.12, wM], [-.145, wE], [-zE, wE]], [],
+          .026, [0, 0, 1], [1, 0, 0], [0, 1, 0], [0, .147, 0], 'titanium');                                                                   // the top plate
+        const keel = [[-zE, .134], [-zE, .112], [-.07, .072], [-.03, .072], [-.03, .106], [.03, .106], [.03, .072], [.07, .072], [zE, .112], [zE, .134]];
+        const pocket = s => [[s * .078, .127], [s * .15, .127], [s * .15, .1066], [s * .078, .0836]];
+        plate('mount-fwd', f, keel, [pocket(1), pocket(-1)], .048, [0, 0, 1], [0, 1, 0], [-1, 0, 0], [0, 0, 0], 'titanium');         // the keel's rim and ribs
+        plate('mount-fwd', f, keel, [], .01, [0, 0, 1], [0, 1, 0], [-1, 0, 0], [0, 0, 0], 'titanium');                                  // the web at the pockets' floor
+        for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) Kt.hex('mount-fwd', f, [a * .037, .127, b * .10], '-y', .009, .008, 'steel');   // the four mount bolts' nuts, clear of the keel
+        /* each side link: two flat dog-bone plates either side of the beam's end tongue and the lug on the ring, on two bolts */
+        for (const s of [-1, 1]) { Kt.box('mount-fwd', f, [0, .055, s * zL], [.05, .06, .03], 'titanium', { round: .008 });                        // lug on the ring
+          for (const e of [-1, 1]) dogbone('mount-fwd', f, e * .035, [.142, s * zL], [.055, s * zL], .022, .015, .012, 'titanium');
+          for (const y of [.055, .142]) { Kt.cyl('mount-fwd', f, [0, y, s * zL], 'x', .007, .1, 'steel'); for (const e of [-1, 1]) Kt.hex('mount-fwd', f, [e * .047, y, s * zL], 'x', .011, .007, 'steel'); } }
         /* p.47: the fail-safe bolt runs fore and aft, its head facing the same way as the side link bolts, through the beam's centre
-           clevis and a centre lug on the ring; the two shear pins stand on the beam's top face to locate it in the pylon */
+           clevis and a centre lug on the ring, which stands in the keel's notch; the two shear pins stand on the beam's top face to
+           locate it in the pylon */
         Kt.box('mount-fwd', f, [0, .07, 0], [.05, .06, .035], 'titanium', { round: .008 });                                          // centre lug on the ring
-        for (const s of [-1, 1]) Kt.box('mount-fwd', f, [s * .034, .098, 0], [.012, .05, .05], 'titanium', { round: .005 });         // the clevis cheeks under the beam
+        for (const s of [-1, 1]) Kt.box('mount-fwd', f, [s * .034, .1035, 0], [.012, .061, .05], 'titanium', { round: .005 });       // the clevis cheeks under the beam
         Kt.cyl('mount-fwd', f, [0, .085, 0], 'x', .009, .1, 'steel'); for (const e of [-1, 1]) Kt.hex('mount-fwd', f, [e * .052, .085, 0], 'x', .013, .008, 'steel');   // fail-safe bolt
         for (const z of [-.09, .05]) { Kt.cyl('mount-fwd', f, [0, .17, z], 'y', .008, .02, 'steel'); Kt.cone('mount-fwd', f, [0, .185, z], 'y', .003, .008, .01, 'steel'); } }   // shear pins
       /* aft mount (p.48-49): main beam under the pylon's aft fitting, two outer links down to lugs on the turbine exhaust case, the centre
          fail-safe link, and the balance beam ahead of it carrying the thrust links */
       PW.part('mount-aft', { parent: 'mounts', label: 'Aft engine mount and balance beam', src: 'p.44-45, p.48-49',
         info: 'On the turbine exhaust case at 12 o\'clock, reacting fore-aft, side, vertical and roll loads. The main beam bolts to the pylon with four bolts, located by two shear pins. Two outer links run down to the case, each held to it by one shear bolt; the centre fail-safe link and its two bolts only take load if an outer link fails. The balance beam on its forward face pivots at its centre and takes the two thrust links, evening out the load between them.' });
+      /* p.49: a thick main beam with a pocket in its top between the shear pins, the outer links' and the fail-safe link's clevises
+         under it; the outer links, the fail-safe link and the side links forward are flat dog-bones. The balance beam lies across the
+         main beam's forward edge on its pivot bolt, pocketed on top, its forked ends taking the thrust links' rod ends on upright bolts.
+         Until 2026-10-14 the beam was a plain plate, the outer links round rods and the balance beam a bar */
       { const f = Kt.frame('mount-aft', xa, 12, .40);
-        Kt.box('mount-aft', f, [0, .22, 0], [.12, .04, .38], 'titanium', { round: .008 });
-        for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) Kt.hex('mount-aft', f, [a * .035, .244, b * .14], 'y', .009, .007, 'steel');
+        plate('mount-aft', f, [[-.20, -.05], [-.17, -.065], [.17, -.065], [.20, -.05], [.20, .05], [.17, .065], [-.17, .065], [-.20, .05]], [[[-.06, -.035], [.06, -.035], [.06, .035], [-.06, .035]]],
+          .042, [0, 0, 1], [1, 0, 0], [0, 1, 0], [0, .222, 0], 'titanium');                                                                   // the main beam, its pocket through
+        Kt.box('mount-aft', f, [0, .205, 0], [.074, .008, .124], 'titanium', { round: .002 });                                                  // the pocket's floor
+        for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) Kt.hex('mount-aft', f, [a * .035, .246, b * .14], 'y', .009, .007, 'steel');
         for (const z of [-.07, .07]) { Kt.cyl('mount-aft', f, [0, .25, z], 'y', .008, .02, 'steel'); Kt.cone('mount-aft', f, [0, .265, z], 'y', .003, .008, .01, 'steel'); }   // the two shear pins (p.48-49)
         const rT = PW.tecR(xa);                                                                                             // the TEC's barrel here (r 0.40, the old cone, until 2026-10-14)
         for (const s of [-1, 1]) { const ly = rT * Math.cos(.49) - .4, lz = rT * Math.sin(.49);                                                       // case lugs at 28 deg either side
-          const g = Kt.frame('mount-aft', xa, 12 + s * .936, rT); Kt.box('mount-aft', g, [0, .02, 0], [.05, .04, .03], 'nickel', { round: .006 });
-          Kt.rod('mount-aft', f, [0, .205, s * .165], [0, ly + .035, s * lz], .015, 'titanium');                                                         // outer link
-          for (const p of [[0, .205, s * .165], [0, ly + .035, s * lz]]) { Kt.cyl('mount-aft', f, p, 'x', .007, .075, 'steel'); for (const e of [-1, 1]) Kt.hex('mount-aft', f, [e * .04, p[1], p[2]], 'x', .011, .007, 'steel'); } }
+          const g = Kt.frame('mount-aft', xa, 12 + s * .936, rT); for (const e of [-1, 1]) Kt.box('mount-aft', g, [e * .017, .02, 0], [.012, .04, .032], 'nickel', { round: .004 });   // the case's clevis
+          for (const e of [-1, 1]) Kt.box('mount-aft', f, [e * .017, .18, s * .165], [.012, .045, .046], 'titanium', { round: .005 });                 // the beam's clevis
+          dogbone('mount-aft', f, 0, [.175, s * .165], [ly + .035, s * lz], .022, .015, .016, 'titanium');                                          // outer link
+          for (const p of [[0, .175, s * .165], [0, ly + .035, s * lz]]) { Kt.cyl('mount-aft', f, p, 'x', .007, .075, 'steel'); for (const e of [-1, 1]) Kt.hex('mount-aft', f, [e * .03, p[1], p[2]], 'x', .011, .007, 'steel'); } }
         for (const dx of [.027, -.027]) Kt.box('mount-aft', f, [dx, (rT - .4 + .091) / 2, 0], [.01, .091 - (rT - .4), .07], 'nickel', { round: .004 });   // the case's centre lugs (p.53), up from the barrel
-        Kt.box('mount-aft', f, [0, .15, 0], [.034, .1, .04], 'titanium', { round: .008 });                                                              // fail-safe link
-        for (const y of [.075, .195]) { Kt.cyl('mount-aft', f, [0, y, 0], 'x', .008, .085, 'steel'); for (const e of [-1, 1]) Kt.hex('mount-aft', f, [e * .045, y, 0], 'x', .012, .007, 'steel'); }
-        Kt.box('mount-aft', f, [.07, .16, 0], [.035, .032, .24], 'titanium', { round: .008 }); Kt.cyl('mount-aft', f, [.07, .19, 0], 'y', .014, .04, 'steel');   // balance beam and its pivot
-        for (const s of [-1, 1]) { Kt.cyl('mount-aft', f, [.07, .16, s * .09], 'y', .008, .05, 'steel'); Kt.hex('mount-aft', f, [.07, .188, s * .09], 'y', .011, .006, 'steel'); } }
-      /* thrust links (p.48-49): rod-end eyes at the CIC clevises and on the balance beam. Real links are straight; the model's simplified
-         inner fixed structure leaves no straight path, so these bend into the gap between the IFS halves */
+        for (const e of [-1, 1]) Kt.box('mount-aft', f, [e * .016, .181, 0], [.008, .04, .046], 'titanium', { round: .003 });                         // the beam's centre clevis
+        dogbone('mount-aft', f, 0, [.182, 0], [.075, 0], .02, .014, .02, 'titanium');                                                                 // fail-safe link
+        for (const y of [.075, .182]) { Kt.cyl('mount-aft', f, [0, y, 0], 'x', .008, .085, 'steel'); for (const e of [-1, 1]) Kt.hex('mount-aft', f, [e * .045, y, 0], 'x', .012, .007, 'steel'); }
+        Kt.box('mount-aft', f, [.085, yBB, 0], [.04, .03, .13], 'titanium', { round: .005 });                                                         // balance beam
+        for (const s of [-1, 1]) { Kt.box('mount-aft', f, [.085, yBB + .0158, s * .035], [.024, .0016, .04], 'darkBox', { round: .0008 });          // its pockets
+          for (const dy of [-.015, .015]) Kt.box('mount-aft', f, [.085, yBB + dy, s * .09], [.04, .007, .052], 'titanium', { round: .003 });        // the fork at each end
+          Kt.cyl('mount-aft', f, [.085, yBB, s * .09], 'y', .008, .05, 'steel'); Kt.hex('mount-aft', f, [.085, yBB + .0215, s * .09], 'y', .011, .006, 'steel'); }   // the thrust link bolt
+        Kt.box('mount-aft', f, [.0825, yBB + .023, 0], [.045, .016, .05], 'titanium', { round: .004 });                                               // the pivot lug off the main beam's forward edge
+        Kt.cyl('mount-aft', f, [.085, yBB + .01, 0], 'y', .012, .05, 'steel'); Kt.cyl('mount-aft', f, [.085, yBB + .0325, 0], 'y', .019, .003, 'steel'); Kt.hex('mount-aft', f, [.085, yBB + .0385, 0], 'y', .015, .009, 'steel'); }   // its pivot bolt, washer and head
+      /* thrust links (p.44-45, p.48-49): straight, from a clevis on the CIC at 1:36 and 10:24 to the balance beam's forks: the forward
+         rod end's eye on a radial pin, a slim 28 mm tube tapering out over the middle to the 46 mm aft half, a ribbed swaged collar and
+         the aft spherical rod end. The CIC lug, aft of the IFS's forward fire seal, holds the pin 8 cm off the CIC's aft cone, so the
+         slim tube passes over the HP bleed duct, the fuel lines and the TACC valve (the FOHX boost lines cross over the left one about
+         4 mm clear), and the links stay just over the LPT's front spray ring. The model's IFS hugs the top of the turbine closer than
+         the real upper bifurcation does, so from x -2.1 to -2.4 the links run through its top edge, as the curved links before them
+         did (until 2026-10-14 they were bent 44 mm tubes); with the reverser doors open they are clear */
       PW.part('thrust-links', { parent: 'mounts', label: 'Thrust links (2)', src: 'p.44-45, p.48-49',
-        info: 'Two links from the compressor intermediate case (CIC) to the aft mount\'s balance beam. They carry the engine thrust aft into the aft mount and keep it from bending the core. If any link of the aft mount fails, including a thrust link, the load moves to a secondary path.\n\nThe real links are straight rods; the model bends them to fit its simplified inner fixed structure.' });
-      for (const s of [-1, 1]) { const h0 = s > 0 ? 1.6 : 10.4;
-        const g = Kt.frame('thrust-links', -1.0, h0, .455, { rz: .88 }); Kt.box('thrust-links', g, [0, .012, 0], [.05, .024, .06], 'titanium', { round: .006 });   // clevis on the CIC
-        const c = line('thrust-links', [P(-1.0, h0, .44), P(-1.25, s > 0 ? 1.5 : 10.5, .47), P(-1.8, s > 0 ? .7 : 11.3, .512), P(-2.15, s > 0 ? .55 : 11.45, .512), P(-2.32, s > 0 ? .25 : 11.75, .555), V(xa + .07, .56, .09 * s)], .022, 'tube', { clamps: 0, tension: 0, ends: false });
-        PW.add('thrust-links', G.alongCurve(c, [.012, .988], () => new THREE.CylinderGeometry(.029, .029, .06, 18)), 'steel').userData.isLine = true; } }   // swaged rod-end housings
+        info: 'Two straight links from the compressor intermediate case (CIC) to the aft mount\'s balance beam. They carry the engine thrust aft into the aft mount and keep it from bending the core. Each has a rod end at both ends, on a pin through a clevis on the CIC at the front and in a fork of the balance beam at the back, which shares the thrust between them. If any link of the aft mount fails, including a thrust link, the load moves to a secondary path.' });
+      const tl = PW.parts.get('thrust-links').obj;
+      for (const s of [-1, 1]) { const h0 = s > 0 ? 1.6 : 10.4, F = P(-1.035, h0, .465), B = V(xa + .085, .40 + yBB, .09 * s), D = B.clone().sub(F), L = D.length(); D.normalize();
+        const at = d => F.clone().addScaledVector(D, d), Dd = D.toArray(), nF = V(0, Math.cos(G.clock(h0)), Math.sin(G.clock(h0)));
+        /* the clevis on the CIC: a pad on the case, cheeks above and below the rod end's eye, closed at the front, and the pin */
+        const ex = D.clone().addScaledVector(nF, -D.dot(nF)).normalize().negate(), g = new THREE.Group(); g.position.copy(F);
+        g.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(ex, nF, ex.clone().cross(nF))); tl.add(g);
+        Kt.box('thrust-links', g, [.016, -.052, 0], [.048, .076, .04], 'titanium', { round: .004 });                                // the lug, up off the CIC's aft cone
+        for (const y of [-.011, .011]) Kt.box('thrust-links', g, [.013, y, 0], [.042, .006, .036], 'titanium', { round: .003 });
+        Kt.box('thrust-links', g, [.034, 0, 0], [.01, .028, .036], 'titanium', { round: .003 });
+        Kt.cyl('thrust-links', g, [0, 0, 0], 'y', .0065, .04, 'steel'); Kt.hex('thrust-links', g, [0, .0175, 0], 'y', .0105, .005, 'steel');
+        Kt.cyl('thrust-links', g, [0, 0, 0], 'y', .016, .014, 'steel');                                                                // the rod end's eye
+        Kt.cyl('thrust-links', tl, at(.04).toArray(), Dd, .0085, .04, 'steel'); Kt.hex('thrust-links', tl, at(.058).toArray(), Dd, .0125, .01, 'steel');   // its shank and jam nut
+        Kt.cone('thrust-links', tl, at(.07).toArray(), Dd, .014, .0095, .012, 'titanium');
+        const tube = (d0, d1, r) => { PW.add('thrust-links', G.tube([at(d0), at(d1)], r, { radial: 24, seg: 2 }), 'titanium').userData.isLine = true; };
+        tube(.075, .705, .014); Kt.cone('thrust-links', tl, at(.75).toArray(), Dd, .023, .014, .1, 'titanium'); tube(.795, L - .13, .023);
+        Kt.cyl('thrust-links', tl, at(L - .105).toArray(), Dd, .027, .058, 'steel', { edge: .003 });                                          // the swaged collar
+        { const c = new THREE.Group(); c.position.copy(at(L - .105)); c.quaternion.setFromUnitVectors(V(1, 0, 0), D); tl.add(c);
+          for (let k = 0; k < 16; k++) { const a = k / 16 * TAU; Kt.box('thrust-links', c, [0, .0275 * Math.cos(a), .0275 * Math.sin(a)], [.054, .003, .005], 'steel', { round: .001, rot: [a, 0, 0] }); } }   // its ribs
+        Kt.cyl('thrust-links', tl, at(L - .058).toArray(), Dd, .013, .032, 'steel'); Kt.cyl('thrust-links', tl, B.toArray(), 'y', .021, .021, 'steel'); } }   // the aft rod end in the fork
 
     /* ============================== DRAINS ============================== */
     PW.part('drain-mast', { label: 'Drain lines and drain mast', explode: [0, -.5, 0], src: 'p.50-51',
