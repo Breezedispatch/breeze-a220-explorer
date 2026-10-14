@@ -558,8 +558,11 @@
         const wm = new THREE.Mesh(wg); wm.rotation.set(aW, 0, 0); PW.add(lb, wm, 'lime', { solid: true });
         /* the latch beam's fairing, the bottom of the nacelle between the two sleeves' lower edges, 6 deg either side of 6 o'clock
            (p.29-31, TTM 01 fig. 28): the flush handles of latches 1, 4 and 5 and the latch access door are in the left one */
-        { const fs = []; for (let i = 0; i <= 12; i++) { const xx = xJ2 - .002 + (xTE - .028 - xJ2 + .002) * i / 12; fs.push([xx, rOut(xx)]); }
-          PW.add(lb, G.revolve(G.shellProfile(fs, fs.map(([xx, r]) => [xx, r - .02])), Object.assign({ seg: 3 }, span(174, 180))), 'nacellePaint'); }
+        { const skin = (xa, xb, th0, th1) => { const fs = []; for (let i = 0; i <= 12; i++) { const xx = xa + (xb - xa) * i / 12; fs.push([xx, rOut(xx)]); }
+            PW.add(lb, G.revolve(G.shellProfile(fs, fs.map(([xx, r]) => [xx, r - .02])), Object.assign({ seg: 3 }, span(th0, th1))), 'nacellePaint'); };
+          /* open 45 mm round the drain mast, which comes out through the latch access door's grommet at x -1.50, under the mast's end
+             plate (until 2026-10-14 the mast's tubes ran through solid skin) */
+          skin(xJ2 - .002, -1.455, 174, 180); skin(-1.455, -1.545, 174, 177.76); skin(-1.545, xTE - .028, 174, 180); }
         /* latches 1 to 4 on the beam: [x, radius, has an outer handle]; the hooks on the left web reach across onto the keepers on the
            right. p.29 and p.31 put latch 4 near the sleeves' trailing edge and latch 5 aft of it, on the aft core cowl's bottom split;
            until 2026-10-14 latches 4 and 5 were at x -1.81 and -2.09 on the beam */

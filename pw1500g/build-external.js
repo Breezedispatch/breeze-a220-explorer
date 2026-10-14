@@ -1722,7 +1722,7 @@
 
     /* ============================== DRAINS ============================== */
     PW.part('drain-mast', { label: 'Drain lines and drain mast', explode: [0, -.5, 0], src: 'p.50-51',
-      info: 'Eight drain lines, from the 2.5 bleed valve actuator, the HPC and LPC vane actuators, the VFG, the starter, the fuel/oil manifold and IFPC, the oil tank scupper and the hydraulic pump, gather into the drain mast. The mast drops between the reverser doors at 6 o\'clock and ends in a round plate of tube ends at the latch access panel. The drain tube map inside the panel numbers them: 1 DR11 2.5 bleed, 2 DR21 HPC SVA, 3 DR01 LPC SVA, 4 DR61 VFG, 5 DR91 starter, 6 DR41 FOM fuel, 7 DR71 oil tank, 8 DR51 hydraulic pump. Which tube drips points to the leaking unit. The nacelle also drains through the gaps round the latch access panel and through holes in the lower bifurcation panels.' });
+      info: 'Eight drain lines, from the 2.5 bleed valve actuator, the HPC and LPC vane actuators, the VFG, the starter, the fuel/oil manifold and IFPC, the oil tank scupper and the hydraulic pump, gather into the drain mast. The mast drops between the reverser doors at 6 o\'clock and ends in a round plate of tube ends at the latch access panel. The drain tube map inside the panel numbers them: 1 DR11 2.5 bleed, 2 DR21 HPC SVA, 3 DR01 LPC SVA, 4 DR61 VFG, 5 DR91 starter, 6 DR41 FOM fuel, 7 DR71 oil tank, 8 DR51 hydraulic pump. On the plate the tube ends sit in a shield-shaped block in rows of 1, 2, 3 and 2: tube 1 at the narrow end, toward the right of the engine. Which tube drips points to the leaking unit. The nacelle also drains through the gaps round the latch access panel and through holes in the lower bifurcation panels.' });
     /* p.50: each drain runs from its source to the top of the mast under the core at 6 o'clock; the mast carries them down the lower
        bifurcation and through the reverser to the latch access panel at the bottom of the nacelle */
     { const xm2 = -1.48, runs = [
@@ -1740,22 +1740,35 @@
       /* the six forward drains keep their own lanes, 1 cm apart, into the top of the collector block on the mast, all to the left of the
          igniter cables; the right-side drains take the lanes in the order they arrive, so none crosses another */
       const lanes = [6.025, 5.99, 5.955, 6.055, 6.105, 6.145];
-      /* p.51: the tubes gather into the mast, a bundle held in clamp blocks, and end side by side in a round end plate at the latch
-         access panel, each in its place on the drain tube map (1 DR11 2.5 bleed, 2 DR21 HPC SVA, 3 DR01 LPC SVA, 4 DR61 VFG, 5 DR91
-         starter, 6 DR41 FOM, 7 DR71 oil tank, 8 DR51 hydraulic pump; tube 1 taken as forward). Brian's photos from below, reverser doors
-         open, show the plate as the white disc of tube ends under the core. The bundle drops between the reverser doors' latch beams,
-         which leave a 50 mm gap at 6 o'clock, so it is packed four tubes across there and the plate hangs just below them */
+      /* p.51: the tubes gather into the mast, a bundle held in clamp blocks, and end in a round end plate at the latch access panel, each
+         in its place on the drain tube map (1 DR11 2.5 bleed, 2 DR21 HPC SVA, 3 DR01 LPC SVA, 4 DR61 VFG, 5 DR91 starter, 6 DR41 FOM,
+         7 DR71 oil tank, 8 DR51 hydraulic pump). Brian's photo from below, reverser doors open, shows the plate end-on as a white disc
+         with the tube ends in one brown shield-shaped block: rows of 1, 2, 3 and 2 stacked across the engine, each row running fore and
+         aft, tube 1 at the narrow end toward the engine's right and 7 and 8 at the wide end toward its left. The order along each row
+         takes the map as drawn seen from below (3, 6 and 8 forward); the photo cannot show it. Until 2026-10-14 the pattern was turned
+         90 deg, tube 1 forward. The bundle drops between the reverser doors' latch beams, which leave a 50 mm gap at 6 o'clock, so it
+         is packed four tubes across there (map) and spreads to the plate's pattern (plate) just below them */
       const rP = 1.155, map = [[.012, .01], [.03, 0], [.012, -.01], [-.028, .009], [-.008, .015], [-.008, 0], [-.008, -.015], [-.028, -.009]];   // by run: LPC, 2.5, HPC, pump, FOM, starter, VFG, oil tank
+      const plate = [[.01, -.012], [0, -.03], [-.01, -.012], [.009, .028], [.015, .008], [0, .008], [-.015, .008], [-.009, .028]];   // same order: [forward, toward the engine's left]
       const xB = xm2 - .02, inB = (i, r, k) => { const [a, t] = map[i]; return P(xB + a * k, 6 + t * k / r / (Math.PI / 6), r); };   // aft of the reverser latch at x -1.40
+      const onP = (i, r) => { const [a, t] = plate[i]; return P(xB + a, 6 + t / r / (Math.PI / 6), r); };
       runs.forEach((pts, i) => { let lead = pts;
         /* the three actuator drains stay low until x -1.40, under W04 and clear of ignition cable B, then rise into the collector */
         if (i <= 5) { const h = lanes[i], q = pts[pts.length - 1]; pts[pts.length - 1] = P(q.x, h, Math.hypot(q.y, q.z));
           lead = pts.concat(q.x > -1.38 ? [P(-1.40, h, .503)] : [], [P(xm2 + .03, h, .56), P(xm2 + .01, h, .604)]); }
-        line('drain-mast', lead.concat([inB(i, .66, .6), inB(i, .80, .9), inB(i, .95, 1), inB(i, rP - .03, 1), inB(i, rP - .006, 1)]), .004, 'tube', { clamps: 0, ends: false }); });
+        line('drain-mast', lead.concat([inB(i, .66, .6), inB(i, .80, .9), inB(i, .95, 1), inB(i, rP - .03, 1), onP(i, rP - .004)]), .004, 'tube', { clamps: 0, ends: false }); });
       for (const r of [.76, .935]) box('drain-mast', xB - .002, 6, r, .08, .02, .06, 'steel');                                     // clamp blocks round the bundle
-      { const g = Kt.frame('drain-mast', xB, 6, rP);                                                                               // the end plate, facing down
-        Kt.cyl('drain-mast', g, [0, -.002, 0], 'y', .046, .014, 'termWhite', { edge: .004 });
-        map.forEach(([a, t]) => { Kt.cyl('drain-mast', g, [a, .0065, t], 'y', .0062, .007, 'phenolic'); Kt.cyl('drain-mast', g, [a, .012, t], 'y', .0043, .005, 'brass'); }); } }
+      /* the end plate, facing down: a white disc about 2.6 times the block's width in the photo, filling the latch access door's
+         grommet (r 0.066); it was r 0.046 until 2026-10-14 */
+      { const g = Kt.frame('drain-mast', xB, 6, rP);
+        Kt.cyl('drain-mast', g, [0, .001, 0], 'y', .064, .014, 'termWhite', { edge: .004 });
+        /* the brown block, drawn as [forward, -toward the left] so that turned into the plate it reads [forward, toward the left] */
+        const sh = new THREE.Shape(), outline = [[-.008, .04], [.008, .04], [.02, .024], [.02, .004], [.025, .004], [.025, -.018], [.019, -.018], [.019, -.038],
+          [-.019, -.038], [-.019, -.018], [-.025, -.018], [-.025, .004], [-.02, .004], [-.02, .024]];
+        sh.moveTo(...outline[0]); outline.slice(1).forEach(p => sh.lineTo(...p)); sh.closePath();
+        const blk = new THREE.ExtrudeGeometry(sh, { depth: .006, bevelEnabled: true, bevelThickness: .0008, bevelSize: .0008, bevelSegments: 1 });
+        blk.rotateX(-Math.PI / 2); blk.translate(0, .008, 0); blk.userData.solid = true; PW.add('drain-mast', blk, 'phenolic', { into: g });
+        plate.forEach(([a, t]) => { Kt.cyl('drain-mast', g, [a, .015, t], 'y', .0043, .005, 'brass'); Kt.cyl('drain-mast', g, [a, .0177, t], 'y', .0027, .0008, 'darkBox'); }); } }
   }
   /* a small circle profile (tori for manifolds) */
   function circ(x, r, rad, n) { const out = []; for (let i = 0; i < n; i++) { const a = i / n * TAU; out.push([x + rad * Math.cos(a), r + rad * Math.sin(a)]); } return out; }
