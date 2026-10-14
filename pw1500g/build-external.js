@@ -971,9 +971,17 @@
        case from the 6th-stage ports to the HPT case just ahead of the clearance control manifold, metered by plates at the case */
     PW.part('hpt-cooling', { parent: 'air', label: 'HPT cooling air tubes (6th stage)', src: 'p.276-277',
       info: 'Four tubes carry 6th-stage HPC air to the HPT 2nd stage vanes and blade attachments. Metering plates between the tubes and the HPT case set the flow; the air passes through the hollow vanes and leaves at their trailing edges. The 4th-stage air that cools the TIC fairings, the LPT case and the LPT rotor and blade attachments goes through its own tubes (TIC and LPT cooling air tubes).' });
-    for (const h of [10.45, 11.15, .85, 1.6]) {
+    /* p.277 draws one tube high and one low on each side. The right low one leaves its 6th-stage port at 3:49, between the cowl anti-ice
+       boss, the borescope port and the gearbox's right arm, and runs aft under the oil control module, over the fuel manifolds, to the
+       HPT case at 3:36 (it was the second high tube at 0:51 until 2026-10-14). The left low one would have to pass through the gearbox
+       and its heat shield here, so it stays high at 10:27 */
+    const boss = (xx, h, rr, s) => { s = s || .04; const g = Kt.frame('hpt-cooling', xx, h, rr); Kt.box('hpt-cooling', g, [0, .006, 0], [s, .012, s], 'nickel', { round: .006 }); Kt.bolts('hpt-cooling', g, [0, .013, 0], 'y', s * .5, 4, .0035, { phase: Math.PI / 4 }); };
+    for (const h of [10.45, 11.15, 1.6]) {
       line('hpt-cooling', [P(-1.515, h, .251), P(-1.53, h, .30), P(-1.56, h, .345), P(-1.70, h, .357), P(-1.85, h, .357), P(-1.88, h, .32), P(-1.893, h, .27), P(-1.895, h, .245)], .015, 'tube', { clamps: 2, ends: false });
-      for (const [xx, rr] of [[-1.515, .251], [-1.895, .245]]) { const g = Kt.frame('hpt-cooling', xx, h, rr); Kt.box('hpt-cooling', g, [0, .006, 0], [.04, .012, .04], 'nickel', { round: .006 }); Kt.bolts('hpt-cooling', g, [0, .013, 0], 'y', .02, 4, .0035, { phase: Math.PI / 4 }); } }
+      boss(-1.515, h, .251); boss(-1.895, h, .245); }
+    line('hpt-cooling', [P(-1.515, 3.80, .251), P(-1.53, 3.83, .30), P(-1.56, 3.79, .343), P(-1.62, 3.74, .351), P(-1.68, 3.70, .351), P(-1.72, 3.67, .354), P(-1.76, 3.64, .354), P(-1.83, 3.6, .345),
+      P(-1.87, 3.6, .315), P(-1.89, 3.6, .27), P(-1.895, 3.6, .245)], .015, 'tube', { clamps: 2, ends: false });
+    boss(-1.515, 3.80, .251, .03); boss(-1.895, 3.6, .245);                                                        // a smaller plate at the port, between the bosses either side
     /* p.276-277: 4th-stage air for the TIC fairings and transition ducts, the LPT case and the LPT rotor. Four supply tubes leave bolted
        bosses on the 4th-stage collar, two each side, and run aft through the gaps the gearbox, starter, coolers and oil tank leave to
        bosses on the TIC's forward face; two jumpers run round the TIC's aft cone, and four short ones arch over the TIC/LPT flange onto
