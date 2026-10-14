@@ -26,7 +26,7 @@
     quilt:      () => new THREE.MeshStandardMaterial({ color: col('#c9cbc8'), roughness: .48, metalness: .42, bumpMap: quiltTex(), bumpScale: .002, roughnessMap: quiltTex() }),   // light silver in the photos: at metalness .75 it mirrored the dark backdrop (as the IFS blanket did)
     silicone:   () => new THREE.MeshStandardMaterial({ color: col('#c9531f'), roughness: .6, metalness: 0 }),
     tankAl:     () => new THREE.MeshStandardMaterial({ color: col('#c6cacb'), roughness: .5, metalness: .32, roughnessMap: PW.tex.noise('fine', 256, 40, .6, 1) }),   // formed and welded aluminium (oil tank)
-    heatShield: () => new THREE.MeshStandardMaterial({ color: col('#c3c6c7'), roughness: .36, metalness: .72, bumpMap: shieldTex(), bumpScale: .0012, roughnessMap: shieldTex() }),   // embossed stainless heat shield round the oil tank (photo)
+    heatShield: () => new THREE.MeshStandardMaterial({ color: col('#c3c6c7'), roughness: .42, metalness: .45, bumpMap: shieldTex(), bumpScale: .0012, roughnessMap: shieldTex() }),   // embossed stainless heat shield round the oil tank: against the mint fan exit liner it reads 0.9 as bright in the A Nahas p.19 photo, 0.57 at metalness .72
     exciterBlack: () => new THREE.MeshStandardMaterial({ color: col('#17181a'), roughness: .62, metalness: .2 }),                 // ignition exciter case (photo)
     braidSteel: () => new THREE.MeshStandardMaterial({ color: col('#ffffff'), map: steelBraidTex(), roughness: .38, metalness: .8, bumpMap: steelBraidTex(), bumpScale: .0004 }),   // ignition cable overbraid
   });
@@ -40,8 +40,11 @@
     c.fillStyle = '#d8d8d8'; for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) { c.beginPath(); c.arc(x * 32 + 16, y * 32 + 16, 9, 0, TAU); c.fill(); } }); }
   K.quiltTex = quiltTex;
   /* embossed stainless foil of the oil tank's heat shield: a fine diamond quilting, about 15 mm cells at the arc loft's 1/0.06 m tiling */
-  let shTex; function shieldTex() { return shTex || (shTex = PW.tex.canvas(64, 64, (c, w, h) => { c.fillStyle = '#bdbdbd'; c.fillRect(0, 0, w, h); c.strokeStyle = '#575757'; c.lineWidth = 2.5;
-    for (let i = -w; i <= 2 * w; i += 16) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i + h, h); c.stroke(); c.beginPath(); c.moveTo(i, 0); c.lineTo(i - h, h); c.stroke(); } })); }
+  /* the oil tank's embossed stainless heat shield: rows of small round bumps about 7.5 mm apart, every other row offset (A Nahas p.19
+     and Brian's photos; a 15 mm diamond quilt until 2026-10-14). One tile is 8 x 8 bumps */
+  let shTex; function shieldTex() { return shTex || (shTex = PW.tex.canvas(96, 96, (c, w, h) => { c.fillStyle = '#8c8c8c'; c.fillRect(0, 0, w, h);
+    for (let j = 0; j < 8; j++) for (let i = -1; i <= 8; i++) { const x = i * 12 + (j % 2 ? 6 : 0) + 6, y = j * 12 + 6, g = c.createRadialGradient(x, y, 0, x, y, 5.2);
+      g.addColorStop(0, '#e2e2e2'); g.addColorStop(.6, '#b4b4b4'); g.addColorStop(1, '#8c8c8c'); c.fillStyle = g; c.beginPath(); c.arc(x, y, 5.2, 0, TAU); c.fill(); } })); }
 
   /* ---------------- frames ---------------- */
   /* a frame on the case at (x, clock h, radius r), optionally turned about its own axes (radians) */

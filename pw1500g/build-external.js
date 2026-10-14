@@ -34,6 +34,7 @@
     stainless: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#c4c7c9'), roughness: .36, metalness: .8, roughnessMap: PW.tex.noise('fine', 256, 40, .6, 1) }),   // the bleed ducts' brushed finish (photos)
     bareSheet: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#bfc3c5'), roughness: .5, metalness: .35, roughnessMap: PW.tex.noise('fine', 256, 40, .6, 1) }),   // light satin bare sheet: the VFG air/oil cooler's hood (photos)
     chromate: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#a08a40'), roughness: .45, metalness: .4 }),         // the olive-gold conversion coat on the VFG air/oil cooler's grille (photo)
+    springSteel: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#5e554c'), roughness: .42, metalness: .5 }),      // the heat-darkened springs on the oil tank's heat shield (A Nahas p.19 photo)
   });
 
   /* ---------------- helpers ---------------- */
@@ -496,9 +497,64 @@
        the sight glass (upper forward) are on the outboard face under the access door; the quantity sensor, the pressurization valve and
        the de-aerator inlet are on the lid. The body wears the embossed stainless heat shield; the lid and the castings are bare */
     { const xa = -2.08, xf = -1.755, sec = (h, a, f, ri, ro, n) => ({ h, x: (a + f) / 2, w: f - a, ri, ro, n });
-      Kt.arcLoft('oil-tank', [sec(2.345, xa, xf, .375, .527, 4), sec(3.5, xa, xf, .375, .527, 4), sec(3.75, xa, -1.765, .375, .527, 4), sec(4.0, xa, -1.80, .376, .526, 3.8),
+      const SH = [sec(2.345, xa, xf, .375, .527, 4), sec(3.5, xa, xf, .375, .527, 4), sec(3.75, xa, -1.765, .375, .527, 4), sec(4.0, xa, -1.80, .376, .526, 3.8),
         sec(4.3, xa, -1.86, .385, .522, 3.4), sec(4.6, -2.076, -1.93, .40, .512, 3), sec(4.85, -2.064, -1.975, .418, .498, 2.6), sec(5.0, -2.05, -1.995, .43, .487, 2.3),
-        sec(5.1, -2.04, -2.004, .44, .476, 2)], 'heatShield', { seg: 48, uv: 1 / .06 });
+        sec(5.1, -2.04, -2.004, .44, .476, 2)];
+      Kt.arcLoft('oil-tank', SH, 'heatShield', { seg: 48, uv: 1 / .06 });
+      /* the shield is made in panels (A Nahas p.19 photo): the upper one, with the windows for the sight glass and the fill port, laps
+         over the two below it along a seam just under the sight glass; those two meet in a seam running down the lower front, held
+         closed by five hooked coil springs across it, each on a small tab either side. Small clips hold the top edge to the lid. The
+         seams' places come from the photo by eye against the tank's own features (its camera could not be fitted closely); until
+         2026-10-14 the shield was one seamless shell (design audit 3, finding 7) */
+      { const at = h => { let k = 1; while (k < SH.length - 1 && h > SH[k].h) k++; const p = SH[k - 1], s = SH[k], t = Math.max(0, Math.min(1, (h - p.h) / (s.h - p.h))), q = {};
+          for (const key of ['x', 'w', 'ri', 'ro', 'n']) q[key] = p[key] + (s[key] - p[key]) * t; return q; };
+        /* a point on the shield's outer face at clock h, round its section by u (0 forward, .5 outboard, 1 aft), lifted e off it, with the
+           face's outward normal */
+        const surf = (h, u, e) => { const s = at(h), a = s.w / 2, b = (s.ro - s.ri) / 2, rc = (s.ro + s.ri) / 2, t = u * Math.PI, c = Math.cos(t), q = 2 / s.n;
+          const X = Math.sign(c) * Math.pow(Math.abs(c), q), Y = Math.pow(Math.sin(t), q);
+          let nx = Math.sign(X) * Math.pow(Math.abs(X), s.n - 1) / a, nr = Math.pow(Y, s.n - 1) / b; const l = Math.hypot(nx, nr); nx /= l; nr /= l;
+          const px = s.x + a * X + nx * e, pr = rc + b * Y + nr * e, th = G.clock(h);
+          return { p: new THREE.Vector3(px, pr * Math.cos(th), pr * Math.sin(th)), n: new THREE.Vector3(nx, nr * Math.cos(th), nr * Math.sin(th)) }; };
+        /* a lap seam: the overlapping panel's edge, a low wedge along the path whose square edge faces side s (+1: n x tangent) */
+        const lap = (S, s) => { let prof = [[-.009, 0], [-.004, .0012], [-.0012, .0019], [0, .0018], [.0005, .0008], [.0004, 0]].map(([v, w]) => [v * s, w]); if (s < 0) prof = prof.reverse();   // a rolled edge
+          const pos = [], uv = [], idx = [], m = prof.length; let len = 0;
+          S.forEach((q, k) => { const T = (k < S.length - 1 ? S[k + 1].p.clone().sub(q.p) : q.p.clone().sub(S[k - 1].p)).normalize(), B = q.n.clone().cross(T).normalize();
+            if (k) len += q.p.distanceTo(S[k - 1].p);
+            for (const [v, w] of prof) { const p = q.p.clone().addScaledVector(B, v).addScaledVector(q.n, w); pos.push(p.x, p.y, p.z); uv.push(len / .06, v / .06); } });
+          for (let k = 0; k < S.length - 1; k++) for (let i = 0; i < m; i++) { const a = k * m + i, b = k * m + (i + 1) % m, c = a + m, d = b + m; idx.push(a, c, b, b, c, d); }
+          for (const k of [0, S.length - 1]) for (let i = 1; i < m - 1; i++) k ? idx.push(k * m, k * m + i + 1, k * m + i) : idx.push(0, i, i + 1);
+          const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx);
+          G.orientOutward(g); g.computeVertexNormals(); g.userData.solid = true; PW.add('oil-tank', g, 'heatShield', { solid: true }); };
+        const HS = 3.02, seamU = h => .33 + .17 * Math.pow((h - HS) / (5.02 - HS), 1.5);
+        const across = []; for (let i = 0; i <= 40; i++) across.push(surf(HS, .1 + .8 * i / 40, .0002));
+        lap(across, 1);                                                                                                     // under the sight glass, the upper panel's edge facing down
+        const down = []; for (let i = 0; i <= 40; i++) { const h = HS + .01 + (5.02 - HS - .01) * i / 40; down.push(surf(h, seamU(h), .0002)); }
+        lap(down, -1);                                                                                                      // down the lower front, the forward panel's edge facing aft
+        /* the springs: a close-wound coil about 6 mm across and 40 mm long, a hook at each end round a tab bent up from each panel */
+        const coils = [], hooks = [], fAt = (p, X, Y) => { const g = new THREE.Group(); g.position.copy(p); g.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, Y, X.clone().cross(Y)));
+          PW.parts.get('oil-tank').obj.add(g); return g; };                                                              // a frame with +x along X and +y along Y
+        const uAt = (h, x) => { let lo = 0, hi = 1; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (surf(h, m, 0).p.x > x) lo = m; else hi = m; } return (lo + hi) / 2; };   // round the section to station x
+        for (const h of [3.25, 3.62, 3.99, 4.36, 4.73]) { const q = surf(h, seamU(h), .0052), q2 = surf(h + .02, seamU(h + .02), .0052), T = q2.p.clone().sub(q.p).normalize(), A = q.n.clone().cross(T).normalize();
+          const W = A.clone().cross(q.n).normalize(), c0 = q.p.clone().addScaledVector(A, -.0205), helix = new THREE.Curve();   // the coil lies across the seam, clear of the lap
+          helix.getPoint = (t, o = new THREE.Vector3()) => { const th = t * 30 * TAU; return o.copy(c0).addScaledVector(A, .041 * t).addScaledVector(q.n, .0026 * Math.cos(th)).addScaledVector(W, .0026 * Math.sin(th)); };
+          coils.push(new THREE.TubeGeometry(helix, 30 * 9, .00065, 5, false));
+          for (const s of [-1, 1]) { const e = q.p.clone().addScaledVector(A, s * .0255);                                   // the hook: a loop standing up off the coil's end
+            const ring = new THREE.TorusGeometry(.0045, .0006, 5, 16); ring.applyMatrix4(new THREE.Matrix4().makeBasis(A, q.n, W)); ring.translate(e.x, e.y, e.z); hooks.push(ring);
+            const g = q.p.clone().addScaledVector(A, s * .0285), ht = Math.atan2(g.z, g.y) / TAU * 12, b = surf(ht, uAt(ht, g.x), .0002);   // its tab, bent up from the panel through the hook
+            Kt.box('oil-tank', fAt(b.p, A.clone().addScaledVector(b.n, -A.dot(b.n)).normalize(), b.n), [0, .0035, 0], [.0016, .007, .008], 'heatShield', { round: .0006 }); } }
+        PW.add('oil-tank', G.merge(coils), 'springSteel', { solid: false }); PW.add('oil-tank', G.merge(hooks), 'springSteel');   // the coils are open-ended wire
+        /* the clips over the lid's rim along the top edge, clear of the fill port and sight glass windows (the section is well rounded:
+           only its middle third is near the full radius) */
+        for (const u of [.76, .496, .289]) { const q = surf(2.43, u, .0006), th = G.clock(2.43), Z = new THREE.Vector3(0, -Math.sin(th), Math.cos(th)), f = fAt(q.p, q.n.clone().cross(Z).normalize(), q.n);
+          Kt.box('oil-tank', f, [0, 0, 0], [.011, .0012, .046], 'heatShield', { round: .0005 }); Kt.cyl('oil-tank', f, [0, .0008, .016], 'y', .0022, .0012, 'steel'); }
+        /* the window round the sight glass: the panel's edge rolled up in a stadium 4 mm clear of the casting (photos) */
+        { const R = .036, L = .045, st = [];
+          for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI; st.push([R * Math.cos(a), -L - R * Math.sin(a)]); }
+          for (let i = 0; i < 6; i++) st.push([-R, -L + 2 * L * i / 6]);
+          for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI; st.push([-R * Math.cos(a), L + R * Math.sin(a)]); }
+          for (let i = 0; i < 6; i++) st.push([R, L - 2 * L * i / 6]);
+          const pts = st.map(([lx, lz]) => { const h = 2.71 + lz / .526 * 6 / Math.PI, x = -1.842 + lx; return surf(h, uAt(h, x), .0016).p; });
+          PW.add('oil-tank', G.tube(new THREE.CatmullRomCurve3(pts, true, 'catmullrom', .3), .0018, { radial: 8, seg: 96 }), 'heatShield'); } }
       Kt.arcLoft('oil-tank', [sec(2.29, xa - .006, xf + .006, .37, .532, 5), sec(2.35, xa - .006, xf + .006, .37, .532, 5)], 'tankAl', { seg: 48 });   // the lid
       const lid = (x, r) => Kt.frame('oil-tank', x, 2.29, r);                                                                       // on the lid, local -z is up out of the tank
       /* quantity sensor (p.249): the probe hangs inside nearly the full height; on the lid, its five-bolt flange and the connector */
