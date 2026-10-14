@@ -1227,30 +1227,33 @@
     /* ============================== ELECTRICAL AND CONTROL ============================== */
     PW.part('eec', { label: 'Electronic engine control (EEC)', explode: [0, 0, -.6], src: 'p.74-95, p.104-105; photos',
       info: 'Dual-channel FADEC computer on the left side of the fan case at 9 o\'clock, on four vibration isolators, cooled by fan compartment air. Each channel has a control and a protection processor. It sets thrust, schedules fuel, vanes, bleeds and clearance control, runs starts and the reverser logic, and stores faults.\n\nThe data storage unit plugged into it holds the engine rating and trim data; it stays with the engine if the EEC is changed. Eight connectors: check them seated and locked after any EEC work. After a new EEC is installed, the EEC SYSTEM TEST must be run through the OMS, one channel at a time, and checked through both channels (p.182).' });
-    /* p.105, p.91 and Brian's photo: a grey box about 0.6 m long fore and aft on the left of the fan case, about a third of the way aft,
-       on four isolator feet; four connectors on its upper face and four on its lower, with stainless backshells and braided harnesses;
-       a THIS SIDE UP placard, a black data plate and a white label; two pressure sense fittings at its forward end; the DSU in J99.
-       The separate box right behind it is the PHMU */
+    /* p.105 (600 dpi, about 1.08 mm a pixel), p.91, the A Nahas face-on photo and Brian's: a grey housing about 0.52 m long fore and
+       aft and 0.29 m tall on the left of the fan case, its centre face raised between two connector flanges, each flange carrying four
+       connectors in a forward and an aft pair, all with 90 deg stainless elbow backshells turning the braided harnesses up and down; a
+       THIS SIDE UP placard, a black data plate and a white label; two pressure ports on its lower edge; the DSU in J99. It stands on four
+       isolators on tabs at its corners, the aft pair against the support rail. Until 2026-10-14 it was a plain 0.46 x 0.22 m box with
+       straight backshells (design audit 3). The separate box right behind it is the PHMU */
     { const ex = -.08, eh = 9, er = 1.045, f = Kt.frame('eec', ex, eh, er);
-      Kt.box('eec', f, [.03, 0, 0], [.46, .095, .22], 'eecGrey', { round: .012 });
-      for (const [ax, az] of [[.285, .085], [.285, -.085], [-.23, .085], [-.23, -.085]]) { Kt.box('eec', f, [ax, -.036, az], [.06, .012, .045], 'eecGrey', { round: .004 });
+      Kt.box('eec', f, [.07, -.0175, 0], [.52, .06, .29], 'eecGrey', { round: .012 });                                     // the housing, to the flanges' face
+      Kt.box('eec', f, [.07, .03, 0], [.5, .035, .17], 'eecGrey', { round: .01 });                                         // its raised centre face
+      for (const [ax, az] of [[.345, .12], [.345, -.12], [-.23, .12], [-.23, -.12]]) { Kt.box('eec', f, [ax, -.036, az], [.05, .012, .04], 'eecGrey', { round: .004 });
         Kt.cyl('eec', f, [ax + Math.sign(ax) * .012, -.026, az], 'y', .016, .02, 'eecGrey'); Kt.hex('eec', f, [ax + Math.sign(ax) * .012, -.014, az], 'y', .006, .006, 'steel');
         /* the channel bracket each foot's isolator stands on, bonded to the composite case (r 0.97) */
-        Kt.box('eec', f, [ax, -.075, az], [.06, .008, .05], 'lime', { round: .002 }); Kt.box('eec', f, [ax, -.0435, az], [.06, .003, .05], 'lime', { round: .001 });
-        for (const s of [-1, 1]) Kt.box('eec', f, [ax + s * .022, -.057, az], [.004, .03, .045], 'lime', { round: .001 }); }
-      for (const x of [.18, .1, -.02, -.1]) for (const s of [1, -1]) Kt.connector('eec', f, [x, 0, s * .11], s > 0 ? 'z' : '-z', .017);
-      Kt.placard('eec', f, [.02, .0485, 0], 'y', 'z', .06, .07, 'thisSideUp');
-      Kt.label('eec', f, [.19, .0479, -.02], 'y', 'z', .05, .03, 'dataBlack'); Kt.label('eec', f, [.12, .0479, -.02], 'y', 'z', .04, .045, 'white');   // black data plate and white label (photo)
+        Kt.box('eec', f, [ax, -.0825, az], [.06, .008, .05], 'lime', { round: .002 }); Kt.box('eec', f, [ax, -.0435, az], [.06, .003, .05], 'lime', { round: .001 });
+        for (const s of [-1, 1]) Kt.box('eec', f, [ax + s * .022, -.061, az], [.004, .038, .045], 'lime', { round: .001 }); }
+      for (const x of [.21, .145, -.025, -.11]) for (const s of [1, -1]) Kt.connector('eec', f, [x, .0125, s * .116], 'y', .017, { lead: s > 0 ? 'z' : '-z' });   // elbows: up from the upper flange, down from the lower
+      Kt.placard('eec', f, [.06, .0485, 0], 'y', 'z', .06, .07, 'thisSideUp');
+      Kt.label('eec', f, [.26, .0479, -.01], 'y', 'z', .05, .03, 'dataBlack'); Kt.label('eec', f, [.18, .0479, -.01], 'y', 'z', .04, .045, 'white');   // black data plate and white label (photo)
       /* p.94-95, p.102 and the A Nahas photo: the two pneumatic ports on the EEC's lower edge. The P2 port, under the forward pair of
          lower connectors, takes the P2 sense line from the inlet's P2/T2 probe; the ambient pressure port, under the aft pair, is a
          small oval boss with a screen and no line, feeding the Pamb sensor inside (channel A) */
-      Kt.fitting('eec', f, [.14, -.03, -.11], '-z', .007);
-      Kt.box('eec', f, [-.06, -.03, -.112], [.016, .01, .006], 'eecGrey', { round: .003 }); Kt.cyl('eec', f, [-.06, -.03, -.1155], '-z', .0035, .001, 'darkBox');
+      Kt.fitting('eec', f, [.178, -.03, -.145], '-z', .007);
+      Kt.box('eec', f, [-.068, -.03, -.147], [.016, .01, .006], 'eecGrey', { round: .003 }); Kt.cyl('eec', f, [-.068, -.03, -.1505], '-z', .0035, .001, 'darkBox');
       PW.part('dsu', { parent: 'eec', label: 'Data storage unit (DSU)', src: 'p.90-91, p.104-105',
         info: 'Small round plug, a Hamilton Sundstrand DSU1230-1, in connector J99 on the face of the EEC, on a lanyard. It holds the engine serial number and the rating and trim data in flash memory, read by both channels\' protection processors. It stays with the engine: when an EEC is changed, the new EEC reads the engine\'s data from it. With no DSU fitted the EEC will not allow an engine start on the ground; if it disconnects in flight, the EEC carries on with the programming in its own memory (p.90). An incorrectly installed DSU can affect engine operation (p.94 caution).' });
-      const g = Kt.frame('dsu', ex, eh, er); Kt.cyl('dsu', g, [-.07, .052, .07], 'y', .021, .012, 'steel', { edge: .003 }); Kt.cyl('dsu', g, [-.07, .061, .07], 'y', .018, .008, 'capBlack', { edge: .002 });
+      const g = Kt.frame('dsu', ex, eh, er); Kt.cyl('dsu', g, [-.07, .052, .06], 'y', .021, .012, 'steel', { edge: .003 }); Kt.cyl('dsu', g, [-.07, .061, .06], 'y', .018, .008, 'capBlack', { edge: .002 });
       /* its lanyard, over the EEC's face to the support rail (p.91, p.95) */
-      const ly = [[-.07, .057, .05], [-.15, .056, .045], [-.215, .045, .035], [-.25, .01, .03], [-.263, -.022, .027]];
+      const ly = [[-.07, .057, .04], [-.15, .056, .04], [-.215, .045, .035], [-.25, .01, .03], [-.263, -.022, .027]];
       for (let i = 1; i < ly.length; i++) Kt.rod('dsu', g, ly[i - 1], ly[i], .0013, 'steel');
       /* the EEC/PHMU support rail (p.91, p.95, p.105; Brian's photo): a lime bracket standing on the case between the EEC's aft isolators
          (on its forward side) and the PHMU's forward ones (on its aft side), with a row of oval cutouts and three finger-type harness
@@ -1270,7 +1273,7 @@
        connector ties into WF01 and its lower one into W03; the ignition exciter's power comes off W03 too. The fifth interface
        connector feeds a run down the right of the case to the door opening powerpack. Orange sleeves identify each run near its
        connectors. The harnesses ride 27 mm off the composite case (r 0.97) */
-    { const rc = .97, rh = .999, eT = 9.3135, eB = 8.6865, eR = 1.0592;                     // the EEC backshell ends, upper and lower
+    { const rc = .97, rh = .999, eT = 9.2554, eB = 8.7446, eR = 1.0996;                     // the EEC's elbow backshell ends, upper and lower
       const harn = (pts, r, o) => line('harnesses', pts, r, 'harness', Object.assign({ clamps: 0, ends: false, tension: .3 }, o || {}));
       const standoff = (x, h, d, rr) => { const f = Kt.frame('harnesses', x, h, rc), y = (rr || .014) + .013;
         Kt.box('harnesses', f, [0, .006, 0], [.026, .012, .02], 'lime', { round: .003 }); Kt.box('harnesses', f, [0, y * .55, 0], [.006, y * .8, .016], 'lime', { round: .001 });
@@ -1284,10 +1287,10 @@
         Kt.connector('harnesses', f, [-.12, .008, 0], 'y', .014, { lead: 'z' }); }
       const iT = 11.952, iR = 1.005;                                                                   // their backshell ends
       /* WF02 and WF01: legs from the interface, the trunks down the case, legs into the EEC */
-      for (const [xa, xb, xt, xe1, xe2] of [[.13, .07, .10, .10, .02], [.02, -.04, -.10, -.10, -.18]]) {
+      for (const [xa, xb, xt, xe1, xe2] of [[.13, .07, .10, .13, .065], [.02, -.04, -.10, -.105, -.19]]) {
         for (const xi of [xa, xb]) harn([P(xi, iT, iR), P(xi + (xt - xi) * .2, 11.9, 1.0), P(xi + (xt - xi) * .7, 11.83, rh), P(xt, 11.78, rh)], .012, { bands: [.35] });
         const trunk = [[xt, 11.78], [xt, 11.4], [xt, 11.0], [xt, 10.6], [xt, 10.2], [xt, 9.85]]; harn(onCase(trunk), .016);
-        for (const xe of [xe1, xe2]) harn([P(xt, 9.85, rh), P(xt + (xe - xt) * .6, 9.6, 1.01), P(xe, 9.42, 1.04), P(xe, eT, eR)], .012, { bands: [.7] }); }
+        for (const xe of [xe1, xe2]) harn([P(xt, 9.85, rh), P(xt + (xe - xt) * .6, 9.6, 1.01), P(xe, 9.42, 1.04), P(xe, 9.33, 1.10), P(xe, eT, eR)], .012, { bands: [.7] }); }
       /* the ladder: three lime-green brackets across both trunks, a cushioned loop round each */
       for (const h of [11.2, 10.6, 10.0]) { const f = Kt.frame('harnesses', 0, h, rc);
         Kt.box('harnesses', f, [0, .008, 0], [.27, .006, .018], 'lime', { round: .002 }); for (const s of [-1, 1]) Kt.box('harnesses', f, [s * .125, .0025, 0], [.02, .005, .024], 'lime', { round: .001 });
@@ -1295,8 +1298,8 @@
       /* W04 from the forward lower pair, W03 from the aft lower pair; on the bottom W04 runs right of 6 o'clock and W03 left of it */
       const w04 = [[.065, 8.15], [.06, 7.7], [.04, 7.2], [.0, 6.75], [-.06, 6.4], [-.15, 6.12], [-.28, 5.96], [-.45, 5.94], [-.58, 5.94]];
       const w03 = [[-.135, 8.2], [-.19, 7.9], [-.25, 7.55], [-.31, 7.15], [-.37, 6.75], [-.43, 6.4], [-.49, 6.15], [-.55, 6.06], [-.6, 6.06]];
-      for (const [xe, xm, hb] of [[.10, .065, 8.15], [.02, .065, 8.15], [-.10, -.135, 8.2], [-.18, -.135, 8.2]])
-        harn([P(xe, eB, eR), P(xe, 8.58, 1.04), P(xe + (xm - xe) * .5, 8.4, 1.01), P(xm, hb, rh)], .012, { bands: [.3] });
+      for (const [xe, xm, hb] of [[.13, .065, 8.15], [.065, .065, 8.15], [-.105, -.135, 8.2], [-.19, -.135, 8.2]])
+        harn([P(xe, eB, eR), P(xe, 8.67, 1.10), P(xe, 8.58, 1.04), P(xe + (xm - xe) * .5, 8.4, 1.01), P(xm, hb, rh)], .012, { bands: [.3] });
       /* over the mount ring, forward through the bifurcation panel at x -0.985 (orange boots), down inside the bifurcation to the core */
       for (const [run, dh] of [[w04, -.05], [w03, .05]]) { const h6 = 6 + dh * 1.15;
         const c = harn(onCase(run).concat([P(-.66, h6, 1.025), P(-.74, 6 + dh * 1.3, 1.045), P(-.86, 6 + dh * 2.6, 1.068), P(-.985, 6 + dh * 3.2, 1.056), P(-1.06, 6 + dh * 2.9, 1.045), P(-1.12, 6 + dh * 2.8, 1.0),
@@ -1310,9 +1313,9 @@
       PW.add('bif-panel', G.revolve([[-.982, .955], [-.988, .955], [-.988, 1.075], [-.982, 1.075]], { seg: 10, thetaStart: Math.PI - .115, thetaLength: .23 }), 'nickel');
       PW.add('bif-panel', G.revolve([[-.978, 1.065], [-.992, 1.065], [-.992, 1.077], [-.978, 1.077]], { seg: 10, thetaStart: Math.PI - .115, thetaLength: .23 }), 'nickel');
       for (const h of [5.785, 5.955, 6.045, 6.215]) { const f = Kt.frame('bif-panel', -.98, h, 1.071); Kt.hex('bif-panel', f, [.002, 0, 0], 'x', .004, .004, 'steel'); }   // fasteners clear of the boots
-      /* the PHMU's two connectors (backshell ends at 9.277 and 8.723 o'clock, r 1.056), the exciter's power lead */
-      harn([P(-.50, 9.277, 1.056), P(-.50, 9.42, 1.03), P(-.45, 9.75, 1.0), P(-.33, 10.05, rh), P(-.2, 10.25, rh), P(-.115, 10.3, rh)], .01, { bands: [.12] });
-      harn([P(-.50, 8.723, 1.056), P(-.49, 8.58, 1.03), P(-.42, 8.36, 1.0), P(-.33, 8.25, rh), P(-.24, 8.05, rh), P(-.19, 7.93, rh)], .01, { bands: [.12] });
+      /* the PHMU's two connectors (elbow backshell ends at 9.2454 and 8.7546 o'clock, r 1.1194), the exciter's power lead */
+      harn([P(-.51, 9.2454, 1.1194), P(-.51, 9.33, 1.11), P(-.50, 9.45, 1.04), P(-.45, 9.75, 1.0), P(-.33, 10.05, rh), P(-.2, 10.25, rh), P(-.115, 10.3, rh)], .01, { bands: [.12] });
+      harn([P(-.51, 8.7546, 1.1194), P(-.51, 8.67, 1.11), P(-.50, 8.55, 1.04), P(-.42, 8.36, 1.0), P(-.33, 8.25, rh), P(-.24, 8.05, rh), P(-.19, 7.93, rh)], .01, { bands: [.12] });
       /* down the right of the case to the door opening powerpack's motor connector */
       { const run = []; for (let i = 0; i <= 10; i++) run.push([-.12 - .28 * i / 10, 12.2 + 1.8 * i / 10]);
         harn([P(-.10, 12.048, iR), P(-.115, 12.12, 1.0)].concat(onCase(run), [P(-.44, 14.06, 1.02), P(-.464, 14.094, 1.041)]), .012, { bands: [.04, .97] }); stands(run); }
@@ -1323,8 +1326,8 @@
          forward flange, then a braided flexible line aft and up under the EEC to its P2 port (the photos) */
       { const g = Kt.frame('harnesses', .33, 10.95, rc); Kt.cyl('harnesses', g, [0, .046, 0], 'x', .007, .018, 'steel'); Kt.hex('harnesses', g, [-.01, .046, 0], 'x', .007, .006, 'steel'); }
       { const E = FLa(-.08, 9, 1.045);
-        line('harnesses', [P(.322, 10.95, 1.016), P(.315, 10.7, 1.015), P(.305, 10.25, 1.015), P(.30, 9.7, 1.015), P(.295, 9.2, 1.015), P(.29, 8.75, 1.015), P(.28, 8.55, 1.015)], .004, 'tube', { clamps: 3 });
-        line('harnesses', [P(.28, 8.55, 1.015), P(.24, 8.52, 1.018), P(.19, 8.55, 1.02), E(.14, -.03, -.165), E(.14, -.03, -.135), E(.14, -.03, -.12015)], .0045, 'hose', { clamps: 0, ends: true, mat: 'braid' }); }
+        line('harnesses', [P(.322, 10.95, 1.016), P(.315, 10.7, 1.015), P(.31, 10.25, 1.015), P(.307, 9.7, 1.015), P(.305, 9.2, 1.015), P(.30, 8.75, 1.015), P(.29, 8.55, 1.015)], .004, 'tube', { clamps: 3 });   // ahead of the EEC's forward isolators
+        line('harnesses', [P(.29, 8.55, 1.015), P(.25, 8.52, 1.018), P(.20, 8.55, 1.02), E(.178, -.03, -.20), E(.178, -.03, -.17), E(.178, -.03, -.15515)], .0045, 'hose', { clamps: 0, ends: true, mat: 'braid' }); }
       /* the powerpack's second connector into the run that serves its motor connector */
       harn([P(-.491, 2.26, 1.11), P(-.47, 2.26, 1.11), P(-.45, 2.15, 1.07), P(-.43, 2.06, 1.025)], .006);
       /* the left core harness from the junction at the bottom (p.105): up the left forward of the IFPC, over the layshaft, past the Pb
@@ -1667,13 +1670,15 @@
     PW.part('phmu', { label: 'Prognostics and health monitoring unit (PHMU)', explode: [0, .3, .3], src: 'p.92-95, p.134-139; photos',
       info: 'Grey box on the left of the fan case at 9 o\'clock, immediately aft of the EEC, with its own THIS SIDE UP placard. It takes the two vibration sensors, the oil debris monitor, the FDGS auxiliary oil pressure sensor and the P2.5 signal from the P2.5/T2.5 probe directly, and N1, N2, fan speed and the other engine data from the EEC over the CAN bus. It works out fan, N1 and N2 vibration for EICAS, compares the streaming engine data with stored gas path models for health monitoring, checks the FDGS oil supply, and records the data for trend monitoring and the fan trim balance solutions; its reports go through the EEC to the OMS and the HMU. Powered from DC BUS 1 (p.92; the figure on p.93 shows the left engine).' });
     /* p.139 and Brian's photo: a separate grey box just aft of the EEC (until 2026-10-07 the model had it as a cross-braced module of the
-       EEC, with a second box at 10:30), a connector at each aft corner; built in the EEC's frame */
+       EEC, with a second box at 10:30), a connector at each aft corner; built in the EEC's frame. p.105 and the A Nahas face-on photo
+       show it as tall as the EEC, about 0.19 m long and 0.30 m tall, its connectors with elbow backshells turning up and down (it was
+       0.21 m tall with straight backshells until 2026-10-14) */
     { const f = Kt.frame('phmu', -.08, 9, 1.045), xc = -.36;
-      Kt.box('phmu', f, [xc, -.002, 0], [.19, .085, .21], 'eecGrey', { round: .01 });
-      for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) Kt.box('phmu', f, [xc + a * .07, -.0615, b * .07], [.03, .034, .03], 'lime', { round: .003 });
-      Kt.placard('phmu', f, [xc, .0408, .045], 'y', 'z', .045, .05, 'thisSideUp');
-      Kt.label('phmu', f, [xc, .0408, -.02], 'y', 'z', .04, .03, 'white'); Kt.label('phmu', f, [xc, .0408, -.065], 'y', 'z', .03, .02, 'dataBlack');
-      for (const s of [-1, 1]) Kt.connector('phmu', f, [xc - .06, 0, s * .105], s > 0 ? 'z' : '-z', .013, { lead: s > 0 ? 'z' : '-z' }); }
+      Kt.box('phmu', f, [xc, -.002, 0], [.19, .085, .30], 'eecGrey', { round: .01 });
+      for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) Kt.box('phmu', f, [xc + a * .07, -.0615, b * .10], [.03, .034, .03], 'lime', { round: .003 });
+      Kt.placard('phmu', f, [xc, .0408, .06], 'y', 'z', .045, .05, 'thisSideUp');
+      Kt.label('phmu', f, [xc, .0408, -.01], 'y', 'z', .04, .03, 'white'); Kt.label('phmu', f, [xc, .0408, -.07], 'y', 'z', .03, .02, 'dataBlack');
+      for (const s of [-1, 1]) Kt.connector('phmu', f, [xc - .07, .0405, s * .12], 'y', .013, { lead: s > 0 ? 'z' : '-z' }); }
     PW.part('pdos', { label: 'Power door operating system (PDOS)', explode: [0, .3, .4], src: 'p.32-43',
       info: 'Opens the thrust reverser doors, one at a time, and supports them open (p.32-43). An electrohydraulic powerpack on the fan case, an AC motor driving a gear pump, makes 2300 psi for two locking actuators, one per door, each connected between the fan case and its door\'s torque box. It works only on the ground with the engine shut down (weight on wheels and the EEC\'s engine-off signal, through the CDC): the left engine\'s motor runs on AC BUS 1 with control from DC BUS 1, the right engine\'s on AC BUS 2 and DC BUS 2. A thermal switch stops an overheating motor.\n\nTo open a door, hold its T/R door switch on the fan case until the actuator is fully extended and for 5 seconds more; the pressure-relief valve opens, and on release the actuator settles onto its internal mechanical lock. Then fit the hold-open rod, the failsafe. To close, refit the rod in its stow bracket, hold the switch until the actuator is fully extended and for at least 5 seconds more, then release it: the pressure-relief valve closes, the lock disengages, and the door\'s weight closes it, slowed by an internal restrictor (p.34, p.42). Make sure the V-groove blade and the alignment pins engage. Without power, a hand pump on the actuator\'s quick-disconnect opens the door; the TTM notes that newer aircraft have the hand pump only.\n\nThe powerpack is serviced with engine oil: dipstick under the filler cap, L 0.74 L, N 0.82 L, H 0.89 L, with the doors closed. Cautions: the inboard reverser doors can hit the slats if they are extended, and pumping by hand can overflow the reservoir.' });
     /* p.33-35: the powerpack at the aft end of the fan case on the right: an AC motor driving a gear pump, a reservoir and manifold
