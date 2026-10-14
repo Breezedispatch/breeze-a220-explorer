@@ -263,8 +263,15 @@
       /* the six segments meet at 1, 3, 5, 7, 9 and 11 o'clock (the photos show the joints at 3 and 9; they were at 12, 2, 4 ... until
          2026-10-12). Each joint lies over a bolted splice strap (p.61), whose two rows of flush fasteners show either side of it aft of
          the FEGVs, and a row of fasteners runs round the aft edge */
-      for (let i = 0; i < 6; i++) { const a = seg('bypassInner', xs - .05, xe, 20);
-        PW.add('fan-exit-liner', G.revolve(G.shellProfile(a, a.map(([x, r]) => [x, r - .008])), { seg: 24, thetaStart: (i + .5) / 6 * TAU + .004, thetaLength: TAU / 6 - .008 }), 'mint'); }
+      /* the VFG air/oil cooler's opening in the 7-9 o'clock segment (Brian's Core_LH photo, A Nahas p.18): its matrix is set into the
+         liner behind the hood (build-external.js builds the cooler from these) */
+      const AO = PW.AOHX_OPENING = { h0: 7.45, h1: 8.68, xL: -.772, xB: -.938 };
+      const shell = (xa, xb, t0, t1) => { const a = seg('bypassInner', xa, xb, 20);
+        PW.add('fan-exit-liner', G.revolve(G.shellProfile(a, a.map(([x, r]) => [x, r - .008])), { seg: Math.max(2, Math.round((t1 - t0) / (TAU / 144))), thetaStart: t0, thetaLength: t1 - t0 }), 'mint'); };
+      for (let i = 0; i < 6; i++) { const t0 = (i + .5) / 6 * TAU + .004, t1 = t0 + TAU / 6 - .008;
+        if (i !== 3) { shell(xs - .05, xe, t0, t1); continue; }
+        const o0 = G.clock(AO.h0), o1 = G.clock(AO.h1);
+        shell(xs - .05, xe, t0, o0); shell(xs - .05, xe, o1, t1); shell(xs - .05, AO.xL, o0, o1); shell(AO.xB, xe, o0, o1); }
       { const fx = [], put = (x, a) => fx.push(new THREE.CylinderGeometry(.0028, .0028, .0012, 8).rotateX(a).translate(...G.onRing(x, rL(x) + .0003, a).toArray()));
         for (let i = 0; i < 6; i++) for (let x = -.615; x > xe + .03; x -= .036) for (const s of [-1, 1]) put(x, G.clock(1 + 2 * i) + s * .024 / rL(x));
         for (let k = 0; k < 28; k++) put(xe + .016, (k + .5) / 28 * TAU);

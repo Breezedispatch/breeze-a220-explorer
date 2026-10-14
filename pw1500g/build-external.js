@@ -22,6 +22,7 @@
     clampOrange: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#c8642c'), roughness: .6, metalness: .1 }),
     labelBlue: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#2f62b8'), roughness: .5, metalness: .1 }),
     stainless: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#c4c7c9'), roughness: .36, metalness: .8, roughnessMap: PW.tex.noise('fine', 256, 40, .6, 1) }),   // the bleed ducts' brushed finish (photos)
+    bareSheet: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#bfc3c5'), roughness: .5, metalness: .35, roughnessMap: PW.tex.noise('fine', 256, 40, .6, 1) }),   // light satin bare sheet: the VFG air/oil cooler's hood (photos)
     chromate: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#a08a40'), roughness: .45, metalness: .4 }),         // the olive-gold conversion coat on the VFG air/oil cooler's grille (photo)
   });
 
@@ -559,8 +560,8 @@
         for (const [x, y] of [[-.025, -.03], [.015, -.03], [-.025, .005], [.015, .005]]) Kt.hex('vfgoohx', f, [x, y, -.063], '-z', .0042, .004, 'steel'); }
       /* VFG oil on from here forward along the left of the core, under the fuel supply hose and through the compressor intermediate
          case's outer cone (a bulkhead nut where it passes), to the VFG air/oil cooler under the fan exit liner */
-      { const c = line('vfgoohx', [P(vx, 9.72, .43), P(-1.40, 9.72, .44), P(-1.30, 9.55, .43), P(-1.20, 9.38, .424), P(-1.10, 9.28, .444), P(-1.03, 9.28, .468), P(-.99, 9.22, .47), P(-.96, 9.05, .468), P(-.93, 8.75, .468), P(-.895, 8.5, .468), FLa(-.855, 8.4, .467)(-.01595, 0, 0)], .011, 'hose', { clamps: 3, labels: [[.3, 'labelWhite']] });   // above the forward vibration sensor
-        PW.add('vfgoohx', G.alongCurve(c, [tAt(c, -.976)], () => new THREE.CylinderGeometry(.018, .018, .016, 6)), 'steel').userData.isLine = true; }
+      { const c = line('vfgoohx', [P(vx, 9.72, .43), P(-1.40, 9.72, .44), P(-1.30, 9.55, .43), P(-1.20, 9.38, .424), P(-1.10, 9.28, .444), P(-1.03, 9.28, .468), P(-.995, 9.22, .462), P(-.975, 9.12, .444), P(-.965, 8.85, .446), P(-.958, 8.55, .452), FLa(-.936, 8.4, .462)(-.01595, 0, 0)], .011, 'hose', { clamps: 3, labels: [[.3, 'labelWhite']] });   // above the forward vibration sensor
+        PW.add('vfgoohx', G.alongCurve(c, [tAt(c, -.99)], () => new THREE.CylinderGeometry(.018, .018, .016, 6)), 'steel').userData.isLine = true; }
       /* and back (p.213 draws the VFG oil circuit as a pair, to and from the VFG): beside the first, aft of and outboard of it, between the fuel/oil manifold and the air/oil cooler's plenum */
       line('vfgoohx', [P(vx - .045, 9.74, .44), P(-1.512, 9.62, .485), P(-1.515, 9.5, .525), P(-1.515, 9.3, .53), P(-1.51, 9.1, .53), P(-1.545, 8.55, .512), P(-1.585, 8.05, .512), P(-1.597, 7.75, .518), P(-1.615, 7.52, .522), P(-1.665, 7.40, .522), P(-1.69, 7.25, .519), P(-1.712, 7.0, .518), P(-1.745, 6.78, .532), FLa(mx1, 6.15, VFG_R)(-.11, .0825, .1181), FLa(mx1, 6.15, VFG_R)(-.11, .07192, .10109)], .014, 'tube', { clamps: 3 }); }
     /* the VFG air/oil cooler. p.215 and p.217 put it in the VFG oil loop but the manual never shows where it is; the A Nahas location
@@ -570,17 +571,39 @@
        between the PMAG and the generator, to the fitting on the VFG's 7 o'clock side */
     PW.part('vfg-aohx', { parent: 'oil', label: 'VFG air/oil cooler', src: 'p.215, p.217; A Nahas location photos p.18; photos',
       info: 'The last cooler in the generator\'s own oil loop: VFG, VFG oil/oil heat exchanger, this air/oil cooler, and back to the VFG (p.215, p.217). It sits under a fairing on the fan exit liner, low on the left side, its matrix open to the fan stream through the grille behind the fairing\'s hood. To reach it, remove the fan exit case fairing and then the cooler\'s own fairing.\n\nThe manual shows it only in the oil schematics; its place comes from the location photos.' });
-    { Kt.arcLoft('vfg-aohx', [{ h: 7.75, x: -.765, w: .31, ri: .488, ro: .522, n: 5 }, { h: 8.65, x: -.765, w: .31, ri: .488, ro: .522, n: 5 }], 'mint');   // the fairing
-      Kt.arcLoft('vfg-aohx', [{ h: 7.8, x: -.672, w: .024, ri: .515, ro: .536, n: 4 }, { h: 8.6, x: -.672, w: .024, ri: .515, ro: .536, n: 4 }], 'stainless');   // its hood, bare polished sheet (photo)
-      /* the matrix grille: olive-gold slats in four sections round the arc, with a pale retaining clip at each joint (photo) */
-      const sl = [], cl = []; for (let k = 0; k < 10; k++) for (let j = 0; j < 4; j++) { const a = G.clock(7.88 + (j + .5) * .16), g = G.roundedBox(.005, .008, .040, .001);
-        g.rotateZ(.55); g.rotateX(a); g.translate(-.695 - k * .02, .5245 * Math.cos(a), .5245 * Math.sin(a)); sl.push(g); }
-      for (let j = 1; j < 4; j++) for (const xc of [-.70, -.865]) { const a = G.clock(7.88 + j * .16), g = G.roundedBox(.014, .006, .008, .0015);
-        g.rotateX(a); g.translate(xc, .5275 * Math.cos(a), .5275 * Math.sin(a)); cl.push(g); }
-      PW.add('vfg-aohx', G.merge(sl), 'chromate', { solid: true }); PW.add('vfg-aohx', G.merge(cl), 'plateAl', { solid: true });
-      Kt.arcLoft('vfg-aohx', [{ h: 7.85, x: -.74, w: .23, ri: .45, ro: .484, n: 6 }, { h: 8.55, x: -.74, w: .23, ri: .45, ro: .484, n: 6 }], 'castAl');   // the core under the liner
-      for (const h of [8.0, 8.4]) Kt.fitting('vfg-aohx', Kt.frame('vfg-aohx', -.855, h, .467), [0, 0, 0], '-x', .011);         // oil out (8:00) and in (8:24)
-      const c = line('vfg-aohx', [FLa(-.855, 8.0, .467)(-.01595, 0, 0), P(-.895, 8.04, .468), P(-.93, 8.1, .468), P(-.98, 8.2, .468), P(-1.03, 8.33, .462), P(-1.10, 8.42, .48), P(-1.15, 8.45, .492), P(-1.20, 8.48, .502), P(-1.25, 8.51, .508),
+    { /* As Brian's Core_LH photo and the A Nahas photo (p.18, "A/O HX FAIRING") show it: a bare metal hood rises out of the liner
+         just aft of the FEGVs and wraps the forward edge and both ends of a band running round the case, from about 7:25 to 8:40 below
+         the 9 o'clock liner joint, back to the liner's aft edge. In the band the cooler's matrix shows as long olive-gold slats running
+         round the case, eight across, in four groups between gold cross-members, each with a pale clip at the hood's lip. The fan exit
+         case fairing round it, which comes off first, is outlined by its fasteners. Until 2026-10-14 this was a raised mint block with
+         a thin hood strip and a grid of short slats (Brian: "very inaccurate") */
+      const rLin = x => G.interp(D.GEN.lines.bypassInner, x), deg = Math.PI / 180;
+      const AO = PW.AOHX_OPENING, a0 = G.clock(AO.h0), a1 = G.clock(AO.h1), e = G.clock(.08), xF = -.628, xL = AO.xL, xB = AO.xB;   // the liner opening (build-core.js); hood overlap and front
+      const hgt = a => { const t = (a - (a0 - e)) / (a1 - a0 + 2 * e), u = Math.min(1, Math.min(t, 1 - t) / .1); return .1 + .9 * u * u * (3 - 2 * u); };
+      PW.add('vfg-aohx', sweepSections(a => { const h = hgt(a), xf = xF - .045 * (1 - h), inBand = a >= a0 && a <= a1, xl = inBand ? xL : xB + .002;
+        return [[xf, rLin(xf) - .003], [xf - .022, rLin(xf - .022) + .006 * h], [xf - .06, rLin(xf - .06) + .015 * h], [xl + .03, rLin(xl + .03) + .022 * h],
+          [xl + .007, rLin(xl + .007) + .024 * h], [xl, rLin(xl) + .019 * h], [xl + .004, rLin(xl) - .003]]; }, a0 - e, a1 + e, 110), 'bareSheet');   // the hood
+      /* the matrix in the liner's opening: a dark tub under it, the slats standing in it with their tops just below the liner surface,
+         the cross-members and their clips */
+      const band = (xa, xb, lo, hi, ta, tb, mat) => { const pts = []; for (let i = 0; i <= 8; i++) pts.push(xa + (xb - xa) * i / 8);
+        PW.add('vfg-aohx', G.revolve(pts.map(x => [x, rLin(x) + lo]).concat(pts.map(x => [x, rLin(x) + hi]).reverse()), { seg: Math.max(2, Math.round((tb - ta) / (1.5 * deg))), thetaStart: ta, thetaLength: tb - ta }), mat); };
+      band(xL, xB, -.026, -.024, a0, a1, 'darkBox'); band(xL + .001, xL - .001, -.026, -.006, a0, a1, 'darkBox'); band(xB + .001, xB - .001, -.026, -.006, a0, a1, 'darkBox');
+      band(xL, xB, -.026, -.006, a0 - .002, a0, 'darkBox'); band(xL, xB, -.026, -.006, a1, a1 + .002, 'darkBox');
+      const cut = [0, 1, 2, 3, 4].map(j => a0 + (a1 - a0) * j / 4), cw = .006 / .505;                            // group edges; half a cross-member's width
+      for (let j = 0; j < 4; j++) for (let i = 0; i < 8; i++) { const xc = xL - .014 - i * (xL - .014 - xB - .008) / 7, rc = rLin(xc);
+        band(xc + .003, xc - .003, -.024, -.003, cut[j] + (j ? cw : .002), cut[j + 1] - (j < 3 ? cw : .002), 'chromate'); }   // eight slats across each group
+      for (let j = 1; j < 4; j++) { const a = cut[j];
+        band(xL, xB, -.024, .001, a - cw, a + cw, 'chromate');                                                           // cross-member
+        const f = Kt.frame('vfg-aohx', xL - .016, a / (Math.PI / 6), rLin(xL - .016) + .001); Kt.box('vfg-aohx', f, [0, .002, 0], [.026, .004, .02], 'plateAl', { round: .0015 }); }   // its clip
+      /* the fan exit case fairing's fasteners, round its forward edge and along its top and bottom */
+      { const fx = [], put = (x, a) => fx.push(new THREE.CylinderGeometry(.0028, .0028, .0012, 8).rotateX(a).translate(...G.onRing(x, rLin(x) + .0003, a).toArray()));
+        const p0 = a0 - e - G.clock(.12), p1 = a1 + e + G.clock(.12), xs = xF + .022;
+        for (let a = p0; a <= p1 + 1e-6; a += .036 / .495) put(xs, a);
+        for (let x = xs - .036; x > xB - .004; x -= .036) { put(x, p0); put(x, p1); }
+        PW.add('vfg-aohx', G.merge(fx), 'steel'); }
+      Kt.arcLoft('vfg-aohx', [{ h: AO.h0 + .03, x: (xL + xB) / 2, w: xL - xB - .004, ri: .45, ro: .474, n: 6 }, { h: AO.h1 - .03, x: (xL + xB) / 2, w: xL - xB - .004, ri: .45, ro: .474, n: 6 }], 'castAl');   // its body, under the opening
+      for (const h of [8.0, 8.4]) Kt.fitting('vfg-aohx', Kt.frame('vfg-aohx', xB + .002, h, .462), [0, 0, 0], '-x', .011);     // oil out (8:00) and in (8:24), on its aft face
+      const c = line('vfg-aohx', [FLa(xB + .002, 8.0, .462)(-.01595, 0, 0), P(-.962, 8.07, .463), P(-.98, 8.2, .468), P(-1.03, 8.33, .462), P(-1.10, 8.42, .48), P(-1.15, 8.45, .492), P(-1.20, 8.48, .502), P(-1.25, 8.51, .508),
         P(-1.30, 8.53, .512), P(-1.35, 8.55, .513), P(-1.40, 8.57, .513), P(-1.46, 8.57, .51), P(-1.51, 8.5, .512), P(-1.555, 8.05, .505), P(-1.568, 7.75, .508), P(-1.59, 7.45, .512), P(-1.64, 7.25, .514), P(-1.675, 7.0, .515), P(-1.69, 6.78, .528), FLa(mx1, 6.15, VFG_R)(-.04, .0775, .1231), FLa(mx1, 6.15, VFG_R)(-.04, .06692, .10609)], .011, 'hose', { clamps: 4 });
       PW.add('vfg-aohx', G.alongCurve(c, [tAt(c, -.976)], () => new THREE.CylinderGeometry(.018, .018, .016, 6)), 'steel').userData.isLine = true; }
     PW.part('fohe', { parent: 'oil', label: 'Fuel/oil heat exchanger (FOHX) and bypass valve', src: 'p.162-170, p.212-217, p.232-233',
