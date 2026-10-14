@@ -130,7 +130,7 @@
     }
     /* fan blades: from the measured leading and trailing edge curves (p.53), hub to tip */
     PW.part('fan-blades', { parent: 'fan-rotor', label: 'Fan blades (18)', src: 'p.53, p.58-59; photos',
-      info: 'Eighteen hollow aluminium blades with a titanium leading edge and black polyurethane erosion paint. Each dovetail root slides into a hub slot with a spacer under it and composite wear strips on its sides.\n\nInspect for leading-edge nicks, dents and erosion against the AMM limits, and for paint loss. A bird strike or FOD finding here usually leads to a borescope of the core.' });
+      info: 'Eighteen hollow aluminium blades with a titanium leading edge and black polyurethane erosion paint. Each dovetail root slides into a hub slot with a spacer under it and composite wear strips on its sides.\n\nInspect for leading-edge nicks, dents and erosion against the AMP limits, and for paint loss. A bird strike or FOD finding here usually leads to a borescope of the core.' });
     PW.part('fan-hub', { parent: 'fan-rotor', label: 'Fan hub, lock ring and balance weights', src: 'p.58-59, p.144-147',
       info: 'The hub carries the 18 blades in dovetail slots, the No. 1 slot between the two "No. 1" marks on the hub. Composite fairings between the blades form the inner flow path, each held by a pin through lugs on the hub. The lock ring across the front of the slots holds the blades axially.\n\nInside the lock ring, behind the inlet cone, is the fan correction plane: the balance weight flange. The riveted module (Z) balance weights are set when the module is built and are never disturbed. Clip-on trim weights go either side of them. After a vibration survey the OMS trim balance procedure gives each weight (each mass has its own part number) and its angle from the 0 deg reference, a dimple on the fan shaft. Check the stored weight configuration against the hardware first: if they differ, the solution is wrong.' });
     {
@@ -344,7 +344,7 @@
 
     /* =========================== HPC (N2) =========================== */
     PW.part('hpc', { label: 'High-pressure compressor (HPC)', explode: [-.8, 0, 0], src: 'p.52-55, p.258-263; TTM ch. 72',
-      info: 'Eight-stage compressor on the N2 spool. Stages 1 to 7 are integrally bladed rotors and stage 8 is a bladed disc. The inlet guide vanes and the first three stator rows are variable, moved by a fuel-powered actuator on EEC command.\n\n4th-stage air is the normal bleed source; 8th-stage air is added through the high-pressure valve when 4th-stage pressure is low. Borescope ports on the case give access to every stage. 100% N2 is 24,470 rpm.' });
+      info: 'Eight-stage compressor on the N2 spool. Stages 1 to 7 are integrally bladed rotors and stage 8 is a bladed disc. The inlet guide vanes and the first three stator rows are variable, moved by a fuel-powered actuator on EEC command.\n\n4th-stage air is the normal bleed source. When its pressure is too low or the demand is high, the air system controllers open the high-pressure valve and the bleed comes from the 8th stage instead, with a check valve keeping it out of the 4th stage (TTM ch. 36). Borescope ports on the case give access to every stage. 100% N2 is 24,470 rpm.' });
     {
       const igv = R('HPC variable inlet guide vane');
       PW.part('hpc-igv', { parent: 'hpc', label: 'HPC variable inlet guide vanes', src: 'p.52, p.258-261', info: 'Variable inlet guide vanes of the HPC, scheduled by the EEC with N2. Count representative.' });
@@ -523,7 +523,7 @@
 
   function buildCombustor() {
     PW.part('combustor', { label: 'Diffuser and combustor', explode: [-1.05, 0, 0], src: 'p.53-55, p.162-175; TTM ch. 72-73',
-      info: 'HPC exit air slows in the diffuser and enters the annular combustor, where fuel from 16 nozzles burns continuously. The liner walls are film-cooled by air that flows round them inside the diffuser case.\n\nStation 3 (HPC exit) and station 4 (combustor exit) are here. The liner and the fuel nozzle tips are borescoped through ports in the diffuser case; hot streaks or burnt liner panels show up as an EGT spread.' });
+      info: 'HPC exit air slows in the diffuser and enters the annular combustor, where fuel from 16 nozzles burns continuously. The liner walls are film-cooled by air that flows round them inside the diffuser case.\n\nStation 3 (HPC exit) and station 4 (combustor exit) are here. The liner and the fuel nozzle tips are borescoped through ports in the diffuser case. Hot streaks or burnt liner panels are found by borescope: the displayed EGT is a single average of all eight probes (p.126), so they may show only as a higher EGT or a trend shift.' });
     const xf = -1.66, xa = -1.89;
     PW.part('diffuser-case', { parent: 'combustor', label: 'Diffuser case', src: 'p.53, p.55', info: 'Pressure case round the combustor between flanges H and M. It carries the 16 fuel nozzle mounting pads, the two igniter bosses and borescope ports.' });
     PW.add('diffuser-case', G.revolve(G.shellProfile(seg('outer', xf, xa, 20).map(([x, r]) => [x, Math.max(r, .245)]), seg('outer', xf, xa, 20).map(([x, r]) => [x, Math.max(r, .245) - .007])), { seg: 128 }), 'nickel');
@@ -535,7 +535,7 @@
     { const dm = L().combustorDome; PW.add('combustor-liner', G.revolve(G.shellProfile(dm.map(([x, r]) => [x + .006, r]), dm), { seg: 96 }), 'combLiner'); }   // dome bulkhead (p.53)
     /* 16 fuel nozzles through the case, with their swirler cups at the dome (TTM: 16) */
     PW.part('fuel-nozzles', { parent: 'combustor', label: 'Fuel nozzles (16)', src: 'p.164-175; TTM ch. 73',
-      info: 'Sixteen nozzles fed by the primary and secondary manifolds, each held by a mounting flange on the diffuser case with its tip in a swirler at the combustor dome. Ten are duplex (primary and secondary) and six simplex (secondary only), in a pattern of 4 duplex, 4 simplex, 6 duplex, 2 simplex. Every nozzle has check valves in both circuits that shut as the pressure falls at shutdown, so the manifolds do not drain into the combustor, and an alignment pin that stops it being fitted wrongly (p.174).\n\nA streaky or uneven EGT pattern can point to a coked or leaking nozzle.' });
+      info: 'Sixteen nozzles fed by the primary and secondary manifolds, each held by a mounting flange on the diffuser case with its tip in a swirler at the combustor dome. Ten are duplex (primary and secondary) and six simplex (secondary only), in a pattern of 4 duplex, 4 simplex, 6 duplex, 2 simplex. Every nozzle has check valves in its fuel circuits that shut as the pressure falls at shutdown, so the manifolds do not drain into the combustor, and an alignment pin that stops it being fitted wrongly (p.174).\n\nA coked or leaking nozzle is found by borescope through the diffuser case ports: the displayed EGT is one averaged value (p.126), so it may show only as a higher EGT or a trend shift.' });
     const fnPath = L().fuelNozzle;
     for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + TAU / 32;                       // 16 nozzles; two straddle 12 o'clock at +/-11.25 deg (p.164-165)
       const pts = fnPath.map(([x, r]) => G.onRing(x, r, a)); PW.add('fuel-nozzles', G.tube(pts, .0065, { radial: 10, tension: .1 }), 'steel');
@@ -555,7 +555,7 @@
 
   function buildTurbines(SP) {
     PW.part('hpt', { label: 'High-pressure turbine (HPT)', explode: [-1.3, 0, 0], src: 'p.52-55; TTM ch. 72',
-      info: 'Two-stage turbine on the N2 spool that drives the HPC and, through the towershaft, the gearboxes. Blades and vanes are cooled internally and coated with a ceramic thermal barrier. It is the hottest part of the engine and the main reason for EGT limits.\n\nBlade and vane distress is found by borescope; findings are tracked against the AMM limits and drive many removals.' });
+      info: 'Two-stage turbine on the N2 spool that drives the HPC and, through the towershaft, the gearboxes. Blades and vanes are cooled internally and coated with a ceramic thermal barrier. It is the hottest part of the engine and the main reason for EGT limits.\n\nBlade and vane distress is found by borescope; findings are tracked against the AMP limits and drive many removals.' });
     const tbc = 'tbc';
     const rowsT = [['HPT vane 1', 'hpt-ngv-1', 'HPT stage 1 nozzle guide vanes', false], ['HPT blade 1', 'hpt-rotor-1', 'HPT stage 1 rotor', true],
                    ['HPT vane 2', 'hpt-ngv-2', 'HPT stage 2 vanes', false], ['HPT blade 2', 'hpt-rotor-2', 'HPT stage 2 rotor', true]];
