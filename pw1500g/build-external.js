@@ -1003,7 +1003,7 @@
         Kt.cyl('bts', g, [.026, 0, 0], 'x', .0085, .024, 'steel'); Kt.connector('bts', g, [.038, 0, 0], 'x', .008, { lead: 'y' });
         line('bts', [V(-2.1028, .8844, 0), V(-2.108, .95, .008), V(-2.105, 1.017, .012)], .005, 'harness', { clamps: 0, ends: false }); } }
     PW.part('tacc', { parent: 'air', label: 'Turbine active clearance control', src: 'p.270-277',
-      info: 'Fan air taken through the scoop on the right IFS at about 1:30 passes the ACC valve and is sprayed onto the HPT and LPT cases from ring manifolds. Shrinking the cases closes the blade tip clearances in cruise, saving fuel; the valve is closed for takeoff and most of the climb.' });
+      info: 'Fan air taken through the scoop on the right IFS at about 2 o\'clock passes the ACC valve and is sprayed onto the HPT and LPT cases from ring manifolds. Shrinking the cases closes the blade tip clearances in cruise, saving fuel; the valve is closed for takeoff and most of the climb.' });
     /* p.270-273: the ACC air valve at 1 o'clock near the rear of the HPC (it was over the HPT until 2026-10-07), fed from the scoop on the
        right IFS; the HPT manifold a shroud band on the HPT case, the LPT manifold a band of spray tubes on the LPT case */
     { /* the HPT manifold band and its spray tubes stop either side of the AP-HPT 1 borescope port at 9 o'clock */
@@ -1031,7 +1031,7 @@
       Kt.cyl('tacc', f, [0, 0, 0], 'x', .046, .11, 'castAl', { edge: .006 });                                                 // butterfly body
       for (const s of [-1, 1]) Kt.flange('tacc', f, [s * .058, 0, 0], s > 0 ? 'x' : '-x', .03, .058, .01, 10, 'castAl');     // bolted end flanges
       Kt.cyl('tacc', f, [0, -.046, 0], 'y', .012, .012, 'castAl'); Kt.hex('tacc', f, [0, -.054, 0], '-y', .006, .005, 'steel');   // butterfly shaft boss underneath
-      /* inlet elbow and its ring, turned outward toward the scoop at 1:30 */
+      /* inlet elbow and its ring, turned outward and round toward the scoop's port at 2 o'clock */
       f.updateMatrixWorld(true); const L = (x, y, z) => f.localToWorld(V(x, y, z));
       const inD = V(-.1, .55, .83).normalize(), ringC = V(.088, .05, .07), onIn = s => ringC.clone().addScaledVector(inD, s);   // clear of the right thrust link at 1 o'clock
       line('tacc', [L(.063, 0, 0), L(.08, .006, .008), L(.088, .025, .035), L(...onIn(-.01).toArray())], .036, 'tube', { clamps: 0, ends: false, mat: 'castAl' });
@@ -1046,7 +1046,7 @@
       Kt.connector('tacc', f, [.015, .05, -.035], 'x', .008, { lead: '-z' });
       for (const z of [-.01, .012]) Kt.fitting('tacc', f, [.037, .07, z], 'x', .006);                                          // servo fuel in and out, high enough to clear the inlet flange and elbow
       Kt.plate('tacc', f, [-.01, .056, .0476], 'z', 'y', .04, .025);
-      line('tacc', [P(-1.62, 1.6, .545), P(-1.60, 1.62, .51), L(...onIn(.045).toArray()), L(...onIn(.007).toArray())], .036, 'tube', { clamps: 0, ends: false, mat: 'castAl' });   // from the IFS scoop to the inlet ring
+      line('tacc', [P(-1.62, 2.1, .545), P(-1.615, 2.07, .51), P(-1.595, 1.9, .49), P(-1.575, 1.75, .484), L(...onIn(.045).toArray()), L(...onIn(.007).toArray())], .036, 'tube', { clamps: 0, ends: false, mat: 'castAl' });   // from the IFS port at 2:06 (1:36 until 2026-10-14) round to the inlet ring
       /* outlet: duct to the plenum on the HPT manifold, between the 6th-stage HPT cooling tubes at 0:51 and 1:36 */
       line('tacc', [P(-1.702, 1.2, .40), P(-1.77, 1.2, .385), P(-1.84, 1.22, .36), P(-1.885, 1.225, .345)], .033, 'tube', { clamps: 1, ends: false });
       { const g = Kt.frame('tacc', -1.93, 1.225, .307); Kt.box('tacc', g, [0, 0, 0], [.07, .04, .075], 'nickel', { round: .012 });

@@ -470,7 +470,7 @@
       /* photos: the blanket is made up in panels with raised hems, held by round stainless studs (a washer with the stud's nut standing
          in the middle) along the hems and across the panels, about 0.19 m apart; none over the openings, the fire elements or the
          bifurcation edges. Hems run round the engine at every other stud row and fore and aft along every third stud column */
-      { const holes = sg > 0 ? [[-1.79, -2.07, 2.15, 3.35], [-2.20, -2.40, 2.1, 2.7], [-1.53, -1.71, 1.35, 1.65]] : [[-1.42, -2.08, 9.0, 10.6], [-2.34, -2.54, 8.65, 9.35]];
+      { const holes = sg > 0 ? [[-1.79, -2.07, 2.15, 3.35], [-2.16, -2.46, 2.15, 3.1], [-1.53, -1.71, 1.9, 2.3]] : [[-1.42, -2.08, 9.0, 10.6], [-2.33, -2.55, 9.2, 10.0], [-2.095, -2.135, 9.05, 9.3]];
         const clk = th => (th / (Math.PI / 6) % 12 + 12) % 12, rB = xx => rIFS(xx) - .032;
         const inBox = (list, xx, th, pad) => list.some(([xa, xb, ha, hb]) => xx <= xa + pad && xx >= xb - pad && clk(th) >= ha - pad * 6 && clk(th) <= hb + pad * 6);
         const inHole = (xx, th, pad) => inBox(holes, xx, th, pad), inFire = (xx, th, pad) => inBox(fireZones, xx, th, pad);
@@ -512,15 +512,25 @@
         const hole = (x0, x1, h, half) => { const a = G.clock(h), xs = []; for (let i = 0; i <= 6; i++) xs.push(x0 + (x1 - x0) * i / 6);
           PW.add(iid, G.revolve(xs.map(xx => [xx, rIFS(xx) - .0322]).concat(xs.map(xx => [xx, rIFS(xx) - .0332]).reverse()), { seg: 12, thetaStart: a - half, thetaLength: 2 * half }), 'darkBox'); };
         const fit = (xx, h, dr, l, w, t) => { const f = PW.kit.frame(iid, xx, h, rIFS(xx) - .032); PW.kit.box(iid, f, [0, -dr, 0], [l, t, w], 'steel', { round: Math.min(l, t, w) * .3 }); };
-        if (sg > 0) { frame(-1.80, -2.06, 2.62, .21, 'blanket', .022, .005); frame(-2.21, -2.39, 2.4, .17, 'blanket', .022, .005);   // clear of the scupper drain
-          for (const [xx, h] of [[-1.86, 2.2], [-2.00, 2.2], [-2.25, 2.05], [-2.35, 2.05]]) fit(xx, h, .007, .04, .018, .01);           // hinges along the upper edges
-          fit(-1.93, 3.03, .006, .05, .02, .008); fit(-2.30, 2.74, .006, .04, .02, .008);                                                 // latches on the lower edges
-          /* the round port at 1:36 where the ACC duct from the scoop meets the door, its orange seal ring round the duct's end */
-          const a = G.clock(1.6), rP = rIFS(-1.62) - .032;
+        /* p.21 and p.23 draw the precooler exhaust door the size of the oil tank access door and beside it in the same clock band (until
+           2026-10-14 it was 0.2 x 0.18 m, lower and further forward) */
+        if (sg > 0) { frame(-1.80, -2.06, 2.62, .21, 'blanket', .022, .005); frame(-2.18, -2.44, 2.62, .21, 'blanket', .022, .005);
+          for (const [xx, h] of [[-1.86, 2.2], [-2.00, 2.2], [-2.24, 2.2], [-2.38, 2.2]]) fit(xx, h, .007, .04, .018, .01);             // hinges along the upper edges
+          fit(-1.93, 3.03, .006, .05, .02, .008); fit(-2.31, 3.03, .006, .04, .02, .008);                                                 // latches on the lower edges
+          /* the round port where the ACC duct from the scoop meets the door, its orange seal ring round the duct's end: level with the
+             oil tank access door's upper edge, as p.21 and p.23 draw it (it was at 1:36 until 2026-10-14) */
+          const a = G.clock(2.1), rP = rIFS(-1.62) - .032;
           PW.add(iid, new THREE.TorusGeometry(.046, .009, 10, 28).rotateX(a - Math.PI / 2).translate(...G.onRing(-1.62, rP - .009, a).toArray()), 'gasketOrange', { solid: true });
           PW.add(iid, new THREE.CylinderGeometry(.038, .038, .002, 24).rotateX(a).translate(...G.onRing(-1.62, rP - .0005, a).toArray()), 'darkBox'); }
         else { frame(-1.545, -1.645, 9.9, .26, 'gasketOrange', .03, .012); hole(-1.545, -1.645, 9.9, .26);                           // clear of the VFG oil line at x -1.51
-          frame(-1.845, -1.945, 9.9, .26, 'plateAl', .016, .005); hole(-1.845, -1.945, 9.9, .26); } }
+          frame(-1.845, -1.945, 9.9, .26, 'plateAl', .016, .005); hole(-1.845, -1.945, 9.9, .26);
+          frame(-2.35, -2.53, 9.6, .17, 'blanket', .022, .005);                                                                          // the pressure-relief door's outline
+          /* p.298: the access hole for the starter air valve's 3/8 in square-drive manual override, over the valve's override funnel; p.21
+             and p.23 draw a small hole just aft of the cooler window. A grommet inside, a flush plug outside */
+          const a = G.clock(9.17), xh = -2.115;
+          PW.add(iid, new THREE.TorusGeometry(.015, .004, 8, 20).rotateX(a - Math.PI / 2).translate(...G.onRing(xh, rIFS(xh) - .036, a).toArray()), 'rubber', { solid: true });
+          PW.add(iid, new THREE.CylinderGeometry(.012, .012, .002, 20).rotateX(a).translate(...G.onRing(xh, rIFS(xh) - .0325, a).toArray()), 'darkBox');
+          PW.add(iid, new THREE.CylinderGeometry(.016, .016, .003, 20).rotateX(a).translate(...G.onRing(xh, rIFS(xh) + .0005, a).toArray()), 'plateAl', { solid: true }); } }
       /* p.20-23: three core scoop vents on each IFS half, small scoops in the fan stream that ram air into the core compartment to
          ventilate it; positions measured off p.23 (fraction of the IFS length, clock) */
       { const L0 = xI0, L1 = xTE - .02;
@@ -800,12 +810,17 @@
         hd.w = 0;
         hor(hid, hinge, () => [Pv, rodEnd(Pv, Sw, doorIn(hd, Ft), hd.w)], { ls: Pv.distanceTo(Sw), r: .016, unlocked: () => hd.w > 0 && hd.w < 1 }); }
     }
-    /* IFS features: oil tank access door (right, 3 o'clock), AOC window and pressure-relief door (left, 9 o'clock), ACC scoop (right, 1:30) */
-    const ifsPanel = (pid, parentDoor, label, info, xx, h, l, w, mat) => { PW.part(pid, { parent: parentDoor, label, info, src: 'p.20-23', attach: PW.parts.get(parentDoor).obj.children[0] }); const a = G.clock(h);
-      const m = new THREE.Mesh(G.roundedBox(l, .008, w, .012)); m.position.copy(G.onRing(xx, rIFS(xx) + .002, a)); m.rotation.x = a;
-      PW.add(pid, m, mat || 'cowlWhite', { solid: true }); };
+    /* IFS features: oil tank access door and precooler exhaust door (right, 2:30), AOC window and pressure-relief door (left, 9:30), ACC
+       scoop (right, 2 o'clock) */
+    /* a door or opening in an IFS half: a patch curved to the skin (its taper and its round), just proud of it, over a slightly larger
+       dark seam. Until 2026-10-14 these were flat plates, which stood off the curved skin at their corners */
+    const ifsPanel = (pid, parentDoor, label, info, xx, h, l, w, mat) => { PW.part(pid, { parent: parentDoor, label, info, src: 'p.20-23', attach: PW.parts.get(parentDoor).obj.children[0] });
+      const a = G.clock(h), patch = (ll, ww, r0, r1, m) => { const xs = []; for (let i = 0; i <= 8; i++) xs.push(xx + ll / 2 - ll * i / 8); const half = ww / 2 / rIFS(xx);
+        PW.add(pid, G.revolve(xs.map(x => [x, rIFS(x) + r0]).concat(xs.map(x => [x, rIFS(x) + r1]).reverse()), { seg: Math.max(4, Math.round(half * 40)), thetaStart: a - half, thetaLength: 2 * half }), m); };
+      patch(l + .008, w + .008, -.001, .001, 'darkBox'); patch(l, w, -.0005, .0025, mat || 'cowlWhite'); };
     ifsPanel('ifs-otad', 'tr-right', 'Oil tank access door (OTAD)', 'Door in the right IFS at about 2:30, over the oil tank, that gives access to its fill port and sight glass without opening the reverser door (p.21, p.223-224). Wait at least 5 minutes after shutdown before servicing, and check the level between 5 and 60 minutes after shutdown.', -1.93, 2.62, .28, .27, 'cowlWhite');
-    ifsPanel('ifs-pce', 'tr-right', 'Precooler exhaust (PCE) door', 'Door aft of the oil tank access door on the right IFS (p.21).', -2.30, 2.4, .2, .18, 'cowlWhite');
+    /* p.21 and p.23: the same size as the oil tank access door and beside it, aft (it was 0.2 x 0.18 m at 2:24 until 2026-10-14) */
+    ifsPanel('ifs-pce', 'tr-right', 'Precooler exhaust (PCE) door', 'Door in the right IFS aft of the oil tank access door, about the same size (p.21, p.23). The EEC can exercise it through the aircraft\'s onboard maintenance system: the PCE door test is one of the EEC tests listed on p.182.', -2.31, 2.62, .28, .26, 'cowlWhite');
     /* the AOC window sits over the air/oil cooler: ZS 748-779 and 9 to 10:30 o'clock on p.5, mid-length of the IFS on p.23. Curved to the IFS, in three sections */
     { PW.part('ifs-aoc-window', { parent: 'tr-left', label: 'Air/oil cooler window', src: 'p.5, p.20-23', attach: PW.parts.get('tr-left').obj.children[0],
         info: 'Opening in the left IFS at about 9:30 o\'clock (ZS 748 to 779), over the air/oil cooler, in three sections. Fan air enters through the forward section, passes aft through the cooler and leaves through the aft section. The IFS pressure-relief door is aft of it.' });
@@ -813,9 +828,12 @@
       PW.add('ifs-aoc-window', G.revolve([[x0, at(x0)], [x1, at(x1)], [x1, at(x1) + .004], [x0, at(x0) + .004]], { seg: 14, thetaStart: a - half, thetaLength: 2 * half }), 'darkBox');
       for (const t of [1 / 3, 2 / 3]) { const xx = x0 + (x1 - x0) * t;
         PW.add('ifs-aoc-window', G.revolve([[xx + .008, at(xx)], [xx - .008, at(xx)], [xx - .008, at(xx) + .008], [xx + .008, at(xx) + .008]], { seg: 14, thetaStart: a - half, thetaLength: 2 * half }), 'cowlWhite'); } }
-    ifsPanel('ifs-prd', 'tr-left', 'IFS pressure-relief door', 'Spring-latched door at 9 o\'clock (ZS 786 to 794) that opens at 3.5 psi core compartment overpressure, as after a bleed duct burst. Found open on the walkaround: find out why before flight.', -2.44, 9, .2, .2, 'cowlWhite');
-    ifsPanel('ifs-acc-scoop', 'tr-right', 'Active clearance control (ACC) inlet', 'Scoop on the right IFS at about 1:30 (p.23: the ACC inlet) that takes fan air for the turbine active clearance control. Its mouth faces forward into the fan stream; inside the IFS a duct takes the air to the inlet ring of the ACC air valve, and the joint parts when the reverser door is opened.', -1.62, 1.5, .18, .07, 'darkBox');
-    { const f = PW.kit.frame('ifs-acc-scoop', -1.62, 1.5, rIFS(-1.62) + .004);                                                // the raised hood, open forward
+    /* the manual's text puts the pressure-relief door "at the 9 o'clock position", behind the AOC exhaust; p.21, p.5's upper panel and
+       Brian's photo from below show it level with the cooler window, so it sits at 9:36 (it was at 9:00 until 2026-10-14) */
+    ifsPanel('ifs-prd', 'tr-left', 'IFS pressure-relief door', 'Spring-latched door in the left IFS just aft of the air/oil cooler window and level with it, at about 9:30 (ZS 786 to 794), that opens at 3.5 psi core compartment overpressure, as after a bleed duct burst. Found open on the walkaround: find out why before flight.', -2.44, 9.6, .2, .2, 'cowlWhite');
+    /* level with the oil tank access door's upper edge (p.21, p.23); it was at 1:30 until 2026-10-14 */
+    ifsPanel('ifs-acc-scoop', 'tr-right', 'Active clearance control (ACC) inlet', 'Scoop on the right IFS at about 2 o\'clock, level with the top of the oil tank access door (p.21, p.23), that takes fan air for the turbine active clearance control. Its mouth faces forward into the fan stream; inside the IFS a duct takes the air to the inlet ring of the ACC air valve, and the joint parts when the reverser door is opened.', -1.62, 2.05, .18, .07, 'darkBox');
+    { const f = PW.kit.frame('ifs-acc-scoop', -1.62, 2.05, rIFS(-1.62) + .004);                                               // the raised hood, open forward
       PW.kit.box('ifs-acc-scoop', f, [-.012, .014, 0], [.15, .026, .074], 'cowlWhite', { round: .011 });
       PW.kit.box('ifs-acc-scoop', f, [.064, .014, 0], [.004, .02, .062], 'darkBox', { round: .003 }); }
 
