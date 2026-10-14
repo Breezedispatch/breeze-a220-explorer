@@ -23,7 +23,7 @@
     capBlack:   () => new THREE.MeshStandardMaterial({ color: col('#1c1d1f'), roughness: .45, metalness: .25 }),
     plateAl:    () => new THREE.MeshStandardMaterial({ color: col('#cfd2d4'), roughness: .4, metalness: .6 }),
     oilGlass:   () => new THREE.MeshPhysicalMaterial({ color: col('#7a6a3a'), roughness: .08, metalness: 0, clearcoat: 1, clearcoatRoughness: .05 }),
-    quilt:      () => new THREE.MeshStandardMaterial({ color: col('#c9cbc8'), roughness: .42, metalness: .75, bumpMap: quiltTex(), bumpScale: .002, roughnessMap: quiltTex() }),
+    quilt:      () => new THREE.MeshStandardMaterial({ color: col('#c9cbc8'), roughness: .48, metalness: .42, bumpMap: quiltTex(), bumpScale: .002, roughnessMap: quiltTex() }),   // light silver in the photos: at metalness .75 it mirrored the dark backdrop (as the IFS blanket did)
     silicone:   () => new THREE.MeshStandardMaterial({ color: col('#c9531f'), roughness: .6, metalness: 0 }),
     tankAl:     () => new THREE.MeshStandardMaterial({ color: col('#c6cacb'), roughness: .5, metalness: .32, roughnessMap: PW.tex.noise('fine', 256, 40, .6, 1) }),   // formed and welded aluminium (oil tank)
     heatShield: () => new THREE.MeshStandardMaterial({ color: col('#c3c6c7'), roughness: .36, metalness: .72, bumpMap: shieldTex(), bumpScale: .0012, roughnessMap: shieldTex() }),   // embossed stainless heat shield round the oil tank (photo)
