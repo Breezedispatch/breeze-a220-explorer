@@ -242,7 +242,8 @@
         K.want.target.addScaledVector(right, -dx * s).addScaledVector(up, dy * s);
       } else { K.want.theta += dx * .006; K.want.phi = Math.min(3.05, Math.max(.08, K.want.phi - dy * .006)); }
     });
-    cv.addEventListener('pointerup', e => { const d = drag; drag = null; if (d && !d.moved && PW.onClick) PW.onClick(e); if (PW.onDragEnd) PW.onDragEnd(e); });
+    cv.addEventListener('pointerup', e => { const d = drag; drag = null; if (d && !d.moved && PW.onClick) PW.onClick(e); if (PW.onDragEnd) PW.onDragEnd(e, d); });
+    cv.addEventListener('dblclick', e => { if (PW.onDblClick) PW.onDblClick(e); });
     cv.addEventListener('wheel', e => { e.preventDefault(); K.want.r = Math.min(30, Math.max(.4, K.want.r * Math.pow(1.0012, e.deltaY))); }, { passive: false });
   };
   PW.updateCamera = function (dt) {
@@ -285,8 +286,9 @@
   /* ghost: a part drawn as faint glass, so what is inside shows without losing where the outside is */
   PW.setGhost = function (id, on) {
     for (const k of PW.sub(id)) { const p = PW.parts.get(k); p.ghost = on;
-      for (const key in p.mats) { const m = p.mats[key]; m.transparent = on; m.opacity = on ? .12 : 1; m.depthWrite = !on; m.needsUpdate = true; }
-      for (const m of p.meshes) m.castShadow = !on; }
+      for (const key in p.mats) { const m = p.mats[key], o = m.userData.ghost0 || (m.userData.ghost0 = { transparent: m.transparent, opacity: m.opacity, depthWrite: m.depthWrite });   // decals and placards are transparent of their own
+        m.transparent = on || o.transparent; m.opacity = on ? .12 * o.opacity : o.opacity; m.depthWrite = on ? false : o.depthWrite; m.needsUpdate = true; }
+      for (const m of p.meshes) { if (m.userData.cast0 === undefined) m.userData.cast0 = m.castShadow; m.castShadow = on ? false : m.userData.cast0; } }   // back to its own setting: decals and fasteners cast none
   };
 
   /* ---------------- explode ---------------- */

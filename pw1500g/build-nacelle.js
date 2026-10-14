@@ -1004,7 +1004,7 @@
     { const [a, b] = xr(['fan-blades', 'fan-hub']); off.fan = cur - a; cur = b + off.fan + GAP; stage('fan-rotor', [off.fan, 0, 0], S4); }
     { const [a, b] = xr(['inlet-cone']); const o = cur - a; cur = b + o + GAP; stage('inlet-cone', [o - off.fan, 0, 0], S4); }
     for (const [b, m] of [['bearing-1', 'fdgs'], ['bearing-1-5', 'fdgs'], ['bearing-2', 'lpc'], ['bearing-3', 'cic'], ['bearing-4', 'tic'], ['bearing-5', 'lpt'], ['bearing-6', 'tec']]) stage(b, [off[m] || 0, 0, 0], S4);
-    stage('shafts', [off.hpc, -1.0, 0], S4);
+    stage('shafts', [off.hpc, -.6, 0], S4);
     /* the module an outside part sits on: the one whose length covers the middle of the part */
     const carrier = id => { const c = bounds(id, P(id).meshes.length > 0).getCenter(V3()); let best = chain[0], bd = Infinity;
       for (const m of chain) { const [a, b] = span[m], d = c.x < a ? a - c.x : c.x > b ? c.x - b : 0; if (d < bd) { bd = d; best = m; } }
@@ -1012,12 +1012,14 @@
 
     /* layer 1: the nacelle */
     { const [a] = xr(['inlet']), all = cur + .2 - a; stage('inlet', [1.6, 0, 0], S1); stage('inlet', [all - 1.6, 0, 0], S4); }
-    stage('fan-cowl-left', [0, 2.1, -1.5], S1d); stage('fan-cowl-right', [0, 2.1, 1.5], S1d);
-    stage('fan-cowl-left', [0, 1.2, -.8], S4); stage('fan-cowl-right', [0, 1.2, .8], S4);                 // higher still once the core spreads out
-    for (const [id, s] of [['tr-left', -1], ['tr-right', 1]]) { stage(id, [-.3, 2.0, 2.0 * s], S1d); stage(id, [off.hpc * .6 + .3, 1.2, .8 * s], S4); }
-    for (const id of ['pylon', 'precooler', 'tras-control', 'fire']) stage(id, [0, 3.0, 0], S1);
-    for (const id of ['fire-left', 'fire-right']) stage(id, [0, -3.0, 0], S1);                     // the core cowl elements stay on their doors
-    stage('mounts', [0, 1.5, 0], S1);
+    /* The doors lift more than they spread, so from the usual three-quarter view they sit above the core rather than in front of it.
+       Until 2026-10-14 they went 4 to 4.5 m out and the pylon 3 m up, off the screen (Brian: "some stuff separates too much") */
+    stage('fan-cowl-left', [0, 1.5, -.95], S1d); stage('fan-cowl-right', [0, 1.5, .95], S1d);
+    stage('fan-cowl-left', [0, .5, -.25], S4); stage('fan-cowl-right', [0, .5, .25], S4);                  // a little higher once the core spreads out
+    for (const [id, s] of [['tr-left', -1], ['tr-right', 1]]) { stage(id, [-.3, 1.6, 1.1 * s], S1d); stage(id, [off.hpc * .6 + .3, .9, .35 * s], S4); }
+    for (const id of ['pylon', 'precooler', 'tras-control', 'fire']) stage(id, [0, 2.3, 0], S1);
+    for (const id of ['fire-left', 'fire-right']) stage(id, [0, -2.3, 0], S1);                     // the core cowl elements stay on their doors
+    stage('mounts', [0, 1.15, 0], S1);
 
     /* layer 2: the dressing */
     stage('eec', radial('eec', .5, 9), S2); stage('phmu', radial('phmu', .5, 9), S2); stage('pdos', radial('pdos', .4, 3), S2);
@@ -1028,15 +1030,22 @@
     for (const id of P('sensors').children) stage(id, radial(id, .3), S2);
     for (const id of P('borescope').children) stage(id, radial(id, .25), S2);
 
-    /* layer 3: the accessories */
-    stage('gearboxes', [0, -1.1, 0], S3);
+    /* layer 3: the accessories (the gearbox dropped 1.1 m until 2026-10-14) */
+    stage('gearboxes', [0, -.85, 0], S3);
     stage('oil-tank', radial('oil-tank', .75, 3), S3); stage('aoc', radial('aoc', .8, 10.5), S3);
     stage('vfgoohx', radial('vfgoohx', .65, 9), S3); stage('fohe', radial('fohe', .6, 11.5), S3);
+    stage('oil-front', [0, -.85, 0], S3);                                                          // the front oil tubes are on the gearbox's front face
 
-    /* layer 4: dressing and accessories follow the module they sit on; the anti-ice duct, harnesses and fan case units stay */
+    /* layer 4: dressing and accessories follow the module they sit on; the anti-ice duct and fan case units stay. The harnesses run
+       over many modules, so they lift clear of the spread core as one bundle instead of tangling through it (Brian: "not everything
+       separates") */
     stage('gearboxes', [off.hpc, 0, 0], S4); stage('oil', [off.combustor, 0, 0], S4); stage('fuel', [off.combustor, 0, 0], S4); stage('igniters', [off.combustor, 0, 0], S4);
+    stage('oil-front', [off.hpc - off.combustor, 0, 0], S4);                                        // with the gearbox, not the oil system
+    stage('vfg-aohx', [-off.combustor, 0, 0], S4);                                                  // the VFG air/oil cooler stays in the fan exit liner, on the fan case
+    stage('harnesses', [0, 1.1, 0], S4);
+    stage('n1-target', [off.lpc, 0, 0], S4);                                                        // the N1 target is the No. 2 bearing's coupling nut: with that bearing
     for (const id of ['hpc-sva', 'lpc-sva', 'bleed-25', 'hpc-bleed-valve', 'bleed-hp', 'buffer-air', 'hpt-cooling', 'tic-cooling', 'tacc', 'drain-mast'].concat(P('sensors').children, P('borescope').children))
-      stage(id, [carrier(id), 0, 0], S4);
+      stage(id, [id === 'nf-probe' ? off.fdgs : carrier(id), 0, 0], S4);                         // the fan speed probe sits in the No. 1 bearing support, on the FDGS
     PW.EXPLODE_SPAN = cur;
   });
 
