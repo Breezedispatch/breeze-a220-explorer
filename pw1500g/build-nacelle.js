@@ -462,12 +462,18 @@
         const ifo = []; for (let i = 0; i <= n; i++) { const xx = xa + (xb - xa) * i / n; ifo.push([xx, rIFS(xx)]); }
         PW.add(iid, G.revolve(G.shellProfile(ifo, ifo.map(([xx, r]) => [xx, r - .02])), { seg: 72, thetaStart: a0, thetaLength: al }), 'cowlWhite');
         PW.add(iid, metricUV(G.revolve(G.shellProfile(ifo.map(([xx, r]) => [xx, r - .02]), ifo.map(([xx, r]) => [xx, r - .032])), { seg: 72, thetaStart: a0 + deg(1), thetaLength: al - deg(2) }), a0), 'blanket'); }
+      /* the core cowl's two fire detection elements (built below): [x, clock of the upper end, clock of the lower end, which way the
+         lower end bends to its connectors: +1 forward, -1 aft], read off p.21 and Brian's photos from below; long one first */
+      const fireEls = sg > 0 ? [[-2.12, 2.15, 4.2, 1], [-1.60, 3.9, 4.2, -1]] : [[-2.23, 10.25, 8.5, 1], [-1.81, 9.0, 8.55, -1]];   // on the right the short one clears the OCM's filter cover and the leads pass above the tank's supply tube
+      const fireZones = fireEls.map(([xx, ha, hb]) => [xx + .02, xx - .02, Math.min(ha, hb) - .1, Math.max(ha, hb) + .1])
+        .concat([[fireEls[1][0] + .02, fireEls[0][0] - .02, Math.min(fireEls[0][2], fireEls[1][2]) - .3, Math.max(fireEls[0][2], fireEls[1][2]) + .3]]);   // the bends, connectors and leads
       /* photos: the blanket is made up in panels with raised hems, held by round stainless studs (a washer with the stud's nut standing
          in the middle) along the hems and across the panels, about 0.19 m apart; none over the openings, the fire elements or the
          bifurcation edges. Hems run round the engine at every other stud row and fore and aft along every third stud column */
       { const holes = sg > 0 ? [[-1.79, -2.07, 2.15, 3.35], [-2.20, -2.40, 2.1, 2.7], [-1.53, -1.71, 1.35, 1.65]] : [[-1.42, -2.08, 9.0, 10.6], [-2.34, -2.54, 8.65, 9.35]];
-        const fireX = [-1.43, side === 'right' ? -2.115 : -2.16], clk = th => (th / (Math.PI / 6) % 12 + 12) % 12, rB = xx => rIFS(xx) - .032;
-        const inHole = (xx, th, pad) => holes.some(([xa, xb, ha, hb]) => xx <= xa + pad && xx >= xb - pad && clk(th) >= ha - pad * 6 && clk(th) <= hb + pad * 6);
+        const clk = th => (th / (Math.PI / 6) % 12 + 12) % 12, rB = xx => rIFS(xx) - .032;
+        const inBox = (list, xx, th, pad) => list.some(([xa, xb, ha, hb]) => xx <= xa + pad && xx >= xb - pad && clk(th) >= ha - pad * 6 && clk(th) <= hb + pad * 6);
+        const inHole = (xx, th, pad) => inBox(holes, xx, th, pad), inFire = (xx, th, pad) => inBox(fireZones, xx, th, pad);
         const btn = [], nut = [], hems = [], cols = []; for (let th = it0 + deg(9); th < it0 + itl - deg(8); th += .33) cols.push(th);
         /* a hem is a flat fold about 18 mm wide standing 3 mm off the blanket, broken where it would cross an opening or a fire element */
         const hem = pts => { let run = []; const flush = () => { if (run.length > 1) { const [xa, ta] = run[0], [xb, tb] = run[run.length - 1];
@@ -475,10 +481,10 @@
               hems.push(G.revolve([[xa + .009, r + .001], [xa + .005, r - .003], [xa - .005, r - .003], [xa - .009, r + .001]], { seg: Math.max(2, Math.round((hi - lo) / deg(2))), thetaStart: lo, thetaLength: hi - lo })); }
             else { const pr = run.map(([xx]) => [xx, rB(xx) - .003]).concat(run.map(([xx]) => [xx, rB(xx) + .001]).reverse()), dth = .014 / rB(xa);
               hems.push(G.revolve(pr, { seg: 2, thetaStart: ta - dth / 2, thetaLength: dth })); } } run = []; };
-          for (const [xx, th] of pts) { if (inHole(xx, th, .03) || fireX.some(f => Math.abs(xx - f) < .03)) flush(); else run.push([xx, th]); } flush(); };
+          for (const [xx, th] of pts) { if (inHole(xx, th, .03) || inFire(xx, th, .015)) flush(); else run.push([xx, th]); } flush(); };
         let row = 0;
-        for (let xx = -1.06; xx > xTE - .02; xx -= .19, row++) { if (fireX.some(f => Math.abs(xx - f) < .045)) continue;   // to the blanket's aft end (a row hung below the bare aft collar until 2026-10-14)
-          for (const th of cols) { if (inHole(xx, th, 0)) continue;
+        for (let xx = -1.06; xx > xTE - .02; xx -= .19, row++) {                                        // to the blanket's aft end (a row hung below the bare aft collar until 2026-10-14)
+          for (const th of cols) { if (inHole(xx, th, 0) || inFire(xx, th, .025)) continue;
             const place = (g, dr) => g.rotateX(th).translate(...G.onRing(xx, rB(xx) - dr, th).toArray());
             btn.push(place(new THREE.CylinderGeometry(.019, .023, .004, 20), .002)); nut.push(place(new THREE.CylinderGeometry(.0062, .0062, .007, 6), .0075)); }
           if (row % 2) { const pts = []; for (let th = it0 + deg(4); th <= it0 + itl - deg(4); th += deg(2)) pts.push([xx, th]); hem(pts); } }
@@ -522,16 +528,46 @@
           const xx = L0 + (L1 - L0) * f, fv = PW.kit.frame(iid, xx, h, rIFS(xx));
           PW.kit.box(iid, fv, [-.004, .006, 0], [.07, .012, .042], 'cowlWhite', { round: .006 });                                     // the hood
           PW.kit.box(iid, fv, [.031, .0065, 0], [.004, .008, .03], 'darkBox', { round: .002 }); } }                                  // its mouth, facing forward
-      /* TTM p.268-269: two fire detection elements on each core cowl, forward and aft, each a pair of sensing tubes (loops A and B)
-         clipped to the blanket and running round the core; they open with the door. On the right the aft pair runs just aft of the oil
-         tank, clear of the oil tank access door; on the left just aft of the starter air valve, clear of the air/oil cooler window (it
-         crossed the window at x -1.98 until 2026-10-12) */
+      /* TTM 26-00: each fire loop, A and B, is five sensing elements in series to its FIDEX channel, one on the pylon and two on each
+         core cowl. p.21 (the IFS halves from inside) and Brian's photos from below show each core cowl's two as a pair of tubes side by
+         side in common clips, closed together at the upper end, their connectors at the lower end and a lead from the long pair to the
+         short one. On the left the long pair runs down between the air/oil cooler window and the pressure-relief door, from level with
+         the window's upper edge, and the short one stands under the window between its two openings; on the right the long pair runs
+         down along the oil tank access door's aft edge, from level with its upper edge, and the short one stands under the ACC inlet
+         port. Clocks are read off p.21's perspective (about +-0.2 h). Until 2026-10-14 each door had a forward and an aft pair running
+         the whole arc, which neither source shows */
       if (PW.parts.has('fire')) { const fid = `fire-${side}`;
-        PW.part(fid, { parent: 'fire', label: `Fire detection elements, ${side} core cowl`, attach: hinge, src: 'TTM ch. 26 (p.268-269)',
-          info: 'Two sensing elements of fire loops A and B on the inside of this core cowl, one forward and one aft, each a pair of tubes running round the core on clips. They are part of the reverser door and open with it.' });
-        for (const xx of [-1.43, side === 'right' ? -2.115 : -2.16]) for (const dx of [-.011, .011]) { const pts = []; for (let i = 0; i <= 18; i++) pts.push(G.onRing(xx + dx, rIFS(xx) - .042, it0 + deg(6) + (itl - deg(12)) * i / 18));
-          const g = G.tube(pts, .0035, { radial: 6 }), m = PW.add(fid, g, 'steel'); m.userData.isLine = true;
-          if (dx < 0) { const c = PW.add(fid, G.alongCurve(g.userData.curve, [.1, .3, .5, .7, .9], () => new THREE.BoxGeometry(.035, .008, .012)), 'steel'); c.userData.isLine = true; } } }
+        PW.part(fid, { parent: 'fire', label: `Fire detection elements, ${side} core cowl`, attach: hinge, src: 'TTM ch. 26 (p.268-269); p.21; photos',
+          info: (side === 'left' ? 'The two fire detection elements on the inside of the left core cowl: a long one running down between the air/oil cooler window and the pressure-relief door, and a short one under the window.'
+            : 'The two fire detection elements on the inside of the right core cowl: a long one running down along the aft edge of the oil tank access door, and a short one under the ACC inlet port.') +
+            ' In each, the loop A and loop B sensing tubes lie side by side in common clips, with their connectors at the lower end and a lead on to the next element. Each loop is five elements in series to its FIDEX control unit channel: two on each core cowl and one on the pylon. They are part of the reverser door and open with it.' });
+        const ro = xx => rIFS(xx) - .039, at = (xx, h) => G.onRing(xx, ro(xx), G.clock(h)), dh = (xx, d) => d / ro(xx) / (Math.PI / 6);   // tubes 3.5 mm off the blanket; d metres along the clock, in hours
+        const line = (pts, r) => { const g = G.tube(pts, r, { radial: 6 }); PW.add(fid, g, 'steel').userData.isLine = true; return g.userData.curve; };
+        /* an element: its tubes 22 mm apart, closed together round the top; at the lower end the two turn the same way, the inner one
+           tighter, so that their connectors sit one above the other. Returns the outer ends of the two connectors, inner first */
+        const element = ([xx, hTop, hBot, b]) => { const s = Math.sign(hBot - hTop), H = (x, d) => hBot + s * dh(x, d), pts = [];
+          const turn = inner => { const x0 = xx + (inner ? b : -b) * .011; return inner ? [[x0, 0], [x0 + b * .008, .02], [x0 + b * .03, .028], [x0 + b * .05, .028]]
+            : [[x0, 0], [x0 + b * .012, .035], [x0 + b * .04, .05], [x0 + b * .072, .05]]; };
+          const n = Math.max(3, Math.round(Math.abs(hBot - hTop) / .1)), legX = [xx - .011, xx + .011], inA = b < 0;   // the first leg is the inner one when the ends turn aft
+          turn(inA).slice().reverse().forEach(([x, d]) => pts.push(at(x, H(x, d))));
+          for (let i = 1; i <= n; i++) pts.push(at(legX[0], hBot + (hTop - hBot) * i / n));
+          for (let k = 1; k < 6; k++) { const a = Math.PI * k / 6; pts.push(at(xx - .011 * Math.cos(a), hTop - s * dh(xx, .011 * Math.sin(a)))); }
+          for (let i = 0; i < n; i++) pts.push(at(legX[1], hTop + (hBot - hTop) * i / n));
+          turn(!inA).forEach(([x, d]) => pts.push(at(x, H(x, d))));
+          const c = line(pts, .0035);
+          const nc = Math.max(3, Math.round(Math.abs(hBot - hTop) / .3));                                       // clips about 15 cm apart, six on the long left one as p.21 draws
+          for (let k = 0; k < nc; k++) { const f = PW.kit.frame(fid, xx, hBot + (hTop - hBot) * (k + .55) / nc, ro(xx)); PW.kit.box(fid, f, [0, 0, 0], [.035, .008, .012], 'steel', { round: .002 }); }
+          const ends = [0, 1].map(t => { const p = c.getPointAt(t), d = c.getTangentAt(t).multiplyScalar(t ? 1 : -1); return { p, d }; });
+          const cg = G.merge(ends.map(({ p, d }) => { const body = new THREE.CylinderGeometry(.0055, .0055, .022, 12), nut = new THREE.CylinderGeometry(.0072, .0072, .007, 6);   // connector and its coupling nut
+            body.translate(0, .006, 0); nut.translate(0, .02, 0); const g = G.merge([body, nut]);
+            g.applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d))); g.translate(p.x, p.y, p.z); return g; }));
+          cg.userData.solid = true; PW.add(fid, cg, 'steel');
+          const tip = ends.map(({ p, d }) => p.clone().addScaledVector(d, .024));
+          return inA ? tip : [tip[1], tip[0]]; };
+        const [l0, l1] = element(fireEls[0]), [s0, s1] = element(fireEls[1]);
+        /* the leads from the long element's connectors to the short one's, inner to inner, outer to outer */
+        for (const [a, z] of [[l0, s0], [l1, s1]]) { const pts = [a]; for (let i = 1; i < 6; i++) pts.push(a.clone().lerp(z, i / 6)); pts.push(z);
+          line(pts.map((p, i) => { if (i === 0 || i === pts.length - 1) return p; const r = Math.hypot(p.y, p.z), want = ro(p.x); return new THREE.Vector3(p.x, p.y * want / r, p.z * want / r); }), .003); } }
       const ac = []; for (let i = 0; i <= 10; i++) { const xx = xTE - .02 + (xCN + .004 - (xTE - .02)) * i / 10; ac.push([xx, rIFS(xx)]); }
       PW.add(iid, G.revolve(G.shellProfile(ac, ac.map(([xx, r]) => [xx, r - .008])), { seg: 72, thetaStart: t0, thetaLength: tl }), 'bareCowl');
       // bifurcation half-walls at the top (hinge beam) and bottom (latch beam)
