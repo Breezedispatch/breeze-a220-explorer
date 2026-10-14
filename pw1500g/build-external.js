@@ -96,8 +96,9 @@
       const m = new THREE.Matrix4().makeBasis(t, u, w), gs = (byPart[c.pid] = byPart[c.pid] || []);   // local x along the line, y toward the seat, z across
       const add = (g, x, y, z) => { g.translate(x, y, z); g.applyMatrix4(m); g.translate(c.p.x, c.p.y, c.p.z); gs.push(g); };
       const bw = Math.min(.014, c.band + .002), y0 = c.r - .001, y1 = dist, hexZ = () => new THREE.CylinderGeometry(.0034, .0034, .003, 6).rotateX(Math.PI / 2);
-      add(new THREE.BoxGeometry(bw, .012, .004), 0, y0 + .006, 0);                                     // the strap's two ends, the tab
-      add(hexZ(), 0, y0 + .008, -.0035);                                                                  // the bolt through tab and bracket
+      const tl = Math.min(.012, y1 - y0 - .0025);                                                         // a line sitting close to the surface gets a short tab bolted straight to it
+      add(new THREE.BoxGeometry(bw, tl, .004), 0, y0 + tl / 2, 0);                                        // the strap's two ends, the tab
+      add(hexZ(), 0, y0 + Math.min(.008, tl * .6), -.0035);                                               // the bolt through tab and bracket
       if (y1 - y0 - .004 > .003) add(new THREE.BoxGeometry(bw, y1 - y0 - .004, .0025), 0, (y0 + .004 + y1) / 2, .00325);   // the strip
       add(new THREE.BoxGeometry(bw + .004, .0025, .02), 0, y1 - .00125, .0115);                          // the foot on the surface
       add(new THREE.CylinderGeometry(.0034, .0034, .003, 6), 0, y1 - .004, .015); }                      // and its bolt
