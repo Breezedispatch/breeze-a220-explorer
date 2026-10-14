@@ -31,7 +31,9 @@
     siliconeSeal: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#9a4430'), roughness: .5, metalness: 0 }),         // the red-brown bulb fire seals (photos)
     gasketOrange: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#cf6a3e'), roughness: .55, metalness: 0 }),        // orange silicone gaskets round the IFS openings (photos)
     cascadeGrey: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#4b5056'), roughness: .5, metalness: .5 }),
-    bareCowl: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#a9a59b'), roughness: .45, metalness: .85, roughnessMap: PW.tex.noise('cast', 256, 14, .55, 1) }),
+    /* the IFS aft collar and the pylon's heat shield: dull satin metal. More metallic, it mirrored the dark backdrop and read near black
+       from aft, where the rear photo shows the heat shield a mid grey (about 0.4 of the white paint's brightness) */
+    bareCowl: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#a9a59b'), roughness: .55, metalness: .5, roughnessMap: PW.tex.noise('cast', 256, 14, .55, 1) }),
     horGrey: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#4b5157'), roughness: .42, metalness: .55 }),   // the dark grey hold-open rods (photos)
     horRed: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#c8261e'), roughness: .5, metalness: .1 }),       // a hold-open rod's collar band: unlocked
     horGreen: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#2f9a3c'), roughness: .5, metalness: .1 }),     // and locked (p.41)

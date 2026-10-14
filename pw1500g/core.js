@@ -101,7 +101,7 @@
     nickel:       () => new THREE.MeshStandardMaterial({ color: col('#9a9690'), roughness: .42, metalness: .9, roughnessMap: noiseTex('cast', 256, 14, .55, 1) }),
     hotCase:      () => new THREE.MeshStandardMaterial({ color: col('#8c7a68'), roughness: .5, metalness: .85, roughnessMap: noiseTex('cast', 256, 14, .55, 1), vertexColors: false }),
     tbc:          () => new THREE.MeshStandardMaterial({ color: col('#d8d2c3'), roughness: .75, metalness: .05 }),
-    lptBlade:     () => new THREE.MeshStandardMaterial({ color: col('#8f8981'), roughness: .45, metalness: .85 }),
+    lptBlade:     () => new THREE.MeshStandardMaterial({ color: col('#4f4a45'), roughness: .55, metalness: .8, envMapIntensity: .35 }),   // oxidised: the last stage reads near black from aft (rear photos)
     combLiner:    () => new THREE.MeshStandardMaterial({ color: col('#c9c3b5'), roughness: .7, metalness: .2 }),
     castAl:       () => new THREE.MeshStandardMaterial({ color: col('#a4a8a6'), roughness: .62, metalness: .55, roughnessMap: noiseTex('cast', 256, 14, .55, 1), bumpMap: noiseTex('cast', 256, 14, .55, 1), bumpScale: .0008 }),
     accPaint:     () => new THREE.MeshStandardMaterial({ color: col('#7d8287'), roughness: .55, metalness: .3 }),

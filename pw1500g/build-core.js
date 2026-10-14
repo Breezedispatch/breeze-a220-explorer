@@ -20,21 +20,28 @@
     fanCaseOlive:() => new THREE.MeshStandardMaterial({ color: new THREE.Color('#5f5f45'), roughness: .62, metalness: .08 }),
     rubTeal:     () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#6fae98'), roughness: .7, metalness: .05 }),
     linerDark:   () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#25282b'), roughness: .62, metalness: .2 }),
+    linerKhaki:  () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#958e50'), roughness: .55, metalness: .05 }),   // the band seen through the FEGVs (core photos)
     fegvDark:    () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#1d222a'), roughness: .45, metalness: .35 }),
     mint:        () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#9fd3bb'), roughness: .55, metalness: .05 }),
     lime:        () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#a4c64a'), roughness: .55, metalness: .05 }),
-    hotNozzle:   () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#a39274'), roughness: .38, metalness: .9 }),
-    plugDark:    () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#6d655b'), roughness: .42, metalness: .85 }),
+    hotNozzle:   () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#ffffff'), vertexColors: true, roughness: .38, metalness: .9 }),   // straw outside, sooty bore (buildExhaust)
+    /* the rear and underside photos: the plug is satin warm grey, far lighter than the turbine exit round it, and its flat tip is cream */
+    plug:        () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#ffffff'), vertexColors: true, roughness: .5, metalness: .6 }),   // shade set per vertex (buildExhaust)
+    plugTip:     () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#c4b99e'), roughness: .6, metalness: .1 }),
+    /* the exhaust case's struts and walls in the gas path: oxidised in service and deep in the duct, they read near black from aft in
+       the rear photos, only their edges catching the light */
+    gasPath:     () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#4f4a45'), roughness: .55, metalness: .8, envMapIntensity: .35 }),
     heatTint:    () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#ffffff'), vertexColors: true, roughness: .42, metalness: .85, roughnessMap: PW.tex.noise('cast', 256, 14, .55, 1) }),   // temper colours set per vertex (tint)
   });
   /* heat tint on a revolved case: colour stops along x (forward to aft), patchy round the circumference as on a real case (photos from
      below: silver over the LPT, blue and violet over the TEC, straw to bronze at its aft flange and on the nozzle) */
-  const tint = (g, stops) => { const p = g.attributes.position, c = new Float32Array(p.count * 3), a = new THREE.Color(), b = new THREE.Color(), cs = stops.map(([x, h]) => [x, new THREE.Color(h)]);
+  const tint = (g, stops, amp) => { amp = amp === undefined ? 1 : amp;                                       // amp scales the patchiness
+    const p = g.attributes.position, c = new Float32Array(p.count * 3), a = new THREE.Color(), b = new THREE.Color(), cs = stops.map(([x, h]) => [x, new THREE.Color(h)]);
     for (let i = 0; i < p.count; i++) { const x = p.getX(i), th = Math.atan2(p.getZ(i), p.getY(i));
       let k = 0; while (k < cs.length - 2 && x < cs[k + 1][0]) k++;
       const [x0, c0] = cs[k], [x1, c1] = cs[k + 1], t = Math.min(1, Math.max(0, (x0 - x) / (x0 - x1)));
       const n = .5 + .25 * Math.sin(th * 5 + x * 23) + .25 * Math.sin(th * 11 - x * 41 + 1.3);              // smooth patches, 0..1
-      a.copy(c0).lerp(c1, Math.min(1, Math.max(0, t + (n - .5) * .5))).multiplyScalar(.9 + .16 * n); c.set([a.r, a.g, a.b], i * 3); }
+      a.copy(c0).lerp(c1, Math.min(1, Math.max(0, t + (n - .5) * .5 * amp))).multiplyScalar(1 + (.16 * n - .1) * amp); c.set([a.r, a.g, a.b], i * 3); }
     g.setAttribute('color', new THREE.BufferAttribute(c, 3)); return g; };
 
   /* ---------------- helpers ---------------- */
@@ -195,7 +202,7 @@
         PW.add(pid, G.revolve(G.shellProfile(b, a), { seg: 160 }), mat); };
       liner('fan-acoustic-fwd', 'Forward acoustic panels', 'Perforated acoustic panels ahead of the fan blades that absorb fan noise. Check for delamination, dents and blocked perforations.', LZ.frontAcousticPanels.x_from - .006, LZ.frontAcousticPanels.x_to, 'linerDark');
       liner('fan-ice-liner', 'Ice liners', 'Replaceable liners just aft of the fan that protect the case from ice shed by the blades.', LZ.iceLiner.x_from, LZ.iceLiner.x_to, 'linerDark');
-      liner('fan-rear-liner', 'Rear acoustic liner segments', 'Acoustic liner segments between the fan and the exit guide vanes.', LZ.rearAcousticLiner.x_from, LZ.rearAcousticLiner.x_to, 'linerDark');
+      liner('fan-rear-liner', 'Rear acoustic liner segments', 'Acoustic liner segments between the fan and the exit guide vanes: the khaki band you see through the vanes with the reverser doors open.', LZ.rearAcousticLiner.x_from, LZ.rearAcousticLiner.x_to, 'linerKhaki');
       /* the rub strip: its measured outline is a closed wedge over the blade tips (p.53), the pale teal band in the front photos */
       PW.part('fan-rub-strip', { parent: 'fan-case', label: 'Fan blade rub strip', src: 'p.53, p.60; photos',
         info: 'Abradable liner over the blade tips, the pale green band you see round the fan from the front. The blades rub into it as they lengthen under centrifugal load, holding a tight tip clearance. Heavy rubbing is repaired by refurbishing the strip.' });
@@ -595,7 +602,7 @@
       if (rot) { const r = bladeRow(pid, rr, { role: 'tblade', s: -1, gHub: 22, gTip: 30, camHub: .2, camTip: .14, tHub: .14, tTip: .08, mat: 'lptBlade', sigma: 1.25 });
         PW.add(pid, G.ring(rr.x_le - .002, rr.x_te + .002, r.rt, r.rt + .006, { seg: 128 }), 'lptBlade');      // interlocking tip shrouds
         disk(pid, rr.x_le, rr.x_te, r.rh, .06, { mat: 'nickel', web: .01, bore: .025 }); }
-      else statorRow(pid, rr, { role: 'ngv', s: -1, gHub: 48, gTip: 52, camHub: .18, camTip: .15, tHub: .14, tTip: .12, mat: 'nickel', sigma: 1.1 }); }
+      else statorRow(pid, rr, { role: 'ngv', s: -1, gHub: 48, gTip: 52, camHub: .18, camTip: .15, tHub: .14, tTip: .12, mat: 'lptBlade', sigma: 1.1 }); }
     PW.part('lpt-case', { parent: 'lpt', label: 'LPT case', src: 'p.53', info: 'Case between flanges N1 and P carrying the LPT vane rings, with the clearance control ring manifolds round it.' });
     PW.add('lpt-case', tint(G.revolve(G.shellProfile(seg('outer', -2.20, -2.47, 20), seg('outer', -2.20, -2.47, 20).map(([x, r]) => [x, r - .008])), { seg: 160 }),
       [[-2.20, '#9c9894'], [-2.40, '#97969a'], [-2.47, '#8c8a96']]), 'heatTint');
@@ -604,9 +611,9 @@
     PW.part('tec', { label: 'Turbine exhaust case (TEC)', explode: [-2.15, 0, 0], src: 'p.53-55, p.44-49; TTM ch. 72',
       info: 'The last structural case. Its struts carry the No. 5 and 6 bearing housing, its outer ring carries the aft engine mount lugs at the top, and the core nozzle and plug bolt to its rear flanges (To and Ti). Station 5 is at its exit.' });
     const tec = rowBy(/TEC strut/)[0];
-    if (tec) statorRow('tec', tec, { count: 10, gHub: 0, gTip: 0, camHub: 0, camTip: 0, tHub: .14, tTip: .14, mat: 'hotCase', bands: false });
-    wall('tec', 'coreCase', -2.47, -2.71, .006, 'hotCase', { n: 16 });
-    wall('tec', 'coreHub', -2.47, -2.71, -.006, 'hotCase', { n: 16 });
+    if (tec) statorRow('tec', tec, { count: 10, gHub: 0, gTip: 0, camHub: 0, camTip: 0, tHub: .14, tTip: .14, mat: 'gasPath', bands: false });
+    wall('tec', 'coreCase', -2.47, -2.71, .006, 'gasPath', { n: 16 });
+    wall('tec', 'coreHub', -2.44, -2.71, -.006, 'gasPath', { n: 16 });                 // from just behind the last LPT rotor, so no disc face shows through from aft
     /* the outer case as Brian's photo from below shows it: a smooth barrel from the LPT/TEC flange (r 0.468) easing down to the rear
        flange (0.437), where a bolted ring steps down to the core nozzle. Until 2026-10-14 it followed the p.53 trace, whose two one-point
        spikes (x -2.556 and -2.615, r 0.494) made knife-edge ridges round the case, over a cone down to r 0.40 (Brian: "really sharp").
@@ -618,26 +625,38 @@
         [[-2.47, '#8a8c95'], [-2.52, '#666b98'], [-2.575, '#4652a0'], [-2.63, '#64529a'], [-2.675, '#8e7a5e'], [-2.71, '#a28b62']]), 'heatTint');
       PW.add('tec', G.ring(-2.699, -2.71, .412, .443, { seg: 160 }), 'hotCase'); }                                              // the rear flange ring
     if (L().tecCentreBody) { const cb = L().tecCentreBody.slice().sort((a, b) => b[0] - a[0]); const prof = cb.concat([[cb[cb.length - 1][0], 0], [cb[0][0], 0]]);
-      PW.add('tec', G.revolve(prof, { seg: 96, crease: 40 }), 'hotCase'); }
+      PW.add('tec', G.revolve(prof, { seg: 96, crease: 40 }), 'gasPath'); }
     for (const dz of [-.07, .07]) { const lug = new THREE.Mesh(G.roundedBox(.07, .06, .025, .006)); lug.position.set(-2.58, PW.tecR(-2.58) + .022, dz); PW.add('tec', lug, 'hotCase', { solid: true }); }   // aft mount lugs at 12 o'clock
   }
 
   function buildExhaust() {
     /* core nozzle (exhaust sleeve) and plug: from the nacelle stations, TEC flange To to ZS 816.2 and the plug tip at ZS 833.3 */
     PW.part('exhaust', { label: 'Core nozzle and exhaust plug', explode: [-2.6, 0, 0], src: 'TTM ch. 01 Fig. 28, ch. 78; photos',
-      info: 'The core nozzle (exhaust sleeve) bolts to the TEC outer flange and the plug to its inner flange. Both are bare heat-resisting metal, straw to bronze with heat. The core stream leaves here; it is never reversed.\n\nOn the walkaround look into the nozzle for metal on the plug or turbine exit, which would mean internal damage.' });
+      info: 'The core nozzle (exhaust sleeve) bolts to the TEC outer flange and the plug to its inner flange. Both are bare heat-resisting metal. The plug is a satin warm grey cone ending in a flat cream tip with a small hole at its centre. The core stream leaves here; it is never reversed.\n\nOn the walkaround look into the nozzle for metal on the plug or turbine exit, which would mean internal damage.' });
     const NC = D.GEN.nacelle, xTo = D.GEN.flanges.find(f => /^To /.test(f.name)).x, xN = NC.coreNozzleExit.x, xP = NC.plugTip.x;
     const rTo = rAt('outer', -2.70), rN = .385;
     const nozOut = [[xTo, rTo + .004], [xTo - .25, rTo - .015], [xN, rN + .004]], nozIn = [[xTo, rTo - .006], [xTo - .25, rTo - .024], [xN, rN - .002]];
-    PW.add('exhaust', G.revolve(G.shellProfile(nozOut, nozIn), { seg: 128, crease: 20 }), 'hotNozzle');
-    /* plug: bolts to flange Ti at the TEC hub (about 0.22 m radius), about 0.33 m across at the nozzle exit (TTM Fig. 28), then a long
-       cone to a small rounded tip at ZS 833.3, as in the rear photos */
-    /* a sheet-metal shell (it reads hollow in a section cut), with a small closed tip */
-    const rTi = (D.GEN.flanges.find(f => /^Ti /.test(f.name)).r_in + .01), plug = [], n = 18;
+    /* the bore is sooty and in shadow, near black from aft in the rear photos behind the bright lip */
+    { const g = G.revolve(G.shellProfile(nozOut, nozIn), { seg: 128, crease: 20 }), p = g.attributes.position, nm = g.attributes.normal, c = new Float32Array(p.count * 3);
+      const cOut = new THREE.Color('#a39274').convertSRGBToLinear(), cIn = new THREE.Color('#3a3530').convertSRGBToLinear();
+      for (let i = 0; i < p.count; i++) { const y = p.getY(i), z = p.getZ(i), r = Math.hypot(y, z) || 1, k = (nm.getY(i) * y + nm.getZ(i) * z) / r < -.5 ? cIn : cOut; c.set([k.r, k.g, k.b], i * 3); }
+      g.setAttribute('color', new THREE.BufferAttribute(c, 3)); PW.add('exhaust', g, 'hotNozzle'); }
+    /* plug: bolts to flange Ti at the TEC hub (about 0.22 m radius), about 0.33 m across at the nozzle exit (TTM Fig. 28), then a straight
+       cone to a flat tip at ZS 833.3. The rear and underside photos show the tip blunt, about 8 cm across (a quarter of the plug's width at
+       the nozzle exit), with a cream face and a small hole at its centre */
+    /* a sheet-metal shell (it reads hollow in a section cut), closed at the tip */
+    const rTi = (D.GEN.flanges.find(f => /^Ti /.test(f.name)).r_in + .01), plug = [], n = 18, rT = .039;
     for (let i = 0; i <= n; i++) { const t = i / n, x = xTo + (xN - xTo) * t; plug.push([x, rTi - (rTi - .165) * Math.pow(t, 1.3)]); }
-    for (let i = 1; i <= n; i++) { const t = i / n, x = xN + (xP - xN) * t; plug.push([x, Math.max(.006, .165 * Math.pow(1 - t, 1.08) + .006 * t)]); }
-    const inner = plug.filter(p => p[1] > .03).map(([x, r]) => [x - .002, r - .004]);
-    PW.add('exhaust', G.revolve(plug.concat([[xP - .006, 0], [inner[inner.length - 1][0] + .01, 0]]).concat(inner.reverse()), { seg: 96, crease: 30 }), 'plugDark');
+    for (let i = 1; i <= n; i++) { const t = i / n, x = xN + (xP + .006 - xN) * t; plug.push([x, .165 + (rT + .003 - .165) * t]); }
+    plug.push([xP + .002, rT + .001], [xP, rT - .001]);                                                     // round-over onto the flat end
+    const inner = plug.filter(p => p[0] > xP + .03).map(([x, r]) => [x + .001, r - .004]);
+    /* inside the exhaust case the plug is as dark as the gas path round it; it lightens to the satin grey toward the nozzle exit */
+    const lin = h => '#' + new THREE.Color(h).convertSRGBToLinear().getHexString();
+    PW.add('exhaust', tint(G.revolve(plug.concat([[xP, 0], [inner[inner.length - 1][0], 0]]).concat(inner.reverse()), { seg: 96, crease: 30 }),
+      [[xTo, lin('#4f4a45')], [xN + .1, lin('#6e675e')], [xN - .06, lin('#a89e90')], [xP, lin('#ada394')]], .35), 'plug');
+    /* the tip's cream face and the hole at its centre, standing just proud of the end */
+    PW.add('exhaust', G.revolve([[xP, 0], [xP, rT - .003], [xP - .0015, rT - .004], [xP - .0015, 0]], { seg: 64, crease: 30 }), 'plugTip');
+    PW.add('exhaust', G.revolve([[xP - .0015, 0], [xP - .0015, .0045], [xP - .0018, .0045], [xP - .0018, 0]], { seg: 24 }), 'rubber');
   }
 
   function buildShafts(SP) {
