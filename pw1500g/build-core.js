@@ -24,6 +24,9 @@
     /* the FEGVs' polyurethane coat (p.60): satin blue-grey in the core photos, clearly lighter than the dark fan blades seen between them */
     fegvPU:      () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#56606c'), roughness: .4, metalness: .3 }),
     mint:        () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#9fd3bb'), roughness: .55, metalness: .05 }),
+    /* the mount ring's brushed titanium: in the photos from below and from the core it is the lightest thing at the back of the fan case,
+       about 1.5 times as bright as the olive shell. As polished titanium (metalness .95) it mirrored the dark backdrop and read black */
+    tiSatin:     () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#bdb8b0'), roughness: .45, metalness: .55, roughnessMap: PW.tex.noise('brushed', 256, 6, .5, 1, 8) }),
     lime:        () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#a4c64a'), roughness: .55, metalness: .05 }),
     hotNozzle:   () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#ffffff'), vertexColors: true, roughness: .38, metalness: .9 }),   // straw outside, sooty bore (buildExhaust)
     /* the rear and underside photos: the plug is satin warm grey, far lighter than the turbine exit round it, and its flat tip is cream */
@@ -212,10 +215,10 @@
       PW.part('mount-ring', { parent: 'fan-case', label: 'Titanium mount ring and V-groove (flange D)', src: 'p.60-61; TTM ch. 72',
         info: 'Titanium ring round the aft end of the fan case. It carries the forward engine mount lugs at 12 o\'clock, and its V-groove takes the V-blade on each thrust reverser door, which aligns and supports the doors when they are closed and latched.' });
       const rM = G.interp(co, -.72);
-      PW.add('mount-ring', G.revolve([[-.66, rM - .004], [-.66, rM + .016], [xD + .03, rM + .016], [xD + .018, rM + .004], [xD + .006, rM + .022], [xD - .006, rM + .022], [xD - .006, rM - .004]], { seg: 160, crease: 30 }), 'titanium');
+      PW.add('mount-ring', G.revolve([[-.66, rM - .004], [-.66, rM + .016], [xD + .03, rM + .016], [xD + .018, rM + .004], [xD + .006, rM + .022], [xD - .006, rM + .022], [xD - .006, rM - .004]], { seg: 160, crease: 30 }), 'tiSatin');
       const ml = D.GEN.externals.forwardMountLugs12oclock;
       for (const dz of [-.06, .06]) { const lug = new THREE.Mesh(G.roundedBox(ml.x_from - ml.x_to + .02, ml.r_top - ml.r_base + .02, .035, .008));
-        lug.position.set((ml.x_from + ml.x_to) / 2, (ml.r_top + ml.r_base) / 2, dz); PW.add('mount-ring', lug, 'titanium', { solid: true }); }
+        lug.position.set((ml.x_from + ml.x_to) / 2, (ml.r_top + ml.r_base) / 2, dz); PW.add('mount-ring', lug, 'tiSatin', { solid: true }); }
       /* precooler duct inlet: four-piece titanium casting at 12 o'clock behind the FEGVs, taking fan air up into the pylon precooler (p.60) */
       PW.part('precooler-inlet', { parent: 'fan-case', label: 'Precooler duct inlet', src: 'p.60-61; p.45; p.297',
         info: 'Four-piece titanium casting at 12 o\'clock behind the fan exit guide vanes. It is the leading edge of the upper bifurcation across the fan duct: fan air enters the tall mouth in its nose and turns aft inside it into the round outlet, where the bellows, the fan air valve and the duct to the pylon-mounted precooler follow. Its aft edges are the seal lands for the thrust reverser doors at the upper bifurcation, and a flange on top ties it to the fan case structure under the pylon.' });
