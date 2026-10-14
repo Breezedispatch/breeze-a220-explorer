@@ -61,6 +61,7 @@
   /* a routed line with clamps: kind 'tube' | 'hose' | 'harness' | 'duct'. The tube and its clamps, end nuts and bands share a
      lineId, so the connection audit can tell a line's own end fittings from whatever it plugs into */
   let lineSeq = 0;
+  const clampLog = PW.clampLog = [];
   function line(pid, pts, r, kind, o) { o = o || {};
     const inCore = pts.reduce((s, p) => s + (p.isVector3 ? p.x : p[0]), 0) / pts.length < -.95;                    // aft of the fan case, in the core compartment
     const mat = o.mat || { tube: 'tube', hose: 'fireSleeve', harness: inCore ? 'harnessCore' : 'harness', duct: 'insulation', black: 'blackHose', cable: 'braidSteel' }[kind] || 'tube', lid = ++lineSeq;
@@ -72,12 +73,35 @@
     if (n > 0) { const ts = []; for (let i = 1; i <= n; i++) ts.push(i / (n + 1));
       /* clamps are thin bands: orange cushioned P-clamps on small lines, steel V-band couplings on large ducts */
       const big = kind === 'duct' || r > .03, band = Math.min(r * 1.6, big ? .022 : .016);
-      tag(PW.add(pid, G.alongCurve(curve, ts, () => new THREE.CylinderGeometry(r + Math.min(.008, r * .35), r + Math.min(.008, r * .35), band, 16)), big ? 'steel' : kind === 'harness' ? 'connector' : 'clampOrange', { shadow: false })); }
+      tag(PW.add(pid, G.alongCurve(curve, ts, () => new THREE.CylinderGeometry(r + Math.min(.008, r * .35), r + Math.min(.008, r * .35), band, 16)), big ? 'steel' : kind === 'harness' ? 'connector' : 'clampOrange', { shadow: false }));
+      if (!big) for (const t of ts) clampLog.push({ pid, lid, r: r + Math.min(.008, r * .35), band, p: curve.getPointAt(t), d: curve.getTangentAt(t) }); }   // P-clamps, for their brackets (below)
     if (o.ends !== false && kind !== 'duct') tag(PW.add(pid, G.alongCurve(curve, [0.012, .988], () => new THREE.CylinderGeometry(r * 1.6, r * 1.6, r * 2.2, 6)), kind === 'harness' ? 'connector' : 'steel', { shadow: false }));
     if (o.bands) tag(PW.add(pid, G.alongCurve(curve, o.bands, () => new THREE.CylinderGeometry(r + .0018, r + .0018, .012, 14)), 'clampOrange', { shadow: false }));   // orange identification sleeves (photos)
     if (o.labels) for (const [t, m] of o.labels) tag(PW.add(pid, G.alongCurve(curve, [t], () => new THREE.CylinderGeometry(r + .0015, r + .0015, Math.max(.035, r * 3.2), 20)), m || 'labelWhite', { shadow: false }));   // printed ID sleeves (photos: white and blue on the core hoses)
     return curve;
   }
+  /* P-clamp brackets. A small line's clamp is a cushioned strap whose two ends make a tab, bolted to a bracket on the engine structure
+     or a unit beside it. PW.BRACKETS (build-brackets.js, baked by the research folder's tools/bake-brackets.js) lists each clamp with a
+     clear seat, by its position to the millimetre: [the distance from the line's centre to that surface, the bracket's direction round
+     the line, in radians from straight in toward the engine axis]. Those clamps get the tab and its bolt, a strip to the surface and a
+     bolted foot; any other clamp, or one whose line has moved since the table was baked, keeps its plain band. Re-bake after moving
+     lines. The frame here must match frameAt() in the bake tool */
+  function supportClamps() {
+    const B = PW.BRACKETS; if (!B || PW.noBrackets) return;
+    const byPart = {};
+    for (const c of clampLog) { const e = B[`${Math.round(c.p.x * 1000)},${Math.round(c.p.y * 1000)},${Math.round(c.p.z * 1000)}`]; if (!e) continue;
+      const [dist, th] = e, t = c.d.clone().normalize(), inw = V(0, -c.p.y, -c.p.z).normalize(), u0 = inw.addScaledVector(t, -inw.dot(t));
+      if (u0.length() < .1) u0.set(0, 1, 0).addScaledVector(t, -t.y); u0.normalize();
+      const b = V().crossVectors(t, u0), u = u0.clone().multiplyScalar(Math.cos(th)).addScaledVector(b, Math.sin(th)).normalize(), w = V().crossVectors(t, u);
+      const m = new THREE.Matrix4().makeBasis(t, u, w), gs = (byPart[c.pid] = byPart[c.pid] || []);   // local x along the line, y toward the seat, z across
+      const add = (g, x, y, z) => { g.translate(x, y, z); g.applyMatrix4(m); g.translate(c.p.x, c.p.y, c.p.z); gs.push(g); };
+      const bw = Math.min(.014, c.band + .002), y0 = c.r - .001, y1 = dist, hexZ = () => new THREE.CylinderGeometry(.0034, .0034, .003, 6).rotateX(Math.PI / 2);
+      add(new THREE.BoxGeometry(bw, .012, .004), 0, y0 + .006, 0);                                     // the strap's two ends, the tab
+      add(hexZ(), 0, y0 + .008, -.0035);                                                                  // the bolt through tab and bracket
+      if (y1 - y0 - .004 > .003) add(new THREE.BoxGeometry(bw, y1 - y0 - .004, .0025), 0, (y0 + .004 + y1) / 2, .00325);   // the strip
+      add(new THREE.BoxGeometry(bw + .004, .0025, .02), 0, y1 - .00125, .0115);                          // the foot on the surface
+      add(new THREE.CylinderGeometry(.0034, .0034, .003, 6), 0, y1 - .004, .015); }                      // and its bolt
+    for (const pid in byPart) { const g = G.merge(byPart[pid]); g.userData.solid = true; PW.add(pid, g, 'stainless', { shadow: false }); } }
   /* where along a routed line (0..1 by length) it reaches station x: for sleeves and boots where it passes through a panel */
   function tAt(curve, x) { let tb = 0, best = Infinity; for (let i = 0; i <= 400; i++) { const d = Math.abs(curve.getPointAt(i / 400).x - x); if (d < best) { best = d; tb = i / 400; } } return tb; }
 
@@ -1774,6 +1798,7 @@
         const blk = new THREE.ExtrudeGeometry(sh, { depth: .006, bevelEnabled: true, bevelThickness: .0008, bevelSize: .0008, bevelSegments: 1 });
         blk.rotateX(-Math.PI / 2); blk.translate(0, .008, 0); blk.userData.solid = true; PW.add('drain-mast', blk, 'phenolic', { into: g });
         plate.forEach(([a, t]) => { Kt.cyl('drain-mast', g, [a, .015, t], 'y', .0043, .005, 'brass'); Kt.cyl('drain-mast', g, [a, .0177, t], 'y', .0027, .0008, 'darkBox'); }); } }
+    supportClamps();
   }
   /* a small circle profile (tori for manifolds) */
   function circ(x, r, rad, n) { const out = []; for (let i = 0; i < n; i++) { const a = i / n * TAU; out.push([x + rad * Math.cos(a), r + rad * Math.sin(a)]); } return out; }
