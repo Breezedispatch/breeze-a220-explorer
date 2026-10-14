@@ -887,9 +887,13 @@
       for (const xx of [-1.93, -1.965, -2.0]) PW.add('tacc', G.revolve(circ(xx, .29, .006, 8), { seg: 128, ...bs }), 'nickel');
       /* the LPT spray rings stop either side of 6 o'clock, their ends closed, leaving the gap the No. 5/6 bearing oil tubes and the
          deoiler vent duct run through (the gap is inferred: the manual's render shows only the top of the manifolds) */
-      { const ga = G.clock(5.72), gb = G.clock(6.28);
+      /* the photos from below show them as round polished tubes, with orange sleeves on their ends; they were square bars until
+         2026-10-14 */
+      { const ga = G.clock(5.72), gb = G.clock(6.28), sl = [];
         for (const xx of [-2.25, -2.32, -2.39]) { const rr = Math.max(rCase(xx), .24) + .025;
-          PW.add('tacc', G.revolve([[xx + .012, rr - .012], [xx - .012, rr - .012], [xx - .012, rr + .012], [xx + .012, rr + .012]], { seg: 128, crease: 80, thetaStart: gb, thetaLength: TAU - (gb - ga) }), 'steel'); } }
+          PW.add('tacc', G.revolve(circ(xx, rr, .011, 10), { seg: 128, thetaStart: gb, thetaLength: TAU - (gb - ga) }), 'stainless');
+          for (const a of [ga - .09, gb + .09]) sl.push(G.revolve(circ(xx, rr, .0135, 10), { seg: 6, thetaStart: a - .05, thetaLength: .1 })); }
+        PW.add('tacc', G.merge(sl), 'clampOrange', { solid: true }); }
       { const band = []; for (let i = 0; i <= 8; i++) { const xx = -2.236 - .168 * i / 8; band.push([xx, rCase(xx) + .004]); }                         // the band under the LPT spray tubes
         PW.add('tacc', G.revolve(G.shellProfile(band.map(([xx, r]) => [xx, r + .005]), band), { seg: 128 }), 'nickel'); }
       const xT = D.GEN.externals.lptCaseTorus; PW.add('tacc', G.revolve(circ(xT.x, xT.r_centre, xT.tube_od / 2, 10), { seg: 128 }), 'steel');

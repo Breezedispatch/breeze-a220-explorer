@@ -25,7 +25,17 @@
     lime:        () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#a4c64a'), roughness: .55, metalness: .05 }),
     hotNozzle:   () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#a39274'), roughness: .38, metalness: .9 }),
     plugDark:    () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#6d655b'), roughness: .42, metalness: .85 }),
+    heatTint:    () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#ffffff'), vertexColors: true, roughness: .42, metalness: .85, roughnessMap: PW.tex.noise('cast', 256, 14, .55, 1) }),   // temper colours set per vertex (tint)
   });
+  /* heat tint on a revolved case: colour stops along x (forward to aft), patchy round the circumference as on a real case (photos from
+     below: silver over the LPT, blue and violet over the TEC, straw to bronze at its aft flange and on the nozzle) */
+  const tint = (g, stops) => { const p = g.attributes.position, c = new Float32Array(p.count * 3), a = new THREE.Color(), b = new THREE.Color(), cs = stops.map(([x, h]) => [x, new THREE.Color(h)]);
+    for (let i = 0; i < p.count; i++) { const x = p.getX(i), th = Math.atan2(p.getZ(i), p.getY(i));
+      let k = 0; while (k < cs.length - 2 && x < cs[k + 1][0]) k++;
+      const [x0, c0] = cs[k], [x1, c1] = cs[k + 1], t = Math.min(1, Math.max(0, (x0 - x) / (x0 - x1)));
+      const n = .5 + .25 * Math.sin(th * 5 + x * 23) + .25 * Math.sin(th * 11 - x * 41 + 1.3);              // smooth patches, 0..1
+      a.copy(c0).lerp(c1, Math.min(1, Math.max(0, t + (n - .5) * .5))).multiplyScalar(.9 + .16 * n); c.set([a.r, a.g, a.b], i * 3); }
+    g.setAttribute('color', new THREE.BufferAttribute(c, 3)); return g; };
 
   /* ---------------- helpers ---------------- */
   const L = () => D.GEN.lines;
@@ -580,7 +590,8 @@
         disk(pid, rr.x_le, rr.x_te, r.rh, .06, { mat: 'nickel', web: .01, bore: .025 }); }
       else statorRow(pid, rr, { role: 'ngv', s: -1, gHub: 48, gTip: 52, camHub: .18, camTip: .15, tHub: .14, tTip: .12, mat: 'nickel', sigma: 1.1 }); }
     PW.part('lpt-case', { parent: 'lpt', label: 'LPT case', src: 'p.53', info: 'Case between flanges N1 and P carrying the LPT vane rings, with the clearance control ring manifolds round it.' });
-    PW.add('lpt-case', G.revolve(G.shellProfile(seg('outer', -2.20, -2.47, 20), seg('outer', -2.20, -2.47, 20).map(([x, r]) => [x, r - .008])), { seg: 160 }), 'hotCase');
+    PW.add('lpt-case', tint(G.revolve(G.shellProfile(seg('outer', -2.20, -2.47, 20), seg('outer', -2.20, -2.47, 20).map(([x, r]) => [x, r - .008])), { seg: 160 }),
+      [[-2.20, '#9c9894'], [-2.40, '#97969a'], [-2.47, '#8c8a96']]), 'heatTint');
     wall('lpt-case', 'coreCase', -2.20, -2.47, .005, 'hotCase', { n: 20 });
 
     PW.part('tec', { label: 'Turbine exhaust case (TEC)', explode: [-2.15, 0, 0], src: 'p.53-55, p.44-49; TTM ch. 72',
@@ -589,7 +600,8 @@
     if (tec) statorRow('tec', tec, { count: 10, gHub: 0, gTip: 0, camHub: 0, camTip: 0, tHub: .14, tTip: .14, mat: 'hotCase', bands: false });
     wall('tec', 'coreCase', -2.47, -2.71, .006, 'hotCase', { n: 16 });
     wall('tec', 'coreHub', -2.47, -2.71, -.006, 'hotCase', { n: 16 });
-    PW.add('tec', G.revolve(G.shellProfile(seg('outer', -2.47, -2.71, 16), seg('outer', -2.47, -2.71, 16).map(([x, r]) => [x, r - .008])), { seg: 128 }), 'hotCase');
+    PW.add('tec', tint(G.revolve(G.shellProfile(seg('outer', -2.47, -2.71, 16), seg('outer', -2.47, -2.71, 16).map(([x, r]) => [x, r - .008])), { seg: 128 }),
+      [[-2.47, '#8a8c95'], [-2.52, '#666b98'], [-2.575, '#4652a0'], [-2.63, '#64529a'], [-2.675, '#8e7a5e'], [-2.71, '#a28b62']]), 'heatTint');
     if (L().tecCentreBody) { const cb = L().tecCentreBody.slice().sort((a, b) => b[0] - a[0]); const prof = cb.concat([[cb[cb.length - 1][0], 0], [cb[0][0], 0]]);
       PW.add('tec', G.revolve(prof, { seg: 96, crease: 40 }), 'hotCase'); }
     for (const dz of [-.07, .07]) { const lug = new THREE.Mesh(G.roundedBox(.07, .06, .025, .006)); lug.position.set(-2.58, .43, dz); PW.add('tec', lug, 'hotCase', { solid: true }); }   // aft mount lugs at 12 o'clock
