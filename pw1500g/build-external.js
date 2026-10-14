@@ -394,19 +394,23 @@
       Kt.cyl('ocm', f, [.10, .045, -.08], '-z', .011, .018, 'steel'); Kt.connector('ocm', f, [.10, .045, -.09], '-z', .009, { lead: '-z' });
       /* the scavenge return to the tank (outboard) and the pressure tube to the No. 4 and No. 5/6 bearings leave the underside, aft */
       Kt.fitting('ocm', f, [-.125, .05, .095], 'z', .011); Kt.fitting('ocm', f, [-.125, .012, .095], 'z', .009); }
-    acc('deoiler', 'Deoiler', 'Self-contained centrifugal deoiler in the right arm of the MGB, on its aft face, driven by a gear. It takes breather air from the gearbox, the No. 3 bearing compartment and the oil tank\'s deaerator, spins the oil out of it back into the gearbox, and vents the air overboard through the deoiler vent duct. The duct runs aft under the oil tank and along the bottom of the turbine cases to a flattened outlet at 6 o\'clock just forward of the turbine exhaust case, between the No. 5/6 bearing oil tubes, where the air leaves with the core compartment\'s exhaust flow. Its drive oil seal is line-replaceable.', 'p.66-67, p.236-237; A Nahas p.20 (overboard breather) and photo from below');
+    acc('deoiler', 'Deoiler', 'Self-contained centrifugal deoiler in the right arm of the MGB, on its aft face, driven by a gear. It takes breather air from the gearbox, the No. 3 bearing compartment and the oil tank\'s deaerator, spins the oil out of it back into the gearbox, and vents the air overboard through the deoiler vent duct. The duct runs aft under the oil tank and along the bottom of the turbine cases to a flattened outlet at 6 o\'clock lying along the front of the turbine exhaust case, its long mouth facing out, between the No. 5/6 bearing oil tubes, where the air leaves with the core compartment\'s exhaust flow. Its drive oil seal is line-replaceable.', 'p.66-67, p.236-237; A Nahas p.20 (overboard breather) and photo from below');
     /* p.237: a drum on the aft face of the right arm, the vent duct leaving its aft end. The A Nahas CAD (p.20, both sides) and the photo
-       from below show where it goes: aft under the oil tank and along the bottom of the turbine cases to a flattened outlet pointing aft
-       at 6 o'clock just forward of the TEC, between the No. 5/6 oil fittings. Until 2026-10-12 the model ran it over the top of the
+       from below show where it goes: aft under the oil tank and along the bottom of the turbine cases to a flattened outlet at 6 o'clock
+       on the front of the TEC, between the No. 5/6 oil tubes. Until 2026-10-12 the model ran it over the top of the
        gearbox to an outlet at its left end, inside the core compartment */
     { const f = Kt.frame('deoiler', mx1, 4.2, .34), Ld = FLa(mx1, 4.2, .34);
       Kt.flange('deoiler', f, [-.008, 0, 0], '-x', .03, .06, .012, 8, 'castTan'); Kt.cyl('deoiler', f, [-.025, 0, 0], 'x', .032, .025, 'castAl');
       Kt.flange('deoiler', f, [-.039, 0, .017], '-x', .012, .022, .006, 4, 'steel');                                            // the duct's bolted flange, low on the aft end
       line('deoiler', [Ld(-.042, 0, .017), Ld(-.055, .006, .02), P(-1.74, 4.38, .356), P(-1.80, 4.46, .356), P(-1.87, 4.55, .352), P(-1.925, 4.75, .348), P(-1.945, 5.0, .345), P(-1.955, 5.25, .34),
         P(-1.965, 5.5, .342), P(-1.98, 5.72, .355), P(-2.0, 5.88, .37), P(-2.04, 5.97, .41), P(-2.09, 6.0, .458), P(-2.14, 6.0, .494), P(-2.20, 6.0, .516), P(-2.25, 6.0, .523), P(-2.32, 6.0, .523),
-        P(-2.38, 6.0, .516), P(-2.415, 6.0, .50)], .015, 'tube', { clamps: 4, ends: false });
-      /* the flattened outlet, 5 cm wide, its mouth facing aft */
-      const g = Kt.frame('deoiler', -2.44, 6.0, .492); Kt.box('deoiler', g, [0, 0, 0], [.05, .018, .05], 'tube', { round: .006 }); Kt.box('deoiler', g, [-.0245, 0, 0], [.002, .01, .04], 'darkBox', { round: .002 }); }
+        P(-2.38, 6.0, .512), P(-2.415, 6.0, .494)], .015, 'tube', { clamps: 4, ends: false });
+      /* the flattened outlet, about 5 cm wide, lying along the front of the turbine exhaust case to x -2.53 with a long scarfed mouth
+         on its outer face (Brian's photo from below: the mouth shows as a dark ellipse from the TEC flange to about a third of the way
+         along the case). Until 2026-10-14 it was a 5 cm box ending at the flange, open aft */
+      const g = Kt.frame('deoiler', -2.473, 6.0, .4865, { rz: .1 });
+      Kt.box('deoiler', g, [0, 0, 0], [.116, .018, .048], 'tube', { round: .007 });
+      Kt.box('deoiler', g, [-.02, .0082, 0], [.072, .003, .03], 'darkBox', { round: .0014 }); }
 
     /* ============================== OIL SYSTEM ============================== */
     PW.part('oil', { label: 'Oil system', explode: [0, 0, .45], src: 'p.212-255; TTM ch. 79',
