@@ -607,11 +607,19 @@
     if (tec) statorRow('tec', tec, { count: 10, gHub: 0, gTip: 0, camHub: 0, camTip: 0, tHub: .14, tTip: .14, mat: 'hotCase', bands: false });
     wall('tec', 'coreCase', -2.47, -2.71, .006, 'hotCase', { n: 16 });
     wall('tec', 'coreHub', -2.47, -2.71, -.006, 'hotCase', { n: 16 });
-    PW.add('tec', tint(G.revolve(G.shellProfile(seg('outer', -2.47, -2.71, 16), seg('outer', -2.47, -2.71, 16).map(([x, r]) => [x, r - .008])), { seg: 128 }),
-      [[-2.47, '#8a8c95'], [-2.52, '#666b98'], [-2.575, '#4652a0'], [-2.63, '#64529a'], [-2.675, '#8e7a5e'], [-2.71, '#a28b62']]), 'heatTint');
+    /* the outer case as Brian's photo from below shows it: a smooth barrel from the LPT/TEC flange (r 0.468) easing down to the rear
+       flange (0.437), where a bolted ring steps down to the core nozzle. Until 2026-10-14 it followed the p.53 trace, whose two one-point
+       spikes (x -2.556 and -2.615, r 0.494) made knife-edge ridges round the case, over a cone down to r 0.40 (Brian: "really sharp").
+       PW.tecR gives its radius for the parts seated on it (EGT probes, aft mount, No. 5/6 oil pads) */
+    const TEC_OUT = [[-2.447, .468], [-2.50, .466], [-2.55, .461], [-2.60, .455], [-2.65, .447], [-2.69, .440], [-2.703, .437]];
+    PW.tecR = x => G.interp(TEC_OUT, x);
+    { const pr = []; for (let i = 0; i <= 26; i++) { const x = -2.447 + (-2.703 + 2.447) * i / 26; pr.push([x, PW.tecR(x)]); }
+      PW.add('tec', tint(G.revolve(G.shellProfile(pr, pr.map(([x, r]) => [x, r - .008])), { seg: 160 }),
+        [[-2.47, '#8a8c95'], [-2.52, '#666b98'], [-2.575, '#4652a0'], [-2.63, '#64529a'], [-2.675, '#8e7a5e'], [-2.71, '#a28b62']]), 'heatTint');
+      PW.add('tec', G.ring(-2.699, -2.71, .412, .443, { seg: 160 }), 'hotCase'); }                                              // the rear flange ring
     if (L().tecCentreBody) { const cb = L().tecCentreBody.slice().sort((a, b) => b[0] - a[0]); const prof = cb.concat([[cb[cb.length - 1][0], 0], [cb[0][0], 0]]);
       PW.add('tec', G.revolve(prof, { seg: 96, crease: 40 }), 'hotCase'); }
-    for (const dz of [-.07, .07]) { const lug = new THREE.Mesh(G.roundedBox(.07, .06, .025, .006)); lug.position.set(-2.58, .43, dz); PW.add('tec', lug, 'hotCase', { solid: true }); }   // aft mount lugs at 12 o'clock
+    for (const dz of [-.07, .07]) { const lug = new THREE.Mesh(G.roundedBox(.07, .06, .025, .006)); lug.position.set(-2.58, PW.tecR(-2.58) + .022, dz); PW.add('tec', lug, 'hotCase', { solid: true }); }   // aft mount lugs at 12 o'clock
   }
 
   function buildExhaust() {

@@ -470,8 +470,8 @@
        entering through a last-chance strainer; each compartment's scavenge comes back in its own tube to its stage of the LSOP (chip
        collectors BC4 and BC5, p.230). The manual gives the circuit, not the routes. Here the scavenge tubes run aft under the gearbox at
        5:20 and 5:30 and pass between the ignition cables where those turn up to the igniters (under A, over B). No. 4 is served through
-       two pads on the forward face of the TIC, as the TIC cooling air tubes are; No. 5/6 through two pads on the forward face of the
-       TEC's outer ring either side of 6 o'clock, its tubes running along the bottom of the LPT case through the gap left between the
+       two pads on the forward face of the TIC, as the TIC cooling air tubes are; No. 5/6 through two flanged fittings on the TEC's
+       barrel either side of 6 o'clock (below), its tubes running along the bottom of the LPT case through the gap left between the
        ends of the clearance control spray rings */
     PW.part('oil-rear', { parent: 'oil', label: 'No. 4 and No. 5/6 bearing oil tubes', src: 'p.212-215, p.230; TTM 79-00 fig. 3',
       info: 'Pressure oil for the turbine bearings leaves the underside of the oil control module in one tube, which runs down behind the gearbox\'s right arm and tees aft of it. One branch feeds the No. 4 bearing compartment through a pad on the forward face of the turbine intermediate case; the other runs aft along the bottom of the LPT case to the No. 5 and 6 bearing compartment in the turbine exhaust case. Each branch enters through a last-chance strainer, which stops any particle that got past the main oil filter from blocking the bearing oil jets.\n\nEach compartment\'s scavenge oil comes back forward in its own tube, under the gearbox, to its own stage of the lube and scavenge pump, where the BC4 or BC5 chip collector catches bearing debris: a chip found there points to that compartment.\n\nThe manual gives this circuit but not the tube routes; the routes here are drawn through the space the other units leave.' });
@@ -487,7 +487,24 @@
         else { Kt.fitting('oil-rear', g, [0, .008, 0], 'y', .009); e = .008 + .009 * 1.45; }
         return [L(0, e + .022, 0), L(0, e, 0)]; };
       const n4p = pad(-2.13, 5.15, .385, -1.4, true), n4s = pad(-2.13, 5.45, .385, -1.4, false);          // No. 4: pressure through its strainer, scavenge
-      const n5p = pad(-2.549, 6.15, .437, -1.18, true), n5s = pad(-2.549, 5.85, .437, -1.18, false);       // No. 5/6: supply left of 6 o'clock, scavenge right, the deoiler vent's outlet between them (A Nahas photo from below)
+      /* No. 5/6 (Brian's photo from below and A Nahas p.18, scaled on the TEC's flanges): each tube's two-bolt flange sits on a boss
+         halfway along the barrel, about 16 deg either side of 6 o'clock, and its fitting body lies along the case, angled forward and in
+         toward the bottom, where the tubes run on forward either side of the deoiler vent's outlet. Supply on the left, through its
+         last-chance strainer; scavenge on the right. s is +1 left of 6 o'clock, -1 right. Until 2026-10-14 the pads stood on the old
+         cone at 6:09 and 5:51 */
+      const tecPad = (h, s, screen) => { const x = -2.57, rT = PW.tecR(x), sl = Math.atan((PW.tecR(x + .025) - PW.tecR(x - .025)) / .05);
+        const b = Kt.frame('oil-rear', x, h, rT, { rz: sl });                                                // boss and flange, square to the barrel
+        Kt.box('oil-rear', b, [0, .003, 0], [.05, .009, .026], 'nickel', { round: .004 });
+        Kt.box('oil-rear', b, [0, .0095, 0], [.058, .004, .02], 'steel', { round: .007 });
+        for (const dx of [-.021, .021]) Kt.hex('oil-rear', b, [dx, .0132, 0], 'y', .0036, .0035, 'steel');
+        const f = Kt.frame('oil-rear', x, h, rT, { ry: s * .68, rz: sl * Math.cos(.68) }), xf = screen ? .08 : .07;   // the body, along the case
+        Kt.box('oil-rear', f, [.004, .0165, 0], [.026, .013, .02], 'steel', { round: .004 });                  // elbow off the flange
+        Kt.cyl('oil-rear', f, [.041, .017, 0], 'x', screen ? .0105 : .0085, .05, 'steel', { edge: .002 });
+        if (screen) Kt.hex('oil-rear', f, [.071, .017, 0], 'x', .0115, .01, 'steel');                           // the strainer's cap
+        Kt.fitting('oil-rear', f, [xf, .017, 0], 'x', .008);
+        f.updateMatrixWorld(true); const L = a => f.localToWorld(V(a, .017, 0)), e = xf + .008 * 1.45;
+        return [L(e + .022), L(e)]; };
+      const n5p = tecPad(6.55, 1, true), n5s = tecPad(5.47, -1, false);
       const Ls = FL(mx0, 4.85, .40), Lo = FLa(-1.575, 3.5, .40);                                            // the LSOP's and OCM's frames
       /* the tee aft of the gearbox: a forged body on the pressure tube, its branch toward 6 o'clock. The tube comes from the OCM's
          underside down behind the gearbox's right arm, aft of the deoiler and forward of igniter A */
@@ -1320,7 +1337,7 @@
       line('harnesses', [P(-1.595, .99, .45), P(-1.575, .99, .445), P(-1.555, 1.0, .41), P(-1.545, 1.0, .36), P(-1.54, 1.0, .325), P(-1.53, 1.015, .307)], .005, 'harness', { clamps: 0, ends: false });
       /* WC05 aft over the fuel manifolds, under the right edge of the precooler and over the clearance control manifolds (the precooler
          sits low enough over the combustor that it can no longer run along 12 o'clock) */
-      line('harnesses', [P(-1.67, 12.05, .305), P(-1.684, 12.35, .32), P(-1.697, 12.45, .345), P(-1.712, 12.45, .356), P(-1.75, 12.45, .356), P(-1.80, 12.45, .34), P(-1.95, 12.45, .325), P(-2.05, 12.4, .345), P(-2.10, 12.35, .385), P(-2.14, 12.3, .47), P(-2.20, 12.18, .51), P(-2.24, 12.08, .555), P(-2.40, 12.0, .56), P(-2.45, 12.0, .52), P(-2.465, 12.0, .478)], .012, 'harness', { clamps: 4 });
+      line('harnesses', [P(-1.67, 12.05, .305), P(-1.684, 12.35, .32), P(-1.697, 12.45, .345), P(-1.712, 12.45, .356), P(-1.75, 12.45, .356), P(-1.80, 12.45, .34), P(-1.95, 12.45, .325), P(-2.05, 12.4, .345), P(-2.10, 12.35, .385), P(-2.14, 12.3, .47), P(-2.20, 12.18, .51), P(-2.24, 12.08, .555), P(-2.40, 12.0, .56), P(-2.45, 12.0, .52), P(-2.465, 12.0, .4835)], .012, 'harness', { clamps: 4 });
       /* p.107 and the A Nahas photo of the core's right side ("EGT T5/T3 HARNESS" over the oil control module): a WC05 branch from over
          the TIC down the right of the HPT case, over the oil tank's lid and the OCM to the oil temperature probe on top of it, where the
          EGT probe junctions are compensated (p.126-129). The model had WC05 only over the top until 2026-10-12 */
@@ -1328,9 +1345,10 @@
         line('harnesses', [P(-2.10, 12.35, .385), P(-2.06, .55, .40), P(-2.02, .95, .425), P(-2.005, 1.3, .44), P(-2.005, 1.65, .45), P(-1.99, 1.95, .455), P(-1.88, 2.0, .465), P(-1.80, 2.08, .48),
           P(-1.765, 2.18, .495), P(-1.728, 2.3, .495), P(-1.725, 2.55, .495), P(-1.70, 2.82, .49), P(-1.62, 2.93, .48), P(-1.55, 2.98, .47), O(.06, .045, -.108), O(.0838, .045, -.1071)], .01, 'harness', { clamps: 3, ends: false }); }
       /* WC05 then rings the LPT's aft flange both ways to the EGT probe junctions at 3 and 9 o'clock (p.107, p.129) */
-      for (const [h0, h1] of [[12, 15], [12, 9]]) { const pts = []; for (let i = 0; i <= 15; i++) pts.push(P(-2.465, h0 + (h1 - h0) * i / 15, .474));
+      for (const [h0, h1] of [[12, 15], [12, 9]]) { const pts = [], rr = PW.tecR(-2.465) + .016; for (let i = 0; i <= 15; i++) pts.push(P(-2.465, h0 + (h1 - h0) * i / 15, rr));
         line('harnesses', pts, .009, 'harness', { clamps: 5, ends: false });
-        line('harnesses', [P(-2.465, h1, .474), P(-2.49, h1, .474), P(-2.51, h1, .468), P(-2.518, h1, .462)], .006, 'harness', { clamps: 0, ends: false }); } }
+        const J = FLa(-2.512, h1, PW.tecR(-2.512), .1);                                                                       // the probe junction's connector (EGT, above)
+        line('harnesses', [P(-2.465, h1, rr), P(-2.485, h1, rr + .008), J(.024, .046, 0), J(.0135, .04225, 0)], .006, 'harness', { clamps: 0, ends: false }); } }
     PW.part('ignition', { label: 'Ignition system', explode: [0, 0, -.35], src: 'p.306-323; TTM ch. 74',
       info: 'One exciter, the black box with the red-orange HIGH VOLTAGE label low on the left of the fan case at 8 o\'clock, cooled by fan compartment air, with two independent capacitor-discharge circuits: system A run by EEC channel A, system B by channel B. Each fires its own igniter at 5 kV, 1 to 3 sparks a second, through a braided steel cable that runs under the engine to the diffuser case: igniter A at 4 o\'clock, igniter B at 5 o\'clock. On this (right) engine the circuits are powered from DC ESS BUS 2 and 3; the left engine uses DC ESS BUS 1 and 3.\n\nAn automatic start uses one igniter, alternating each start: on at 20.4 to 23.5 percent N2, off at 49.3 to 53.3 percent. If the first attempt fails, the EEC dry motors the engine and tries again on both. The EEC selects both igniters continuously after a flameout in flight or on the takeoff roll above 60 kt, an in-flight surge, or for an in-flight start.\n\nWait at least 5 minutes after the ignition last operated before removing a plug or cable: the voltage can injure.' });
     /* the exciter (p.317, and Brian's photo from below the EEC): a black box with a red-orange high-voltage label and a small yellow
@@ -1382,16 +1400,19 @@
          round just aft of the flange with a stub into each probe head */
       PW.part('egt', { parent: 'sensors', label: 'EGT probe and cable assemblies (2)', src: 'p.126-133',
         info: 'Exhaust gas temperature at station 5: two probe and cable assemblies, left and right, each of four thermocouple probes on a semi-rigid cable round the turbine exhaust case. The probes are not replaceable on their own: the whole assembly is changed. The four signals of each assembly are averaged at its probe junction (3 and 9 o\'clock) and compensated at the oil temperature probe on the OCM; the left assembly goes to EEC channel A, the right to channel B.\n\nOne failed assembly gives an L(R) ENGINE FAULT advisory. Limits: 1054 deg C for start and takeoff, 1006 deg C maximum continuous (p.131).' });
-      const xe = -2.52, re = .41, tilt = .444;
+      /* on the TEC's barrel (PW.tecR; the probes sat on the old cone at r 0.41, tilted 0.444, until 2026-10-14), the sheaths long enough
+         to keep the tips as deep in the gas path as before */
+      const xe = -2.52, re = PW.tecR(xe), tilt = .1, dL = re - .41;
       for (const [hs, hj] of [[[.75, 2.25, 3.75, 5.25], 3], [[6.75, 8.25, 9.75, 11.25], 9]]) {
         for (const h of hs) { const f = Kt.frame('egt', xe, h, re, { rz: tilt });
           Kt.box('egt', f, [0, .002, 0], [.026, .004, .016], 'steel', { round: .002 }); for (const s of [-1, 1]) Kt.hex('egt', f, [s * .01, .0055, 0], 'y', .0032, .003, 'steel');   // two-bolt flange
           Kt.box('egt', f, [0, .013, 0], [.016, .018, .018], 'steel', { round: .003 });                                        // terminal head
           Kt.cyl('egt', f, [.02, .016, 0], 'x', .0028, .026, 'steel');                                                        // stub to the cable
-          Kt.cyl('egt', f, [0, -.04, 0], 'y', .0042, .08, 'nickel'); Kt.cyl('egt', f, [0, -.083, 0], 'y', .0055, .012, 'nickel'); }   // sheath and tip shield
-        const run = (a, b) => { const pts = [], n = Math.max(2, Math.ceil(Math.abs(b - a) / .2)); for (let i = 0; i <= n; i++) pts.push(P(-2.497, a + (b - a) * i / n, .438)); return pts; };
+          Kt.cyl('egt', f, [0, -.04 - dL / 2, 0], 'y', .0042, .08 + dL, 'nickel'); Kt.cyl('egt', f, [0, -.083 - dL, 0], 'y', .0055, .012, 'nickel'); }   // sheath and tip shield
+        const xs = xe + .033 * Math.cos(tilt) - .016 * Math.sin(tilt), rs = re + .033 * Math.sin(tilt) + .016 * Math.cos(tilt);   // through the probes' cable stubs
+        const run = (a, b) => { const pts = [], n = Math.max(2, Math.ceil(Math.abs(b - a) / .2)); for (let i = 0; i <= n; i++) pts.push(P(xs, a + (b - a) * i / n, rs)); return pts; };
         line('egt', run(hs[0], hj - .09), .0028, 'tube', { clamps: 0, ends: false }); line('egt', run(hs[3], hj + .09), .0028, 'tube', { clamps: 0, ends: false });
-        const g = Kt.frame('egt', -2.512, hj, .418, { rz: tilt });                                                             // probe junction
+        const g = Kt.frame('egt', -2.512, hj, PW.tecR(-2.512), { rz: tilt });                                                  // probe junction
         Kt.box('egt', g, [0, .014, 0], [.03, .028, .045], 'steel', { round: .004 }); Kt.connector('egt', g, [0, .028, 0], 'y', .0075, { lead: 'x' }); }
       /* N1 speed probe (p.112-115): on the CIC's conical aft face at 4:30, normal to it; a flat head with one bolted ear and its two
          connectors side by side pointing down; the 20 cm shank reaches forward and in to the No. 2 bearing coupling nut */
@@ -1670,11 +1691,12 @@
         Kt.box('mount-aft', f, [0, .22, 0], [.12, .04, .38], 'titanium', { round: .008 });
         for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) Kt.hex('mount-aft', f, [a * .035, .244, b * .14], 'y', .009, .007, 'steel');
         for (const z of [-.07, .07]) { Kt.cyl('mount-aft', f, [0, .25, z], 'y', .008, .02, 'steel'); Kt.cone('mount-aft', f, [0, .265, z], 'y', .003, .008, .01, 'steel'); }   // the two shear pins (p.48-49)
-        for (const s of [-1, 1]) { const ly = .4 * Math.cos(.49) - .4, lz = .4 * Math.sin(.49);                                                       // case lugs at 28 deg either side
-          const g = Kt.frame('mount-aft', xa, 12 + s * .936, .40); Kt.box('mount-aft', g, [0, .02, 0], [.05, .04, .03], 'nickel', { round: .006 });
+        const rT = PW.tecR(xa);                                                                                             // the TEC's barrel here (r 0.40, the old cone, until 2026-10-14)
+        for (const s of [-1, 1]) { const ly = rT * Math.cos(.49) - .4, lz = rT * Math.sin(.49);                                                       // case lugs at 28 deg either side
+          const g = Kt.frame('mount-aft', xa, 12 + s * .936, rT); Kt.box('mount-aft', g, [0, .02, 0], [.05, .04, .03], 'nickel', { round: .006 });
           Kt.rod('mount-aft', f, [0, .205, s * .165], [0, ly + .035, s * lz], .015, 'titanium');                                                         // outer link
           for (const p of [[0, .205, s * .165], [0, ly + .035, s * lz]]) { Kt.cyl('mount-aft', f, p, 'x', .007, .075, 'steel'); for (const e of [-1, 1]) Kt.hex('mount-aft', f, [e * .04, p[1], p[2]], 'x', .011, .007, 'steel'); } }
-        for (const dx of [.027, -.027]) Kt.box('mount-aft', f, [dx, .045, 0], [.01, .092, .07], 'nickel', { round: .004 });                           // the case's centre lugs (p.53)
+        for (const dx of [.027, -.027]) Kt.box('mount-aft', f, [dx, (rT - .4 + .091) / 2, 0], [.01, .091 - (rT - .4), .07], 'nickel', { round: .004 });   // the case's centre lugs (p.53), up from the barrel
         Kt.box('mount-aft', f, [0, .15, 0], [.034, .1, .04], 'titanium', { round: .008 });                                                              // fail-safe link
         for (const y of [.075, .195]) { Kt.cyl('mount-aft', f, [0, y, 0], 'x', .008, .085, 'steel'); for (const e of [-1, 1]) Kt.hex('mount-aft', f, [e * .045, y, 0], 'x', .012, .007, 'steel'); }
         Kt.box('mount-aft', f, [.07, .16, 0], [.035, .032, .24], 'titanium', { round: .008 }); Kt.cyl('mount-aft', f, [.07, .19, 0], 'y', .014, .04, 'steel');   // balance beam and its pivot

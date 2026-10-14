@@ -477,12 +477,12 @@
               hems.push(G.revolve(pr, { seg: 2, thetaStart: ta - dth / 2, thetaLength: dth })); } } run = []; };
           for (const [xx, th] of pts) { if (inHole(xx, th, .03) || fireX.some(f => Math.abs(xx - f) < .03)) flush(); else run.push([xx, th]); } flush(); };
         let row = 0;
-        for (let xx = -1.06; xx > xTE - .06; xx -= .19, row++) { if (fireX.some(f => Math.abs(xx - f) < .045)) continue;
+        for (let xx = -1.06; xx > xTE - .02; xx -= .19, row++) { if (fireX.some(f => Math.abs(xx - f) < .045)) continue;   // to the blanket's aft end (a row hung below the bare aft collar until 2026-10-14)
           for (const th of cols) { if (inHole(xx, th, 0)) continue;
             const place = (g, dr) => g.rotateX(th).translate(...G.onRing(xx, rB(xx) - dr, th).toArray());
             btn.push(place(new THREE.CylinderGeometry(.019, .023, .004, 20), .002)); nut.push(place(new THREE.CylinderGeometry(.0062, .0062, .007, 6), .0075)); }
           if (row % 2) { const pts = []; for (let th = it0 + deg(4); th <= it0 + itl - deg(4); th += deg(2)) pts.push([xx, th]); hem(pts); } }
-        for (let k = 2; k < cols.length - 1; k += 3) { const pts = []; for (let xx = -1.02; xx > xTE - .04; xx -= .02) pts.push([xx, cols[k]]); hem(pts); }
+        for (let k = 2; k < cols.length - 1; k += 3) { const pts = []; for (let xx = -1.02; xx > xTE - .015; xx -= .02) pts.push([xx, cols[k]]); hem(pts); }
         PW.add(iid, G.merge(btn), 'plateAl', { solid: true }); PW.add(iid, G.merge(nut), 'steel', { solid: true }); PW.add(iid, metricUV(G.merge(hems), it0), 'blanket'); }
       /* p.21 and the photos: red-brown bulb fire seals along the IFS half's forward edge, where it closes against the firewall, and along
          its hinge beam edge */
