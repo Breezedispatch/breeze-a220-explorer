@@ -27,7 +27,9 @@
   Object.assign(PW.MAT, {
     cowlWhite: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#e3e6e8'), roughness: .55, metalness: .02 }),
     inletLining: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#2a2f31'), roughness: .6, metalness: .2, bumpMap: PW.tex.perf(), bumpScale: .0008 }),
-    blanket: () => { const t = quiltTex(); return new THREE.MeshStandardMaterial({ color: new THREE.Color('#d3d5d6'), roughness: .62, metalness: .72, bumpMap: t, bumpScale: .0011, roughnessMap: t }); },
+    /* the woven stainless blanket reads as a light matte fabric in the core and exhaust photos, about 0.75 of the mint fan exit liner's
+       brightness; at metalness .72 it mirrored the dark backdrop and rendered at 0.35, now about 0.6 */
+    blanket: () => { const t = quiltTex(); return new THREE.MeshStandardMaterial({ color: new THREE.Color('#d3d5d6'), roughness: .62, metalness: .25, bumpMap: t, bumpScale: .0011, roughnessMap: t }); },
     siliconeSeal: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#9a4430'), roughness: .5, metalness: 0 }),         // the red-brown bulb fire seals (photos)
     gasketOrange: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#cf6a3e'), roughness: .55, metalness: 0 }),        // orange silicone gaskets round the IFS openings (photos)
     cascadeGrey: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#4b5056'), roughness: .5, metalness: .5 }),
