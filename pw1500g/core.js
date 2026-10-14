@@ -95,7 +95,9 @@
     fanBlade:     () => new THREE.MeshStandardMaterial({ color: col('#9ea6ae'), roughness: .32, metalness: .85, roughnessMap: noiseTex('brushed', 256, 6, .5, 1, 8) }),
     spinner:      () => new THREE.MeshPhysicalMaterial({ color: col('#1c1f23'), roughness: .3, metalness: .2, clearcoat: .6, clearcoatRoughness: .2 }),
     titanium:     () => new THREE.MeshStandardMaterial({ color: col('#b9b4ad'), roughness: .3, metalness: .95, roughnessMap: noiseTex('fine', 256, 40, .6, 1) }),
-    steel:        () => new THREE.MeshStandardMaterial({ color: col('#c9ced4'), roughness: .2, metalness: 1, roughnessMap: noiseTex('fine', 256, 40, .6, 1) }),
+    /* steel and tube: satin stainless. In the core photos the tubes and fittings are a light satin grey about 0.8 to 1.0 times as bright
+       as the mint fan exit liner; as mirrors (metalness 1) they reflected the dark backdrop and most fitting faces rendered near black */
+    steel:        () => new THREE.MeshStandardMaterial({ color: col('#c9ced4'), roughness: .35, metalness: .65, roughnessMap: noiseTex('fine', 256, 40, .6, 1) }),
     shaft:        () => new THREE.MeshStandardMaterial({ color: col('#d8dce0'), roughness: .12, metalness: 1 }),
     gearSteel:    () => new THREE.MeshStandardMaterial({ color: col('#aeb3b8'), roughness: .22, metalness: 1 }),
     nickel:       () => new THREE.MeshStandardMaterial({ color: col('#9a9690'), roughness: .42, metalness: .9, roughnessMap: noiseTex('cast', 256, 14, .55, 1) }),
@@ -106,7 +108,7 @@
     castAl:       () => new THREE.MeshStandardMaterial({ color: col('#a4a8a6'), roughness: .62, metalness: .55, roughnessMap: noiseTex('cast', 256, 14, .55, 1), bumpMap: noiseTex('cast', 256, 14, .55, 1), bumpScale: .0008 }),
     accPaint:     () => new THREE.MeshStandardMaterial({ color: col('#7d8287'), roughness: .55, metalness: .3 }),
     darkBox:      () => new THREE.MeshStandardMaterial({ color: col('#2b2f34'), roughness: .5, metalness: .4 }),
-    tube:         () => new THREE.MeshStandardMaterial({ color: col('#c6cbd0'), roughness: .25, metalness: 1 }),
+    tube:         () => new THREE.MeshStandardMaterial({ color: col('#c6cbd0'), roughness: .3, metalness: .8 }),
     braid:        () => new THREE.MeshStandardMaterial({ color: col('#9fa4a8'), roughness: .5, metalness: .8, bumpMap: noiseTex('weave', 256, 30, .6, 1), bumpScale: .0006 }),
     harness:      () => new THREE.MeshStandardMaterial({ color: col('#ffffff'), map: braidTex(), roughness: .78, metalness: .1, bumpMap: braidTex(), bumpScale: .0006 }),   // black overbraid, light green tracer (photos)
     harnessCore:  () => new THREE.MeshStandardMaterial({ color: col('#ffffff'), map: braidTex('braidCore', ['#4f86d6', '#d8dde3']), roughness: .78, metalness: .1, bumpMap: braidTex(), bumpScale: .0006 }),   // the core compartment's, blue and white tracer (photos)
