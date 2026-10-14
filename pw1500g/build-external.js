@@ -1402,22 +1402,23 @@
         Kt.tube('igniters', g, [0, -.036, 0], 'y', .0058, .0095, .008, 'nickel'); } }                                             // the liner's igniter ferrule
     PW.part('sensors', { label: 'Engine sensors', explode: [0, .2, .2], src: 'p.102-161',
       info: 'Speed probes for N1 (station 2.5 at 4:30 on the CIC) and fan speed (inside the No. 1 bearing support at 1 o\'clock) and the PMAG\'s coils for N2; P2/T2 in the inlet, P2.5/T2.5 on the CIC at 1 o\'clock, T3 at the HPC exit and the burner pressure (Pb) sensor on the CIC fire seal at 10 o\'clock; the EGT probes at station 5 on the turbine exhaust case; two vibration sensors; and the oil sensors on the OCM. Most of their signals go to the EEC. The two vibration sensors, the oil debris monitor, the FDGS auxiliary oil pressure sensor and the P2.5 pressure go to the PHMU instead, which processes them and sends the results to the EEC over the CAN bus (p.92, p.102, p.240).' });
-    { /* EGT (p.126-129): two semi-rigid probe and cable assemblies of four probes each on the forward cone of the turbine exhaust case,
-         just aft of the LPT flange: right probes at 0:45 to 5:15 with their probe junction at 3 o'clock, left ones at 6:45 to 11:15 with
-         theirs at 9. Each probe stands normal to the cone (25 deg), its sheath reaching forward and in to the gas path; the cable runs
-         round just aft of the flange with a stub into each probe head */
+    { /* EGT (p.126-129): two semi-rigid probe and cable assemblies of four probes each on the turbine exhaust case: right probes at 0:45
+         to 5:15 with their probe junction at 3 o'clock, left ones at 6:45 to 11:15 with theirs at 9. p.129's render puts the probes in
+         the aft half of the case's barrel and the cable round its forward flange, a short lead from the cable back to each probe; Brian's
+         photo from below agrees (the probes about 60% of the way aft). Until 2026-10-14 they stood just aft of the flange (x -2.52) */
       PW.part('egt', { parent: 'sensors', label: 'EGT probe and cable assemblies (2)', src: 'p.126-133',
         info: 'Exhaust gas temperature at station 5: two probe and cable assemblies, left and right, each of four thermocouple probes on a semi-rigid cable round the turbine exhaust case. The probes are not replaceable on their own: the whole assembly is changed. The four signals of each assembly are averaged at its probe junction (3 and 9 o\'clock) and compensated at the oil temperature probe on the OCM; the left assembly goes to EEC channel A, the right to channel B.\n\nOne failed assembly gives an L(R) ENGINE FAULT advisory. Limits: 1054 deg C for start and takeoff, 1006 deg C maximum continuous (p.131).' });
       /* on the TEC's barrel (PW.tecR; the probes sat on the old cone at r 0.41, tilted 0.444, until 2026-10-14), the sheaths long enough
          to keep the tips as deep in the gas path as before */
-      const xe = -2.52, re = PW.tecR(xe), tilt = .1, dL = re - .41;
+      const xe = -2.60, re = PW.tecR(xe), tilt = .1, dL = re - .41, xs = -2.489, rs = PW.tecR(xs) + .0165;   // the probes, and the cable round the forward flange
       for (const [hs, hj] of [[[.75, 2.25, 3.75, 5.25], 3], [[6.75, 8.25, 9.75, 11.25], 9]]) {
         for (const h of hs) { const f = Kt.frame('egt', xe, h, re, { rz: tilt });
           Kt.box('egt', f, [0, .002, 0], [.026, .004, .016], 'steel', { round: .002 }); for (const s of [-1, 1]) Kt.hex('egt', f, [s * .01, .0055, 0], 'y', .0032, .003, 'steel');   // two-bolt flange
           Kt.box('egt', f, [0, .013, 0], [.016, .018, .018], 'steel', { round: .003 });                                        // terminal head
           Kt.cyl('egt', f, [.02, .016, 0], 'x', .0028, .026, 'steel');                                                        // stub to the cable
-          Kt.cyl('egt', f, [0, -.04 - dL / 2, 0], 'y', .0042, .08 + dL, 'nickel'); Kt.cyl('egt', f, [0, -.083 - dL, 0], 'y', .0055, .012, 'nickel'); }   // sheath and tip shield
-        const xs = xe + .033 * Math.cos(tilt) - .016 * Math.sin(tilt), rs = re + .033 * Math.sin(tilt) + .016 * Math.cos(tilt);   // through the probes' cable stubs
+          Kt.cyl('egt', f, [0, -.04 - dL / 2, 0], 'y', .0042, .08 + dL, 'nickel'); Kt.cyl('egt', f, [0, -.083 - dL, 0], 'y', .0055, .012, 'nickel');   // sheath and tip shield
+          f.updateMatrixWorld(true); const st = f.localToWorld(V(.033, .016, 0));                                              // the lead forward from the stub to the cable
+          line('egt', [st, P(st.x + .025, h, Math.hypot(st.y, st.z) + .003), P(xs - .025, h, rs), P(xs, h, rs)], .0028, 'tube', { clamps: 0, ends: false }); }
         const run = (a, b) => { const pts = [], n = Math.max(2, Math.ceil(Math.abs(b - a) / .2)); for (let i = 0; i <= n; i++) pts.push(P(xs, a + (b - a) * i / n, rs)); return pts; };
         line('egt', run(hs[0], hj - .09), .0028, 'tube', { clamps: 0, ends: false }); line('egt', run(hs[3], hj + .09), .0028, 'tube', { clamps: 0, ends: false });
         const g = Kt.frame('egt', -2.512, hj, PW.tecR(-2.512), { rz: tilt });                                                  // probe junction
