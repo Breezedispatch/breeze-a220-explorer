@@ -266,11 +266,24 @@
         line('sav', [S(.034, .052, -.0567), S(.034, .05, -.075), P(-2.035, 8.8, .5), P(-2.015, 8.7, .49), B(.0, .04, 0), B(0, .0167, 0)], .004, 'tube', { clamps: 1 }); }
       line('sav', [P(-1.95, 9.8, .45), P(-1.975, 9.7, .455), P(-2.0, 9.55, .47), P(-2.022, 9.43, .503), P(-2.03, 9.335, .513)], .006, 'tube', { clamps: 1 }); }   // cooling tube from the aft face of the air/oil cooler
     acc('pmag', 'Permanent magnet alternator/generator (PMAG)', 'Oil-cooled alternator on the MGB aft face at 7 o\'clock. The stator and its windings are held to the gearbox by captive bolts; the rotor stays on the gearbox shaft when the stator is removed. It has a power winding for each EEC channel, dual N2 speed windings, and a separate generator winding that powers the aircraft fly-by-wire controller.\n\nAbove 45 percent N2 it gives each EEC channel 28 to 34 V. If one channel fails, that EEC channel moves to aircraft 28 V DC and a maintenance message is sent; control is unaffected. Below 45 percent N2, or with both channels failed, the EEC runs on aircraft 28 V DC: channel A from DC ESS BUS 3, channel B from DC ESS BUS 2 on this (right) engine and DC ESS BUS 1 on the left.', 'p.96-101, p.112, p.69');
+    /* p.97 and p.99: a smooth can whose flange is held by three captive bolts on lugs; on its end face two small connectors (one per
+       EEC channel), a small boss in the middle and a larger connector for the aircraft's generator winding. Until 2026-10-14 it was
+       finned, with two connectors */
     { const f = Kt.frame('pmag', mx1, 7.15, .40);
-      Kt.flange('pmag', f, [-.006, 0, 0], '-x', .03, .062, .01, 6, 'castAl');
-      Kt.prof('pmag', f, [0, 0, 0], '-x', [[.012, 0], [.012, .05], [.02, .054], [.11, .054], [.125, .045], [.13, 0]], 'castAl');
-      Kt.fins('pmag', f, [-.065, 0, 0], '-x', .052, 10, .005, .003, .08, 'castAl');
-      Kt.connector('pmag', f, [-.13, .02, .0], '-x', .011, { lead: '-z' }); Kt.connector('pmag', f, [-.13, -.02, .0], '-x', .011, { lead: '-z' }); }   // backshells toward 6 o'clock, where their harness runs
+      Kt.flange('pmag', f, [-.006, 0, 0], '-x', .03, .062, .01, 0, 'castAl');
+      for (const a of [Math.PI / 2, 7 * Math.PI / 6, 11 * Math.PI / 6]) { const c = Math.cos(a), s = Math.sin(a);
+        Kt.box('pmag', f, [-.006, .066 * c, .066 * s], [.012, .022, .018], 'castAl', { round: .004, rot: [a, 0, 0] });                 // lug
+        Kt.hex('pmag', f, [-.015, .068 * c, .068 * s], '-x', .0045, .006, 'steel'); }                                                   // its captive bolt
+      Kt.prof('pmag', f, [0, 0, 0], '-x', [[.012, 0], [.012, .052], [.018, .055], [.118, .055], [.127, .05], [.13, .046], [.13, 0]], 'castAl');
+      Kt.cyl('pmag', f, [-.132, 0, 0], '-x', .005, .004, 'steel');                                                                      // the boss
+      Kt.connector('pmag', f, [-.13, .02, -.016], '-x', .009, { lead: '-z' }); Kt.connector('pmag', f, [-.13, -.02, -.016], '-x', .009, { lead: '-z' });   // EEC channels A and B, backshells toward 6 o'clock where their harness runs
+      Kt.connector('pmag', f, [-.13, 0, .024], '-x', .013, { lead: 'y' }); }                                                           // the aircraft's generator winding
+    /* p.67, p.99: the N2 hand cranking pad inboard of the PMAG, a square cover over the drive used to turn the N2 rotor for borescope work */
+    PW.part('n2-crank', { parent: 'gearboxes', label: 'N2 hand cranking pad', src: 'p.67, p.99',
+      info: 'Square cover on the MGB aft face, inboard of the PMAG. With the cover off, a drive tool turns the N2 rotor by hand through the gearbox, for borescope inspections of the HPC and HPT.' });
+    { const f = Kt.frame('n2-crank', mx1, 7.32, .328);
+      Kt.box('n2-crank', f, [-.004, 0, 0], [.008, .046, .046], 'castAl', { round: .005 });
+      Kt.bolts('n2-crank', f, [-.009, 0, 0], '-x', .026, 4, .0035, { phase: Math.PI / 4 }); Kt.hex('n2-crank', f, [-.012, 0, 0], '-x', .008, .008, 'steel'); }
     acc('vfg', 'Variable frequency generator (VFG)', 'The engine\'s main AC generator on the MGB aft face: 115/200 V AC, 75 kVA, 380 to 760 Hz, the frequency following N2. Its grey-blue housing is in two bolted sections, with a round blue cap and a capped port underneath; its pad seal drains to the drain mast (tube 4, DR61). It has its own oil, cooled through the VFG oil/oil heat exchanger and a VFG air/oil cooler.\n\nThe crew can disconnect it from the gearbox with the L or R DISC switch on the electrical panel, which also shows its oil cautions (TTM ch. 24). Reconnection is done on the ground, following the AMM.', 'p.66-69; TTM ch. 24; photos');
     { const f = Kt.frame('vfg', mx1, 6.15, VFG_R);
       /* Brian's photos from below: a grey-blue housing, boxy with rounded corners rather than a finned drum, in two bolted sections, with
@@ -1149,8 +1162,10 @@
         const vfgL = FLa(mx1, 6.15, VFG_R), atsL = FLa(mx1, 8.4, ATS_R);                                                  // points in the VFG's and starter's frames
         line('harnesses', [P(-1.35, 6.9, .42), P(-1.40, 6.82, .445), P(-1.47, 6.68, .495), P(-1.57, 6.6, .502), P(-1.65, 6.65, .50), T1], .011, 'harness', { clamps: 3, ends: false });
         leg([T1, P(-1.76, 6.68, .498), T2], .009);
-        leg([P(-1.8052, 7.06, .42), P(-1.813, 6.95, .435), P(-1.81, 6.8, .47), T2], .007);                                     // PMAG, EEC channel A
-        leg([P(-1.8052, 7.05, .38), P(-1.818, 6.93, .40), P(-1.82, 6.8, .45), P(-1.81, 6.74, .48), T2], .007);                 // PMAG, channel B
+        const pmL = FLa(mx1, 7.15, .40);                                                                                  // points in the PMAG's frame
+        leg([pmL(-.1471, .02, -.0322), pmL(-.1475, .022, -.055), P(-1.812, 6.82, .46), T2], .007);                             // PMAG, EEC channel A
+        leg([pmL(-.1471, -.02, -.0322), pmL(-.148, -.02, -.055), P(-1.818, 6.86, .40), P(-1.82, 6.78, .45), P(-1.81, 6.74, .48), T2], .007);   // PMAG, channel B
+        leg([pmL(-.1547, .0234, .024), pmL(-.1547, .045, .024), pmL(-.152, .06, 0), P(-1.81, 6.84, .47), T2], .008);        // PMAG generator winding, to the aircraft's fly-by-wire controller
         leg([vfgL(-.1816, 0, .1128), P(-1.852, 6.66, .452), P(-1.85, 6.74, .47), P(-1.83, 6.75, .484), T2]);                     // VFG J1
         leg([vfgL(-.1816, .06, .1128), P(-1.852, 6.6, .51), P(-1.85, 6.69, .508), P(-1.83, 6.73, .498), T2]);                   // VFG J2
         leg([T2, P(-1.83, 6.85, .50), P(-1.85, 7.3, .515), P(-1.89, 7.8, .52), P(-1.94, 8.05, .52), T4], .008);                // aft of the starter, clear of its housing
