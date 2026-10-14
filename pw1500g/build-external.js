@@ -209,8 +209,8 @@
       /* p.67's aft view: the rod link's lower clevis is between the PMAG and VFG pads; it was between the PMAG and the starter, at 7:33,
          until 2026-10-14. Here it runs aft at 6:48 over the generator's upper left corner, clear of the PMAG's flange, to the TIC (at 6:45
          and r 0.35-0.37 until the VFG was enlarged on 2026-10-14) */
-      { const a = P(mx1 - .01, 6.8, .345), b = P(-2.10, 6.8, .372); line('mgb', [a, P(-1.72, 6.8, .345), P(-2.045, 6.8, .35), b], .012, 'tube', { clamps: 0, ends: false, tension: 0 });
-        const f = Kt.frame('mgb', -1.88, 6.79, .353); Kt.hex('mgb', f, [0, 0, 0], 'x', .015, .03, 'steel');                     // turnbuckle
+      { const a = P(mx1 - .01, 6.8, .345), b = P(-2.10, 6.8, .336); line('mgb', [a, P(-1.88, 6.8, .3405), b], .012, 'tube', { clamps: 0, ends: false, tension: 0 });   // straight, to a clevis on the TIC's forward flange
+        const f = Kt.frame('mgb', -1.88, 6.8, .3405); Kt.hex('mgb', f, [0, 0, 0], 'x', .015, .03, 'steel');                     // turnbuckle
         for (const p of [a, b]) { const m = new THREE.Mesh(new THREE.SphereGeometry(.016, 14, 10)); m.position.copy(p); PW.add('mgb', m, 'steel', { solid: true }); } }
     }
     /* accessories on the MGB faces (p.69 layout; clocks from p.112, 170, 226, 296) */
@@ -386,18 +386,20 @@
         const g = new THREE.ExtrudeGeometry(s, { depth: Math.max(1e-4, x0 - x1 - 2 * b), bevelEnabled: b > 0, bevelThickness: b, bevelSize: b * .999, bevelSegments: 3, curveSegments: 10 });
         g.rotateY(Math.PI / 2); g.translate(x1 + b, yc, 0); g.computeVertexNormals(); g.userData.solid = true;
         PW.add('vfg', new THREE.Mesh(g), 'vfgGrey', { solid: true, into: f }); };
+      /* re-checked through the same fitted camera on 2026-10-14: length and width within 5% of the photo; the joint at 54% of the length,
+         the aft section as wide as the forward one, the lime fitting lying fore and aft along its lower right edge */
       sect(-.024, -.13, -.001, .1025, .145, .075, .035);                                                                  // forward section: its rounded front
-      sect(-.06, -.224, -.001, .1025, .145, .075, .003);                                                                  // and the rest of it
-      sect(-.224, -.238, -.001, .1055, .148, .08, .002);                                                                 // the bolted joint
-      sect(-.238, -.384, -.003, .095, .135, .05, .01);                                                                   // aft section
-      for (const x of [-.27, -.335]) sect(x + .004, x - .004, -.003, .099, .139, .054, .0015);                            // its cast ribs
-      sect(-.374, -.384, -.003, .098, .138, .053, .002);                                                                 // the end cover's rim
-      for (const [y, z] of [[.097, -.09], [.097, -.03], [.097, .03], [.097, .09], [-.101, -.09], [-.101, -.03], [-.101, .03], [-.101, .09], [-.051, .14], [-.001, .141], [.049, .14], [-.051, -.14], [-.001, -.141], [.049, -.14]])
-        Kt.hex('vfg', f, [-.239, y, z], '-x', .0035, .004, 'steel');                                                       // the joint's bolts, on its exposed aft face
-      Kt.cyl('vfg', f, [-.105, .1015, .01], 'y', .017, .006, 'labelBlue'); Kt.hex('vfg', f, [-.105, .1075, .01], 'y', .006, .006, 'steel');   // the disconnect solenoid reset, under its round blue cap
+      sect(-.06, -.204, -.001, .1025, .145, .075, .003);                                                                  // and the rest of it
+      sect(-.204, -.218, -.001, .1055, .148, .08, .002);                                                                 // the bolted joint
+      sect(-.218, -.384, -.003, .095, .143, .05, .01);                                                                   // aft section
+      for (const x of [-.27, -.335]) sect(x + .004, x - .004, -.003, .099, .149, .054, .0015);                            // its cast ribs
+      sect(-.374, -.384, -.003, .098, .148, .053, .002);                                                                 // the end cover's rim
+      for (const [y, z] of [[.097, -.09], [.097, -.03], [.097, .03], [.097, .09], [-.101, -.09], [-.101, -.03], [-.101, .03], [-.101, .09]])
+        Kt.hex('vfg', f, [-.219, y, z], '-x', .0035, .004, 'steel');                                                       // the joint's bolts, on its exposed aft face
+      Kt.cyl('vfg', f, [-.11, .1015, -.02], 'y', .017, .006, 'labelBlue'); Kt.hex('vfg', f, [-.11, .1075, -.02], 'y', .006, .006, 'steel');   // the disconnect solenoid reset, under its round blue cap
       Kt.cyl('vfg', f, [-.29, .0925, -.065], 'y', .022, .012, 'vfgGrey'); Kt.cyl('vfg', f, [-.29, .0995, -.065], 'y', .016, .006, 'castAl');   // the round boss underneath (its oil filter)
-      Kt.cyl('vfg', f, [-.345, .081, -.105], [0, .7, -.7], .009, .022, 'lime');                                           // the lime fitting at its lower right corner (photo)
-      Kt.box('vfg', f, [-.31, .014, .136], [.08, .03, .006], 'labelBlue', { round: .003 });                                 // the blue data label
+      Kt.cyl('vfg', f, [-.345, .0774, -.1284], 'x', .009, .045, 'lime', { edge: .003 });                                 // the lime fitting along its lower right edge (photo)
+      Kt.box('vfg', f, [-.31, .014, .144], [.08, .03, .006], 'labelBlue', { round: .003 });                                 // the blue data label
       for (const y of [-.026, .024]) Kt.connector('vfg', f, [-.16, y, .145], 'z', .012, { lead: '-x' });                   // J1 below J2, both on the left face (A Nahas photo, p.18)
       Kt.fitting('vfg', f, [-.04, .054, .136], [0, .53, .85], .009); Kt.fitting('vfg', f, [-.11, .059, .134], [0, .53, .85], .009);   // oil to and from its oil/oil cooler, both toward it
       Kt.fitting('vfg', f, [-.05, .1015, -.03], 'y', .006); }                                                                      // pad seal drain, to the drain mast
@@ -576,7 +578,7 @@
         P(-1.77, 5.33, .507), P(-1.817, 5.32, .50), P(-1.86, 5.33, .493), P(-1.92, 5.35, .478), P(-1.98, 5.38, .455), P(-2.03, 5.41, .428)].concat(n4s), .007, 'tube', { clamps: 3 });
       /* both scavenge tubes keep right of the VFG to its aft end; the No. 5/6 one then crosses behind it to its run along the bottom */
       line('oil-rear', [Ls(.04, -.02, .0845), Ls(.04, -.019, .118), P(-1.45, 5.47, .435), P(-1.462, 5.475, .49), P(-1.50, 5.475, .513), P(-1.60, 5.475, .516), P(-1.70, 5.465, .516),
-        P(-1.77, 5.45, .51), P(-1.808, 5.43, .505), P(-1.835, 5.43, .503), P(-1.88, 5.43, .498), P(-1.94, 5.45, .495), P(-2.0, 5.5, .492), P(-2.06, 5.58, .489), P(-2.10, 5.72, .489),
+        P(-1.77, 5.45, .51), P(-1.808, 5.43, .505), P(-1.835, 5.43, .503), P(-1.88, 5.43, .498), P(-1.94, 5.45, .495), P(-2.0, 5.48, .492), P(-2.045, 5.50, .49), P(-2.08, 5.62, .489), P(-2.11, 5.74, .489),
         P(-2.14, 5.81, .494), P(-2.18, 5.845, .501), P(-2.21, 5.85, .508), P(-2.25, 5.85, .515), P(-2.32, 5.85, .512), P(-2.39, 5.85, .504), P(-2.45, 5.84, .488)].concat(n5s), .007, 'tube', { clamps: 5 }); }
     /* p.214-219: the front bearing compartment (FDGS, No. 1, 1.5 and 2) and No. 3 are served by tubes running forward under the HPC
        from the gearbox's front face to bosses on the CIC cone; passages through the case and its struts carry the oil on in. The
