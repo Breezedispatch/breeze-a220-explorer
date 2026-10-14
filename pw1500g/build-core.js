@@ -21,7 +21,8 @@
     rubTeal:     () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#6fae98'), roughness: .7, metalness: .05 }),
     linerDark:   () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#25282b'), roughness: .62, metalness: .2 }),
     linerKhaki:  () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#958e50'), roughness: .55, metalness: .05 }),   // the band seen through the FEGVs (core photos)
-    fegvDark:    () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#1d222a'), roughness: .45, metalness: .35 }),
+    /* the FEGVs' polyurethane coat (p.60): satin blue-grey in the core photos, clearly lighter than the dark fan blades seen between them */
+    fegvPU:      () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#56606c'), roughness: .4, metalness: .3 }),
     mint:        () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#9fd3bb'), roughness: .55, metalness: .05 }),
     lime:        () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#a4c64a'), roughness: .55, metalness: .05 }),
     hotNozzle:   () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#ffffff'), vertexColors: true, roughness: .38, metalness: .9 }),   // straw outside, sooty bore (buildExhaust)
@@ -249,10 +250,10 @@
         PW.add('precooler-inlet', loft(st, 40), 'titanium', { solid: true });
         const fo = Kt.frame('precooler-inlet', -1.148, 12, .768, { rz: .156 });
         Kt.flange('precooler-inlet', fo, [.004, 0, 0], '-x', .084, .1, .008, 12, 'titanium'); }                            // outlet flange for the bellows
-      /* fan exit guide vanes: 44, swept, hollow aluminium with a dark polyurethane coat (p.60; photos), from the measured hub and tip corners */
+      /* fan exit guide vanes: 44, swept, hollow aluminium with a blue-grey polyurethane coat (p.60; photos), from the measured hub and tip corners */
       PW.part('fegv', { parent: 'fan-case', label: 'Fan exit guide vanes (44)', src: 'p.60-61, p.53; photos',
         info: '44 hollow aluminium vanes behind the fan that take the swirl out of the fan air and carry structural load between the fan intermediate case and the fan case. Polyurethane coated against erosion.\n\nInspect from the bypass exit with the reversers open: look for FOD damage, coating loss and cracks at the platforms.' });
-      bladeRow('fegv', R('FEGV'), { role: 'stator', s: 1, count: 44, gHub: 18, gTip: 12, camHub: .08, camTip: .06, tHub: .08, tTip: .07, tipGap: 0, span: 8, mat: 'fegvDark' });
+      bladeRow('fegv', R('FEGV'), { role: 'stator', s: 1, count: 44, gHub: 18, gTip: 12, camHub: .08, camTip: .06, tHub: .08, tTip: .07, tipGap: 0, span: 8, mat: 'fegvPU' });
     }
 
     /* =========================== FAN INTERMEDIATE CASE AND SPLITTER =========================== */
