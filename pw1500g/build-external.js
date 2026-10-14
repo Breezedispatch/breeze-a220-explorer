@@ -69,7 +69,8 @@
     const g = G.tube(pts.map(p => (p.isVector3 ? p : V(...p))), r, { radial: kind === 'duct' ? 16 : 10, tension: o.tension === undefined ? .25 : o.tension });
     if ((kind === 'harness' || kind === 'cable') && g.attributes.uv) { const L = g.userData.curve.getLength(), uv = g.attributes.uv, k = kind === 'cable' ? 16 : 8; for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * L * k); }   // braid repeats along its length
     tag(PW.add(pid, g, mat));
-    const curve = g.userData.curve, n = o.clamps === undefined ? Math.max(1, Math.round(curve.getLength() / (kind === 'duct' ? .35 : .25))) : o.clamps;
+    const L = g.userData.curve.getLength(), curve = g.userData.curve;
+    const n = o.clamps === undefined ? Math.max(1, Math.round(L / (kind === 'duct' ? .35 : .25))) : o.clamps === 'long' ? (L > .35 ? Math.max(1, Math.round(L / .3) - 1) : 0) : o.clamps;   // 'long': only a leg over 35 cm, about every 30 cm
     if (n > 0) { const ts = []; for (let i = 1; i <= n; i++) ts.push(i / (n + 1));
       /* clamps are thin bands: orange cushioned P-clamps on small lines, steel V-band couplings on large ducts */
       const big = kind === 'duct' || r > .03, band = Math.min(r * 1.6, big ? .022 : .016);
@@ -1326,7 +1327,7 @@
          sensor and on aft to the starter air valve; one crosses back under the VFG and up behind the right arm to the oil control module's connectors and the
          VFG's right connector. The VFG and hydraulic pump circuits belong to the aircraft (generator control unit, hydraulic system)
          and are assumed to join the bundle here. The VFG's feeder studs are left bare, as in the photo from below */
-      { const leg = (pts, r) => line('harnesses', pts, r || .006, 'harness', { clamps: 0, ends: false });
+      { const leg = (pts, r) => line('harnesses', pts, r || .006, 'harness', { clamps: 'long', ends: false });
         const T1 = P(-1.70, 6.64, .50), T2 = P(-1.80, 6.72, .49), T4 = P(-1.97, 8.2, .52), T6 = P(-1.70, 5.45, .48), T8 = P(-1.70, 4.4, .478), O = FLa(-1.575, 3.5, .40);   // O: the OCM's frame
         const vfgL = FLa(mx1, 6.15, VFG_R), atsL = FLa(mx1, ATS_H, ATS_R);                                                // points in the VFG's and starter's frames
         line('harnesses', [P(-1.35, 6.9, .42), P(-1.40, 6.82, .445), P(-1.47, 6.68, .495), P(-1.57, 6.62, .503), P(-1.62, 6.68, .505), P(-1.66, 6.68, .502), T1], .011, 'harness', { clamps: 3, ends: false });
@@ -1356,7 +1357,7 @@
       line('harnesses', [P(-1.262, 6.22, .41), P(-1.24, 6.22, .405), P(-1.215, 6.27, .375), P(-1.20, 6.3, .36)], .006, 'harness', { clamps: 0, ends: false });   // hydraulic pump depressurising solenoid, into WC08
       /* the fuel units on the MGB front face into the left core harness as it passes forward of them: the IFPC's metering valve and
          overspeed solenoid, the fuel filter delta-P sensor at 7:30 and the flow meter at 9 o'clock (p.105, p.170) */
-      { const leg = (pts, r) => line('harnesses', pts, r || .006, 'harness', { clamps: 0, ends: false }), J8 = P(-1.30, 7.7, .495);
+      { const leg = (pts, r) => line('harnesses', pts, r || .006, 'harness', { clamps: 'long', ends: false }), J8 = P(-1.30, 7.7, .495);
         const Fh = FLa(mx0 + .055, 7.25, .46), I = FLa(mx0 + .16, 8.05, .44), M = FLa(mx0 + .055, 8.85, .43);
         leg([P(-1.40, 7.97, .515), P(-1.395, 7.86, .522), P(-1.36, 7.72, .523), P(-1.32, 7.66, .51), J8]);                                              // overspeed shutdown solenoid
         leg([Fh(.1232, -.0016, .08), Fh(.1232, .01, .08), P(-1.305, 7.64, .486), J8]);                                          // fuel filter delta-P, from its forward end
