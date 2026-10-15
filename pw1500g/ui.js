@@ -291,7 +291,7 @@
       sp.position.set(x, yF + .06 + sp.scale.y / 2, z); sp.userData.noPick = true; sp.renderOrder = 3; grp.add(sp); };
     const make = (R, d, L, run) => { const grp = new THREE.Group(); root.add(grp);
       const inlet = [[xHL - d, -R]]; for (let i = 0; i <= 32; i++) { const a = -Math.PI / 2 + Math.PI * i / 32; inlet.push([xHL + R * Math.cos(a), R * Math.sin(a)]); } inlet.push([xHL - d, R]);
-      flat(grp, inlet, 0xf28a1e, .78, .004);                                            // p.7's colours, nearly solid on the light hangar floor
+      flat(grp, inlet, 0xf28a1e, .78, .004);                                            // p.7's colours, nearly solid as in the figure
       const w0 = .85, a0 = w0 / Math.tan(Math.PI / 12), ex = [[xN, w0]]; for (let i = 0; i <= 24; i++) { const t = Math.PI / 12 - Math.PI / 6 * i / 24; ex.push([xN + a0 - (L + a0) * Math.cos(t), (L + a0) * Math.sin(t)]); } ex.push([xN, -w0]);
       flat(grp, ex, 0xfcbf4f, .68, .003);
       const ft = Math.round(R / .3048), fd = Math.round(d / .3048), fL = Math.round(L / .3048);
@@ -301,7 +301,7 @@
     const idle = make(2.74, .91, 61, 'ground idle'), to = make(6.10, 1.83, 183, 'takeoff power');
     /* the entry corridor at idle: aft of the intake area, forward of the wing's leading edge (x = -0.9 - 0.6 z on this side) */
     const zIn = (-.9 - (xHL - .91)) / .6, zOut = 13;
-    flat(idle, [[xHL - .91, zIn], [xHL - .91, zOut], [-.9 - .6 * zOut, zOut]], 0x737980, .5, .002);
+    flat(idle, [[xHL - .91, zIn], [xHL - .91, zOut], [-.9 - .6 * zOut, zOut]], 0xa9aeb4, .5, .002);
     label(idle, ['ENTRY CORRIDOR', 'approach a running engine here'], xHL - 2.2, 6.0, 2.2);
     return s => { root.visible = s > 0; idle.visible = s > 0 && s < .5; to.visible = s >= .5; };
   })();

@@ -12,45 +12,44 @@
   PW.init = function (canvas) {
     const R = PW.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, stencil: true, preserveDrawingBuffer: true, powerPreference: 'high-performance' });
     R.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    R.outputEncoding = THREE.sRGBEncoding; R.toneMapping = THREE.ACESFilmicToneMapping; R.toneMappingExposure = .95;
+    R.outputEncoding = THREE.sRGBEncoding; R.toneMapping = THREE.ACESFilmicToneMapping; R.toneMappingExposure = 1.0;
     R.physicallyCorrectLights = false; R.localClippingEnabled = true;
     R.shadowMap.enabled = true; R.shadowMap.type = THREE.PCFSoftShadowMap;
-    /* lit as in Brian's photos: a bright white hangar with high-bay lamps overhead and a light concrete floor, so the light is soft and
-       mostly from above, with strong bounce from below (the underside of the inlet lip is its brightest part in the front photo). Until
-       2026-10-15 the backdrop was dark navy and the environment map came out black: its walls used a lit material in a scene with no
-       lights, so every shiny surface reflected black and the metal finishes had been turned down to make up for it */
+    /* a dark backdrop so the engine stands out (Brian, 2026-10-15: a light grey hangar backdrop washed it out and made it hard to see),
+       a key light from high on the right for shape, and some bounce from below; the reflections come from a dim hangar (below) */
     const S = PW.scene = new THREE.Scene();
-    const BG = 0xc7cbd0; S.background = new THREE.Color(BG);
+    const BG = 0x1b2533; S.background = new THREE.Color(BG);
     PW.camera = new THREE.PerspectiveCamera(32, 2, .05, 200);
     PW.root = new THREE.Group(); PW.root.name = 'engine'; S.add(PW.root);
     S.environment = PW.makeEnvironment(R);
-    const hemi = new THREE.HemisphereLight(0xffffff, 0xa9a9a3, .45); S.add(hemi);                        // sky: the white roof; ground: the floor's bounce
-    const key = PW.key = new THREE.DirectionalLight(0xfff4e6, 1.1); key.position.set(1.5, 10, 2.5); key.castShadow = true;   // the high-bay lamps, nearly overhead
+    const hemi = new THREE.HemisphereLight(0xdfe8f4, 0x5c6168, .35); S.add(hemi);
+    const key = PW.key = new THREE.DirectionalLight(0xfff4e6, 1.5); key.position.set(3.5, 7, 5); key.castShadow = true;
     key.shadow.mapSize.set(4096, 4096); key.shadow.bias = -.0002; key.shadow.normalBias = .012;
     Object.assign(key.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: .5, far: 25 }); S.add(key, key.target);
-    const fill = new THREE.DirectionalLight(0xbcd2ff, .15); fill.position.set(-5, 2, -4); S.add(fill);
-    const rim = new THREE.DirectionalLight(0xffffff, .2); rim.position.set(-2, 5, 6); S.add(rim);
+    const fill = new THREE.DirectionalLight(0xbcd2ff, .3); fill.position.set(-5, 2, -4); S.add(fill);
+    const rim = new THREE.DirectionalLight(0xffffff, .45); rim.position.set(-2, 5, 6); S.add(rim);
     /* a soft light carried with the camera, like the work lights in a hangar, so open compartments and cut faces can be inspected */
-    PW.headlight = new THREE.PointLight(0xfff8f0, .25, 0, 1.2); PW.camera.add(PW.headlight); PW.headlight.position.set(.3, .4, 0); S.add(PW.camera);
-    /* hangar floor: light concrete (the photos' floor is about as bright as the open fan cowls' insides); catches the engine's shadow */
-    const floor = PW.floor = new THREE.Mesh(new THREE.CircleGeometry(30, 64), new THREE.MeshStandardMaterial({ color: new THREE.Color(0x9c9d97).convertSRGBToLinear(), roughness: .8, metalness: 0, envMapIntensity: .6 }));
+    PW.headlight = new THREE.PointLight(0xfff8f0, .45, 0, 1.2); PW.camera.add(PW.headlight); PW.headlight.position.set(.3, .4, 0); S.add(PW.camera);
+    /* hangar floor: catches the engine's shadow and a soft contact shade */
+    const floor = PW.floor = new THREE.Mesh(new THREE.CircleGeometry(30, 64), new THREE.MeshStandardMaterial({ color: new THREE.Color(0x4a5058).convertSRGBToLinear(), roughness: .72, metalness: 0, envMapIntensity: .35 }));
     floor.rotation.x = -Math.PI / 2; floor.position.y = -1.75; floor.receiveShadow = true; floor.userData.noPick = true; S.add(floor);
-    S.fog = new THREE.Fog(BG, 14, 40);                                       // the floor fades into the backdrop (fog mixes after the sRGB encode, so the same hex)
+    S.fog = new THREE.Fog(BG, 11, 26);                                       // the floor fades into the backdrop (fog mixes after the sRGB encode, so the same hex)
     PW.initCut(); PW.initControls(canvas);
     return PW;
   };
-  /* the hangar of Brian's photos rendered to a prefiltered environment map: white wall panels, a light concrete floor, a light roof with
-     a grid of high-bay lamps and an open door of daylight. Everything is unlit (MeshBasic) so its colour is its radiance; a lit material
-     in this lightless scene renders black. Surfaces deep in the inlet, which really see the dark inside of the engine, carry a low
-     envMapIntensity of their own */
+  /* a hangar rendered to a prefiltered environment map for the reflections: grey wall panels, floor and roof, a grid of high-bay lamps
+     and an open door of daylight, kept dim so the dark paint stays dark and the lamps give the highlights. Everything is unlit
+     (MeshBasic) so its colour is its radiance: until 2026-10-15 the walls used a lit material, which renders black in this lightless
+     scene, so every shiny surface reflected black and the metal finishes had been turned down to make up for it. Surfaces deep in the
+     inlet, which really see the dark inside of the engine, carry a low envMapIntensity of their own */
   PW.makeEnvironment = function (R) {
     const env = new THREE.Scene(), box = new THREE.BoxGeometry(), basic = (hex, I, o) => { const m = new THREE.MeshBasicMaterial(Object.assign({ color: hex }, o)); m.color.multiplyScalar(I); return m; };
-    const room = new THREE.Mesh(box, basic(0xf2f3f5, .55, { side: THREE.BackSide })); room.scale.set(44, 18, 44); room.position.y = 7; env.add(room);
+    const room = new THREE.Mesh(box, basic(0xf2f3f5, .3, { side: THREE.BackSide })); room.scale.set(44, 18, 44); room.position.y = 7; env.add(room);
     const plane = (hex, I, y, up) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(44, 44), basic(hex, I)); m.rotation.x = up ? -Math.PI / 2 : Math.PI / 2; m.position.y = y; env.add(m); };
-    plane(0xd9d9d6, .45, -1.9, true); plane(0xe8eaee, .45, 15.9, false);                                // floor and roof
+    plane(0xd9d9d6, .2, -1.9, true); plane(0xe8eaee, .3, 15.9, false);                                  // floor and roof
     const lamp = (x, y, z, sx, sy, sz, I, col) => { const b = new THREE.Mesh(box, basic(col || 0xffffff, I)); b.position.set(x, y, z); b.scale.set(sx, sy, sz); env.add(b); };
     for (let i = -3; i <= 3; i++) for (let j = -2; j <= 2; j++) lamp(i * 5, 15.7, j * 7, 1.2, .1, 1.2, 7);   // high-bay lamps in a grid
-    lamp(0, 6, -21.9, 26, 10, .1, 2.4, 0xe6eeff);                                                          // open hangar door: daylight
+    lamp(0, 6, -21.9, 26, 10, .1, 1.5, 0xe6eeff);                                                          // open hangar door: daylight
     const pm = new THREE.PMREMGenerator(R); const tex = pm.fromScene(env, .04).texture; pm.dispose();
     return tex;
   };
