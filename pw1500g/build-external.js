@@ -31,6 +31,8 @@
     blackHose: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#222426'), roughness: .8, metalness: .05, bumpMap: PW.tex.noise('weave', 256, 30, .6, 1), bumpScale: .0008 }),
     clampOrange: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#c8642c'), roughness: .6, metalness: .1 }),
     labelBlue: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#2f62b8'), roughness: .5, metalness: .1 }),
+    capBlue: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#203f8a'), roughness: .42, metalness: 0 }),          // the dark blue plastic port caps on the IFPC (A Nahas photo)
+    bandGreen: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#55704f'), roughness: .5, metalness: .05 }),       // the green band on the IFPC's upper aft cylinder (A Nahas photo)
     stainless: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#c4c7c9'), roughness: .36, metalness: .8, roughnessMap: PW.tex.noise('fine', 256, 40, .6, 1) }),   // the bleed ducts' brushed finish (photos)
     bareSheet: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#bfc3c5'), roughness: .5, metalness: .35, roughnessMap: PW.tex.noise('fine', 256, 40, .6, 1) }),   // light satin bare sheet: the VFG air/oil cooler's hood (photos)
     chromate: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#a08a40'), roughness: .45, metalness: .4 }),         // the olive-gold conversion coat on the VFG air/oil cooler's grille (photo)
@@ -165,6 +167,7 @@
     PW.part('mgb', { parent: 'gearboxes', label: 'Main gearbox (MGB)', src: 'p.66-69; p.53; p.237; photos',
       info: 'Cast aluminium housing under the core, from about 4:30 to 9 o\'clock, with machined pads on both faces. Forward face: the fuel/oil manifold with the IFPC (8 o\'clock), the layshaft input, the hydraulic pump and the lube and scavenge oil pump (5 o\'clock). Aft face: the air turbine starter, the PMAG (7 o\'clock) and the VFG. The oil control module is on its right side (p.226) and the deoiler in its right arm.\n\nTwo mounting links hang it from the diffuser case and a rod link from its aft face to the turbine intermediate case takes the axial load. A heat shield over its top keeps the core\'s radiant heat off it, and a centering puck on top lines it up during installation. Replaceable carbon seals at each pad, the N2 cranking pad for turning the core by hand during a borescope, and the core drain plugs are serviced here.' });
     const mg = GB.mainGearboxBody, mx0 = mg.x_from, mx1 = mg.x_to, xm = (mx0 + mx1) / 2;
+    const IFPC_H = 8.3, FFM_H = 9.12;                                                                                  // the IFPC and the fuel flow meter on the fuel/oil manifold's face (p.171)
     /* the axes of the starter (8:00) and the VFG (6:09) on the gearbox's aft face. Both hang lower than the gearbox's mid-depth, so their
        bodies clear the diffuser case and the fuel nozzle heads behind it: p.297 puts the starter axis about 8 in below the engine axis,
        16-17 in out from it, and the TTM (p.878) puts the starter at 8 o'clock. Until 2026-10-12 they were at r 0.385 and 0.365 and cut
@@ -228,20 +231,49 @@
     const acc = (pid, label, info, src) => PW.part(pid, { parent: 'gearboxes', label, info, src });
     // forward face
     acc('ifpc', 'Integrated fuel pump and control (IFPC)', 'Engine fuel pump and metering unit, mounted on the fuel/oil manifold on the MGB front face at 8 o\'clock and driven by the gearbox. Inside: a centrifugal boost pump; the high-pressure gear pump, which also supplies servo fuel to the vane and bleed actuators and the turbine active clearance control valve (p.166); a motive flow pump that returns motive flow to the aircraft fuel system; and the metering section, with the fuel metering valve the EEC commands, its pressure-regulating valve, the windmill bypass valve, the minimum pressure-shutoff valve, and the dual-coil overspeed shutdown solenoid that works them to shut off metered flow.\n\nThe flow divider valve keeps the secondary manifold shut until the pressure between the manifolds passes 100 psi. When the start is complete the EEC energizes the equalization bypass valve solenoid: the EBV then feeds the secondary manifold and equalizes the flow between the two, and the flow divider closes. The INFO message 73 L (R) ENGINE FAULT - FUEL EQUAL INOP means no working EEC channel can command that solenoid (p.207). If the fuel temperature sensor fails, the EEC meters with a default of 75 deg C. Its carbon-sealed drive pad is on the MGB; fuel leaks there show at the drain mast.', 'p.162-171, p.69');
-    /* p.165: a pump housing with a square drive flange, a control section of valve bodies on top, the metering valve's conical torque
-       motor housing, connectors and fittings, all natural cast aluminium */
-    { const f = Kt.frame('ifpc', mx0 + .16, 8.05, .44);
-      Kt.box('ifpc', f, [0, -.015, 0], [.18, .11, .15], 'castAl', { round: .018 });                                       // pump housing
-      Kt.box('ifpc', f, [-.096, -.02, 0], [.018, .12, .12], 'castAl', { round: .006 });                                    // square drive flange, bolted to the manifold face
-      Kt.cyl('ifpc', f, [.03, .055, -.03], 'x', .03, .1, 'castAl'); Kt.cyl('ifpc', f, [-.01, .055, .035], 'x', .026, .09, 'castAl');   // metering and pressure-regulating valve bodies
-      Kt.cyl('ifpc', f, [.04, .025, .085], 'z', .022, .05, 'castAl'); Kt.cyl('ifpc', f, [-.04, .04, -.085], '-z', .02, .045, 'castAl');
-      Kt.cone('ifpc', f, [.115, .055, -.03], 'x', .012, .03, .05, 'castAl');                                              // fuel metering valve torque motor / LVDT
-      Kt.box('ifpc', f, [-.02, .075, -.005], [.07, .02, .05], 'darkBox', { round: .005 });                                // overspeed shutdown solenoid
-      Kt.connector('ifpc', f, [.08, .055, .03], 'x', .012, { lead: '-y' }); Kt.connector('ifpc', f, [-.055, .075, -.005], '-x', .009, { lead: '-z' });   // the solenoid's on its aft end, under the IFS
-      Kt.fitting('ifpc', f, [.06, -.04, .075], 'z', .018);                                                                // boost pump inlet, from the aircraft
-      Kt.fitting('ifpc', f, [.09, .02, .065], 'x', .008);                                                                 // metered fuel out, up to the flow meter (A Nahas photo)
-      Kt.fitting('ifpc', f, [-.03, -.05, .075], 'z', .008); Kt.fitting('ifpc', f, [.07, .0, -.075], '-z', .008);               // motive flow out; servo fuel supply to the vane, bleed and clearance control actuators (p.167)
-      Kt.plate('ifpc', f, [.03, -.035, .0761], 'z', 'y', .05, .025); }
+    /* The IFPC fills the manifold face between the flow meter and the fuel filter: at the fan case's scale p.171 draws it about 0.22 m
+       long and 0.3 m tall in side view, and the A Nahas left-side photo matches (it was 0.18 by 0.15 m, centred at 8:03, until
+       2026-10-15). The IFS inner wall is only about 2 cm outside its face, so it is a box about 0.24 m round the engine, not deeper.
+       Its outboard face as the photo shows it: a six-bolt cover plate in the middle with a three-lobed flange and a blue hex cap above
+       it; blue caps on bosses near the top; two cylinders lying fore and aft at the aft end, the upper one with a green band; a large blue
+       cap and a plugged round port low down forward; the data plate low aft. The forward face (p.163, p.171, photo): the fuel inlet's
+       square flange low down on the pump's round boss, the motive flow port above it, the metered fuel outlet above that and a
+       connector at the top. Cast aluminium throughout (p.165) */
+    { const f = Kt.frame('ifpc', mx0 + .16, IFPC_H, .44);
+      Kt.box('ifpc', f, [.011, -.01, -.0155], [.204, .11, .241], 'castAl', { round: .02 });                                 // housing
+      Kt.box('ifpc', f, [-.098, -.0225, -.016], [.014, .095, .26], 'castAl', { round: .004 });                              // mounting flange on the manifold face
+      for (const z of [-.141, .1095]) for (const y of [-.05, -.005]) Kt.hex('ifpc', f, [-.0895, y, z], 'x', .0042, .004, 'steel');
+      /* cover plate: its aft upper corner cut off; seven socket-head screws round the edge */
+      { const s = new THREE.Shape([[-.038, -.063], [.062, -.063], [.062, .007], [-.012, .007], [-.038, -.0156]].map(([u, v]) => new THREE.Vector2(u, -v)));
+        const g = new THREE.ExtrudeGeometry(s, { depth: .006, bevelEnabled: true, bevelThickness: .0012, bevelSize: .0012, bevelSegments: 1 });
+        g.applyMatrix4(new THREE.Matrix4().makeBasis(V(1, 0, 0), V(0, 0, -1), V(0, 1, 0)).setPosition(0, .0452, 0)); g.userData.solid = true;
+        PW.add('ifpc', new THREE.Mesh(g), 'castAl', { solid: true, into: f });
+        for (const [x, z] of [[.052, -.002], [-.006, -.002], [-.027, -.02], [-.031, -.054], [.0, -.057], [.052, -.056], [.056, -.029]]) Kt.cyl('ifpc', f, [x, .0539, z], 'y', .0042, .003, 'steel'); }
+      /* three-lobed flange with a blue hex cap, above the plate */
+      Kt.box('ifpc', f, [.004, .0485, .031], [.074, .007, .026], 'castAl', { round: .003 });
+      for (const x of [-.032, .04]) { Kt.cyl('ifpc', f, [x, .0485, .031], 'y', .012, .007, 'castAl'); Kt.cyl('ifpc', f, [x, .0535, .031], 'y', .0042, .003, 'steel'); }
+      Kt.cyl('ifpc', f, [.004, .0525, .031], 'y', .019, .015, 'castAl', { edge: .003 }); Kt.hex('ifpc', f, [.004, .0645, .031], 'y', .011, .009, 'capBlue');
+      /* blue caps on bosses near the top */
+      for (const [x, z, r] of [[-.005, .078, .009], [-.05, .083, .015], [-.054, .052, .011]]) {
+        Kt.cyl('ifpc', f, [x, .051, z], 'y', r * 1.15, .012, 'castAl', { edge: .002 }); Kt.cyl('ifpc', f, [x, .0615, z], 'y', r, .011, 'capBlue', { edge: r * .3 }); }
+      /* the two cylinders at the aft end, lying fore and aft on the face: the upper with its green band, the lower with a connector
+         underneath that runs down to the junction below the IFPC */
+      Kt.cyl('ifpc', f, [-.071, .059, .02], 'x', .018, .04, 'castAl', { edge: .004 }); Kt.tube('ifpc', f, [-.057, .059, .02], 'x', .0178, .0193, .008, 'bandGreen');
+      Kt.cyl('ifpc', f, [-.068, .061, -.028], 'x', .022, .048, 'castAl', { edge: .004 }); Kt.connector('ifpc', f, [-.082, .061, -.049], '-z', .009, { lead: '-z' });
+      /* low down forward: a large blue cap, and the round port with its plug facing out and down */
+      Kt.cyl('ifpc', f, [.04, .051, -.094], 'y', .029, .012, 'castAl', { edge: .003 }); Kt.cyl('ifpc', f, [.04, .062, -.094], 'y', .026, .01, 'capBlue', { edge: .0025 });
+      { const d = [0, .6, -.8], A = t => [.037, .022 + .6 * t, -.122 - .8 * t];                                            // along the port's axis from the boss's middle
+        Kt.cyl('ifpc', f, A(0), d, .026, .024, 'castAl', { edge: .003 }); Kt.tube('ifpc', f, A(.016), d, .015, .026, .008, 'plateAl');   // machined spot face round the bore
+        Kt.cyl('ifpc', f, A(.013), d, .015, .002, 'steel'); Kt.hex('ifpc', f, A(.0142), d, .006, .0006, 'darkBox'); }
+      Kt.plate('ifpc', f, [-.038, .0456, -.0835], 'y', 'z', .058, .021);
+      /* forward face: the pump's round boss with the inlet's square flange, from the aircraft (Fuel In, p.163); a plug on the boss */
+      Kt.cyl('ifpc', f, [.106, -.005, -.08], 'x', .039, .03, 'castAl', { edge: .006 }); Kt.box('ifpc', f, [.1255, -.005, -.08], [.013, .062, .062], 'castAl', { round: .005 });
+      for (const [y, z] of [[-.027, -.102], [.017, -.102], [-.027, -.058], [.017, -.058]]) Kt.hex('ifpc', f, [.1335, y, z], 'x', .0042, .004, 'steel');
+      Kt.fitting('ifpc', f, [.132, -.005, -.08], 'x', .018); Kt.plug('ifpc', f, [.09, .045, -.12], 'y', .007);
+      Kt.fitting('ifpc', f, [.113, .03, -.025], 'x', .008);                                                               // motive flow out, back to the aircraft (p.163)
+      Kt.fitting('ifpc', f, [.113, -.02, .02], 'x', .008);                                                                // metered fuel out, round in a U to the flow meter (A Nahas photo)
+      Kt.connector('ifpc', f, [.113, .025, .09], 'x', .009, { lead: '-y' });                                              // fuel metering valve torque motor, into the core harness inboard
+      Kt.fitting('ifpc', f, [.07, -.01, -.136], '-z', .008); }                                                            // servo fuel supply to the vane, bleed and clearance control actuators (p.167)
     acc('fom', 'Fuel/oil manifold (FOM), fuel flow meter and fuel filter', 'Upright manifold block against the left end of the MGB front face, from about 7 to 9:30 o\'clock, with the VFG oil/oil heat exchanger on a tower on its top end. It carries the IFPC on its forward face at 8 o\'clock, the fuel flow meter above it at 9 o\'clock and the fuel filter below it, and routes the boost-pump fuel to and from the fuel/oil heat exchanger, which keeps it above 0 deg C at the filter inlet.\n\nIt is also the hub of the cooled-path oil (p.215). Oil from the oil control module comes in through the MGB and goes up to the FOHX bypass valve. The valve\'s air/oil cooler share comes back and goes on to the air/oil cooler through the short tube from the tower. The oil from the FOHX and from the VFG oil/oil heat exchanger joins inside the manifold on its way back to the oil control module.\n\nFuel filter: a disposable canister in a housing screwed into the filter head on the manifold face. The head carries the bypass valve, the lockwired housing drain and the differential pressure sensor; the housing is turned off by the hex in its end. The sensor plugs into the head beside the housing at 7:30, connector forward, and reports to both EEC channels. Above 22 psid: L(R) ENG FUEL FILTER advisory with an IMPENDING BYPASS info message. At 25 psid the bypass valve opens (BYPASS info message). Both engines in bypass gives the L-R ENG FUEL FILTER caution: suspect fuel contamination.\n\nFuel flow meter: on the manifold just above the IFPC, measuring the metered fuel going to the nozzles. Metered fuel comes up a U-tube from the IFPC to the inlet on its forward end. From the meter it goes back through the manifold into the IFPC\'s minimum pressure-shutoff valve (MPSOV) and flow divider valve (FDV), which send it out through the manifold to the primary and secondary tubes (p.166-167). Its signal goes to EEC channel A, and to channel B over the CAN bus.', 'p.162-179, p.69; TTM 73-00; A Nahas photos');
     { const t0 = G.clock(7.1), t1 = G.clock(9.35);
       PW.add('fom', G.revolve([[mx0 + .055, .37], [mx0 + .004, .37], [mx0 + .004, .465], [mx0 + .055, .465]], { seg: 20, thetaStart: t0, thetaLength: t1 - t0, crease: 30 }), 'castAl');
@@ -255,23 +287,24 @@
          cooler; the FOHX and VFG oil/oil cooler outlets join inside it on the way back to the module. p.171, p.215 and the A Nahas photo
          (p.18) put the VFG oil/oil cooler on its top end, under the aft end of the FOHX: here it stands on a tower on the top face, its
          engine oil passing through the tower. The tubes to and from the bypass valve leave the outer face, the FOHX return comes into
-         the forward face and the air/oil cooler feed leaves the tower's aft face. The tube routes are assumed */
+         the tower's forward face and the air/oil cooler feed leaves its aft face. The tube routes are assumed */
       PW.add('fom', G.revolve([[-1.4505, .373], [-1.479, .373], [-1.479, .414], [-1.4505, .414]], { seg: 6, thetaStart: G.clock(9.35), thetaLength: G.clock(9.725) - G.clock(9.35) }), 'castAl');
       for (const [x, h] of [[-1.446, 9.28], [-1.47, 9.16]]) Kt.fitting('fom', Kt.frame('fom', x, h, .465), [0, 0, 0], 'y', .01);   // oil out to the FOHX bypass valve; its air/oil cooler share back
-      Kt.fitting('fom', Kt.frame('fom', mx0 + .055, 9.28, .41), [0, 0, 0], 'x', .011);                                            // FOHX return
+      Kt.fitting('fom', Kt.frame('fom', -1.4505, 9.55, .393), [0, 0, 0], 'x', .011);                                              // FOHX return, into the tower (the manifold's forward face until 2026-10-15, where the flow meter now is)
       Kt.fitting('fom', Kt.frame('fom', -1.479, 9.63, .394), [0, 0, 0], '-x', .01);                                               // on to the air/oil cooler
-      /* fuel flow meter (p.171, p.179 view A, A Nahas photo): just above the IFPC at about 9 o'clock, lying fore and aft. A flange bolted
-         to the manifold face, a cast body, the flow tube with the metered fuel inlet on its forward end, and the electronics housing
-         along its top with the connector facing forward */
-      { const f = Kt.frame('fom', mx0 + .055, 8.85, .43);
-        Kt.box('fom', f, [.008, 0, -.002], [.016, .086, .088], 'castAl', { round: .006 });                                   // mounting flange
-        for (const [y, z] of [[-.036, -.038], [.036, -.038], [-.036, .034], [.036, .034]]) Kt.hex('fom', f, [.0185, y, z], 'x', .0048, .005, 'steel');
-        Kt.box('fom', f, [.04, -.003, -.003], [.05, .056, .058], 'castAl', { round: .014 });                                // body
-        Kt.cyl('fom', f, [.09, -.004, -.008], 'x', .025, .07, 'castAl', { edge: .006 });                                     // flow tube
-        Kt.box('fom', f, [.077, 0, .025], [.07, .04, .022], 'castAl', { round: .006 });                                      // electronics housing
-        Kt.fitting('fom', f, [.127, -.004, -.008], 'x', .01);                                                                // metered fuel in
-        Kt.connector('fom', f, [.111, 0, .025], 'x', .009, { lead: 'x' });
-        Kt.plate('fom', f, [.04, .0256, -.003], 'y', 'z', .036, .02); }
+      /* fuel flow meter (p.171, p.179 view A, A Nahas photo): at the top of the manifold face, just above the IFPC, lying fore and aft.
+         A flange bolted to the manifold face, a cast body, the flow tube with the metered fuel inlet on its forward end, and the
+         electronics housing along its top with the connector facing forward. At the fan case's scale p.171 draws it about 0.18 m long,
+         level with the manifold's top end, as the photo shows it; it was 0.14 m long and centred at 8:51 until 2026-10-15 */
+      { const f = Kt.frame('fom', mx0 + .055, FFM_H, .43);
+        Kt.box('fom', f, [.0105, 0, -.001], [.021, .1, .092], 'castAl', { round: .007 });                                    // mounting flange
+        for (const [y, z] of [[-.042, -.039], [.042, -.039], [-.042, .037], [.042, .037]]) Kt.hex('fom', f, [.0235, y, z], 'x', .006, .006, 'steel');
+        Kt.box('fom', f, [.052, -.004, -.004], [.065, .073, .075], 'castAl', { round: .018 });                               // body
+        Kt.cyl('fom', f, [.117, -.005, -.01], 'x', .0325, .091, 'castAl', { edge: .008 });                                    // flow tube
+        Kt.box('fom', f, [.1, 0, .0325], [.091, .052, .0286], 'castAl', { round: .008 });                                     // electronics housing
+        Kt.fitting('fom', f, [.165, -.005, -.01], 'x', .013);                                                                 // metered fuel in
+        Kt.connector('fom', f, [.1445, 0, .0325], 'x', .0117, { lead: 'x' });
+        Kt.plate('fom', f, [.052, .0333, -.004], 'y', 'z', .047, .026); }
       /* fuel filter (p.173): the head on the manifold face carries the bypass valve, the lockwired housing drain and the differential
          pressure sensor; the housing screws into it and is turned off by the hex in its end */
       { const f = Kt.frame('fom', mx0 + .055, 7.25, .46);
@@ -741,8 +774,9 @@
     /* the VFG air/oil cooler. p.215 and p.217 put it in the VFG oil loop but the manual never shows where it is; the A Nahas location
        photos (p.18) and Brian's photo from the opened left reverser show it: under a fairing on the fan exit liner, low on the left, its
        matrix (yellow slats) open to the fan stream behind a raised hood. Its return line runs aft through the compressor intermediate
-       case's outer cone, under the fuel supply hose, round the outside of the fuel/oil manifold and down the left of the gearbox,
-       between the PMAG and the generator, to the fitting on the VFG's 7 o'clock side */
+       case's outer cone, outboard of the fuel supply hose, over the top of the IFPC under the flow meter, round the outside of the
+       fuel/oil manifold and down the left of the gearbox, between the PMAG and the generator, to the fitting on the VFG's 7 o'clock
+       side (the route is assumed; it crossed the IFPC's face lower down until the IFPC was enlarged on 2026-10-15) */
     PW.part('vfg-aohx', { parent: 'oil', label: 'VFG air/oil cooler', src: 'p.215, p.217; A Nahas location photos p.18; photos',
       info: 'The last cooler in the generator\'s own oil loop: VFG, VFG oil/oil heat exchanger, this air/oil cooler, and back to the VFG (p.215, p.217). It sits under a fairing on the fan exit liner, low on the left side, its matrix open to the fan stream through the grille behind the fairing\'s hood. To reach it, remove the fan exit case fairing and then the cooler\'s own fairing.\n\nThe manual shows it only in the oil schematics; its place comes from the location photos.' });
     { /* As Brian's Core_LH photo and the A Nahas photo (p.18, "A/O HX FAIRING") show it: a bare metal hood rises out of the liner
@@ -777,8 +811,8 @@
         PW.add('vfg-aohx', G.merge(fx), 'steel'); }
       Kt.arcLoft('vfg-aohx', [{ h: AO.h0 + .03, x: (xL + xB) / 2, w: xL - xB - .004, ri: .45, ro: .474, n: 6 }, { h: AO.h1 - .03, x: (xL + xB) / 2, w: xL - xB - .004, ri: .45, ro: .474, n: 6 }], 'castAl');   // its body, under the opening
       for (const h of [8.0, 8.4]) Kt.fitting('vfg-aohx', Kt.frame('vfg-aohx', xB + .002, h, .462), [0, 0, 0], '-x', .011);     // oil out (8:00) and in (8:24), on its aft face
-      const c = line('vfg-aohx', [FLa(xB + .002, 8.0, .462)(-.01595, 0, 0), P(-.962, 8.07, .463), P(-.98, 8.2, .468), P(-1.03, 8.33, .462), P(-1.10, 8.42, .48), P(-1.15, 8.45, .492), P(-1.20, 8.48, .502), P(-1.25, 8.51, .508),
-        P(-1.30, 8.53, .512), P(-1.35, 8.55, .513), P(-1.40, 8.57, .513), P(-1.46, 8.57, .51), P(-1.51, 8.5, .512), P(-1.555, 8.05, .505), P(-1.568, 7.75, .508), P(-1.59, 7.45, .512), P(-1.64, 7.25, .514), P(-1.675, 7.0, .515), P(-1.69, 6.78, .528), FLa(mx1, 6.15, VFG_R)(-.04, .0715, .1641), FLa(mx1, 6.15, VFG_R)(-.04, .06092, .14909)], .011, 'hose', { clamps: 4 });
+      const c = line('vfg-aohx', [FLa(xB + .002, 8.0, .462)(-.01595, 0, 0), P(-.962, 8.07, .463), P(-.985, 8.25, .468), P(-1.03, 8.42, .472), P(-1.08, 8.56, .485), P(-1.12, 8.66, .495), P(-1.16, 8.72, .504),
+        P(-1.20, 8.75, .51), P(-1.25, 8.76, .512), P(-1.32, 8.76, .511), P(-1.40, 8.75, .51), P(-1.46, 8.72, .51), P(-1.50, 8.55, .512), P(-1.555, 8.05, .505), P(-1.568, 7.75, .508), P(-1.59, 7.45, .512), P(-1.64, 7.25, .514), P(-1.675, 7.0, .515), P(-1.69, 6.78, .528), FLa(mx1, 6.15, VFG_R)(-.04, .0715, .1641), FLa(mx1, 6.15, VFG_R)(-.04, .06092, .14909)], .011, 'hose', { clamps: 4 });
       PW.add('vfg-aohx', G.alongCurve(c, [tAt(c, -.976)], () => new THREE.CylinderGeometry(.018, .018, .016, 6)), 'steel').userData.isLine = true; }
     PW.part('fohe', { parent: 'oil', label: 'Fuel/oil heat exchanger (FOHX) and bypass valve', src: 'p.162-170, p.212-217, p.232-233',
       info: 'Fuel-cooled oil cooler on the upper left of the core at 11 o\'clock, over the front HPC. Its bypass valve (FOHXBV) sits at its forward end on the compressor intermediate case near 12 o\'clock, on the dark FOC manifold block. Boost-pump fuel from the fuel/oil manifold takes heat from the oil and goes back to the manifold, keeping the fuel above 0 deg C at the fuel filter inlet.\n\nOil from the fuel/oil manifold comes up behind the cooler and over its top to the bypass valve (p.215, p.217). The valve splits it. The FOHX share runs through the cooler and out of its aft end, back down to the manifold. The air/oil cooler share leaves the block and runs back down beside the supply to the manifold, which passes it on to the air/oil cooler.\n\nThe EEC modulates the bypass valve on the fuel temperature sensor, opening it as the fuel gets colder to send more hot oil through. Normally about 75 percent of the cooled-path oil comes here and 25 percent goes to the air/oil cooler, which always gets at least 25 percent. If the fuel side blocks, a bypass valve sends the fuel round it (p.166); the FOHX also has integral pressure-relief valves on its fuel and oil sides (p.212).' });
@@ -803,17 +837,20 @@
       line('fohe', [P(-1.155 - .01595, 11.90, .42), P(-1.19, 11.90, .425), P(-1.25, 11.88, .435), P(-1.34, 11.84, .445), P(-1.43, 11.76, .46), P(-1.468, 11.55, .475), P(-1.47, 11.25, .495),
         P(-1.47, 10.9, .524), P(-1.47, 10.6, .515), P(-1.47, 10.3, .497), P(-1.47, 10.0, .495), P(-1.47, 9.7, .505), P(-1.47, 9.45, .512), P(-1.47, 9.26, .505), P(-1.47, 9.16, .492), P(-1.47, 9.16, .465 + .0145)], .011, 'tube', { clamps: 3 });   // the air/oil cooler share
       { const o = new THREE.Vector3(-.165, .01, -.1 - .012 * 1.45); f.updateMatrixWorld(true); f.localToWorld(o);
-        line('fohe', [o, P(-1.41, 10.40, .415), P(-1.385, 10.33, .412), P(-1.373, 10.15, .405), P(-1.37, 9.85, .40), P(-1.372, 9.6, .40), P(-1.385, 9.42, .405), P(-1.40, 9.32, .41), P(mx0 + .055 + .011 * 1.45, 9.28, .41)], .012, 'tube', { clamps: 1 }); } }   // the cooled oil back to the manifold
+        line('fohe', [o, P(-1.41, 10.40, .415), P(-1.385, 10.33, .412), P(-1.373, 10.15, .405), P(-1.37, 9.85, .40), P(-1.374, 9.63, .395), P(-1.40, 9.56, .393), P(-1.4505 + .011 * 1.45, 9.55, .393)], .012, 'tube', { clamps: 1 }); } }   // the cooled oil back to the manifold's tower
 
     /* ============================== FUEL ============================== */
     PW.part('fuel', { label: 'Fuel system lines', explode: [0, 0, -.45], src: 'p.162-183; TTM ch. 73',
       info: 'Fuel comes down from the pylon to the IFPC on the MGB. Its boost pump sends the fuel through the fuel/oil manifold to the fuel/oil heat exchanger and back, then through the filter to the high-pressure pump. Metered fuel passes the flow meter and leaves the manifold in two tubes for the primary and secondary manifolds round the combustor, which feed the 16 nozzles: 10 duplex and 6 simplex (secondary only), in a pattern of 4 duplex, 4 simplex, 6 duplex, 2 simplex. Every nozzle has check valves that keep the manifolds full after shutdown.\n\nServo fuel from the high-pressure pump drives the vane and bleed actuators and the turbine active clearance control valve, and returns upstream of the filter (p.166). The IFPC\'s motive flow pump sends fuel back up a small tube beside the supply to the aircraft: it drives the engine feed ejector pump in the collector tank, which normally feeds the engine. If an ejector pump fails, both AC boost pumps run instead (TTM 28-00).' });
-    /* the supply crosses under the left thrust link close to its CIC end, where it is lowest; the FOHX boost lines cross over it */
+    const If = FLa(mx0 + .16, IFPC_H, .44);                                                                          // points in the IFPC's frame
+    /* the supply crosses under the left thrust link close to its CIC end, where it is lowest; the FOHX boost lines cross over it. It comes
+       down forward of the IFPC, clear of the tubes on its forward face, and turns aft into the inlet's square flange low on that face
+       (p.163, p.171); until 2026-10-15 it came in on top of the IFPC */
     line('fuel', [P(-1.03, 11.8, 1.06), P(-1.035, 11.8, .90), P(-1.04, 11.79, .70), P(-1.042, 11.74, .50), P(-1.045, 11.55, .455), P(-1.048, 11.2, .455), P(-1.06, 10.75, .43), P(-1.078, 10.43, .397), P(-1.10, 10.05, .452),
-      P(-1.16, 9.4, .47), P(-1.25, 8.75, .49), P(-1.262, 8.58, .44), P(-1.267, 8.505, .416)], .02, 'hose', { clamps: 4, labels: [[.36, 'labelWhite'], [.44, 'labelPrintBlue']] });   // supply from the pylon, beside the precooler duct, into the IFPC's boost pump inlet
-    /* motive flow (TTM 73-00 fig. 2): from the port beside the IFPC's fuel inlet back up to the pylon, following the supply aft of it:
-       under the left thrust link with it, between it and the fuel/oil cooler, over the FOC manifold and up the upper bifurcation */
-    line('fuel', [P(-1.358, 8.467, .3995), P(-1.358, 8.576, .405), P(-1.345, 8.66, .43), P(-1.315, 8.76, .465), P(-1.27, 8.9, .50), P(-1.22, 9.3, .495), P(-1.19, 9.6, .478), P(-1.16, 9.95, .458),
+      P(-1.118, 9.6, .468), P(-1.122, 9.29, .479), P(-1.124, 9.0, .47), P(-1.125, 8.7, .452), If(.203, .012, 0), If(.203, 0, -.04), If(.192, -.005, -.07), If(.172, -.005, -.08), If(.1581, -.005, -.08)], .02, 'hose', { clamps: 4, labels: [[.36, 'labelWhite'], [.44, 'labelPrintBlue']] });   // supply from the pylon, beside the precooler duct, into the IFPC's boost pump inlet
+    /* motive flow (TTM 73-00 fig. 2): from the port above the IFPC's fuel inlet (p.163) back up to the pylon, following the supply aft of
+       it: under the left thrust link with it, between it and the fuel/oil cooler, over the FOC manifold and up the upper bifurcation */
+    line('fuel', [If(.1246, .03, -.025), If(.145, .03, -.025), If(.162, .038, -.015), If(.168, .045, .01), If(.17, .046, .05), P(-1.158, 8.7, .476), P(-1.156, 9.2, .48), P(-1.156, 9.6, .474), P(-1.16, 9.95, .458),
       P(-1.138, 10.15, .445), P(-1.112, 10.45, .41), P(-1.10, 10.6, .42), P(-1.095, 10.75, .43), P(-1.088, 11.2, .462), P(-1.10, 11.45, .493), P(-1.11, 11.6, .496), P(-1.114, 11.69, .499), P(-1.117, 11.735, .53),
       P(-1.118, 11.755, .60), P(-1.118, 11.755, .80), P(-1.118, 11.755, 1.04)], .005, 'tube', { clamps: 4 });
     for (const [o, r1] of [[0, 0], [.12, .03]]) {                                                                                               // boost fuel to and from the FOHX
@@ -828,10 +865,11 @@
     const xS = -1.705, rS = .31, xPm = -1.722, rPm = .3215;
     line('fuel', [P(-1.472, 9.25, .37 - .0116), P(-1.472, 9.25, .348), P(-1.472, 9.4, .343), P(-1.475, 9.55, .341), P(-1.50, 9.66, .343), P(-1.60, 9.66, .343), P(-1.67, 9.70, .34), P(-1.70, 9.76, .338), P(-1.716, 9.79, .333), P(-1.722, 9.8, .3255)], .008, 'tube', { clamps: 2 });   // to the primary
     line('fuel', [P(-1.444, 9.12, .37 - .0116), P(-1.444, 9.12, .348), P(-1.444, 9.3, .342), P(-1.444, 9.5, .34), P(-1.445, 9.75, .339), P(-1.46, 9.86, .338), P(-1.55, 9.87, .338), P(-1.65, 9.9, .336), P(-1.685, 9.96, .332), P(-1.70, 10.0, .325), P(-1.705, 10.0, .3165)], .008, 'tube', { clamps: 2 });   // to the secondary
-    /* metered fuel from the IFPC's upper forward corner round in a U to the flow meter's inlet (A Nahas photo); the meter returns it
-       through its flange into the manifold */
-    { const I = FLa(mx0 + .16, 8.05, .44), M = FLa(mx0 + .055, 8.85, .43);
-      line('fuel', [I(.1016, .02, .065), I(.112, .021, .066), I(.122, .022, .078), I(.127, .015, .11), I(.124, -.008, .145), I(.112, -.03, .163), I(.09, -.045, .1665), M(.1415, -.004, -.008)], .005, 'tube', { clamps: 0 }); }
+    /* metered fuel from the IFPC's forward face round in a U to the flow meter's inlet (A Nahas photo); the meter returns it through its
+       flange into the manifold */
+    { const M = FLa(mx0 + .055, FFM_H, .43);
+      line('fuel', [If(.1246, -.02, .02), If(.136, -.02, .02), If(.147, -.021, .032), If(.15, -.022, .055), P(-1.178, 8.8, .42), P(-1.178, 8.95, .424), P(-1.182, 9.04, .425),
+        M(.245, -.005, -.01), M(.22, -.005, -.01), M(.18385, -.005, -.01)], .005, 'tube', { clamps: 0 }); }
     { const torus = (x, r, t) => { const o = []; for (let k = 0; k <= 16; k++) { const q = k / 16 * TAU; o.push([x + t * Math.cos(q), r + t * Math.sin(q)]); } return o; };
       PW.add('fuel', G.revolve(torus(xS, rS, .0065), { seg: 160 }), 'steel', { solid: true });                               // secondary manifold
       PW.add('fuel', G.revolve(torus(xPm, rPm, .0045), { seg: 160 }), 'steel', { solid: true });                             // primary manifold
@@ -845,7 +883,7 @@
        the right of the core just aft of WC08 and the CIC fire seal, under the actuators, with a branch up to each one's ports, then aft
        to the ACC valve, low under the bleed duct's elbow and beside the PRSOV, rising to the valve aft of the 4th-stage tee */
     { const arcP = (x, r, h0, h1, n) => Array.from({ length: n + 1 }, (_, i) => P(x, h0 + (h1 - h0) * i / n, r));
-      line('fuel', [P(-1.258, 7.68, .448), P(-1.255, 7.5, .44), P(-1.24, 7.25, .435), P(-1.19, 7.0, .42), P(-1.168, 6.8, .395), P(-1.165, 6.6, .385)].concat(arcP(-1.165, .385, 6.45, 1.85, 16),
+      line('fuel', [If(.07, -.01, -.1476), If(.07, -.01, -.162), P(-1.257, 7.5, .446), P(-1.24, 7.25, .435), P(-1.19, 7.0, .42), P(-1.168, 6.8, .395), P(-1.165, 6.6, .385)].concat(arcP(-1.165, .385, 6.45, 1.85, 16),
         [P(-1.19, 1.74, .36), P(-1.225, 1.6, .322), P(-1.30, 1.42, .31), P(-1.40, 1.38, .31), P(-1.44, 1.36, .34), P(-1.47, 1.28, .40), P(-1.50, 1.2, .43), P(-1.53, 1.12, .44), P(-1.57, 1.10, .455),
          P(-1.585, 1.13, .465), P(-1.594, 1.157, .47)]), .006, 'tube', { clamps: 6, ends: false });   // supply
       line('fuel', [P(-1.458, 7.9, .485), P(-1.458, 7.84, .503), P(-1.458, 7.5, .505), P(-1.455, 7.15, .503), P(-1.44, 7.0, .50), P(-1.35, 6.98, .50), P(-1.25, 6.98, .495), P(-1.20, 6.93, .46), P(-1.185, 6.75, .43), P(-1.18, 6.55, .405)].concat(arcP(-1.18, .40, 6.45, 1.9, 16),
@@ -1434,7 +1472,7 @@
       /* the left core harness from the junction at the bottom (p.105): up the left forward of the IFPC, over the layshaft, past the Pb
          sensor and over the HPC to the top; WC05 branches from it and runs aft along the top in the pylon gap, over the clearance control
          manifolds, to the EGT probe junctions behind the LPT */
-      line('harnesses', [P(-1.35, 6.9, .42), P(-1.215, 7.4, .38), P(-1.21, 8.2, .375), P(-1.25, 9.5, .325), P(-1.30, 10.1, .325), P(-1.35, 10.65, .315), P(-1.40, 11.1, .305), P(-1.445, 11.2, .305), P(-1.50, 11.42, .31), P(-1.58, 11.6, .31), P(-1.65, 11.9, .31), P(-1.68, 12.15, .31)], .012, 'harness', { clamps: 4 });   // under the FOHX end plate, left of the 4th-stage bleed duct
+      line('harnesses', [P(-1.35, 6.9, .42), P(-1.215, 7.4, .38), P(-1.19, 7.75, .39), P(-1.172, 8.05, .4), P(-1.172, 8.35, .38), P(-1.198, 8.75, .35), P(-1.25, 9.5, .325), P(-1.30, 10.1, .325), P(-1.35, 10.65, .315), P(-1.40, 11.1, .305), P(-1.445, 11.2, .305), P(-1.50, 11.42, .31), P(-1.58, 11.6, .31), P(-1.65, 11.9, .31), P(-1.68, 12.15, .31)], .012, 'harness', { clamps: 4 });   // under the FOHX end plate, left of the 4th-stage bleed duct
       line('harnesses', [P(-1.0606, 10.16, .413), P(-1.09, 10.1, .385), P(-1.13, 10.0, .375), P(-1.18, 9.8, .345), P(-1.22, 9.62, .33), P(-1.245, 9.55, .326)], .006, 'harness', { clamps: 0, ends: false });   // Pb sensor
       /* WC08 (p.107) up the right of the core along the CIC fire seal, under the 2.5 bleed and LPC vane actuators and behind the N1
          probe, to 1 o'clock; branches to the N1 probe's two connectors, the P2.5/T2.5 probe and, aft over the HPC, the T3 probe */
@@ -1481,12 +1519,12 @@
       /* the fuel units on the MGB front face into the left core harness as it passes forward of them: the IFPC's metering valve and
          overspeed solenoid, the fuel filter delta-P sensor at 7:30 and the flow meter at 9 o'clock (p.105, p.170) */
       { const leg = (pts, r) => line('harnesses', pts, r || .006, 'harness', { clamps: 'long', ends: false }), J8 = P(-1.30, 7.7, .495);
-        const Fh = FLa(mx0 + .055, 7.25, .46), I = FLa(mx0 + .16, 8.05, .44), M = FLa(mx0 + .055, 8.85, .43);
-        leg([P(-1.40, 7.97, .515), P(-1.395, 7.86, .522), P(-1.36, 7.72, .523), P(-1.32, 7.66, .51), J8]);                                              // overspeed shutdown solenoid
+        const Fh = FLa(mx0 + .055, 7.25, .46), I = FLa(mx0 + .16, IFPC_H, .44), M = FLa(mx0 + .055, FFM_H, .43);
+        leg([I(-.082, .061, -.0823), I(-.082, .061, -.1), I(-.08, .058, -.128), P(-1.375, 7.73, .51), P(-1.33, 7.68, .505), J8]);   // the lower aft cylinder (overspeed shutdown solenoid), down round the IFPC's lower edge
         leg([Fh(.1232, -.0016, .08), Fh(.1232, .01, .08), P(-1.305, 7.64, .486), J8]);                                          // fuel filter delta-P, from its forward end
-        leg([J8, P(-1.255, 7.62, .478), P(-1.228, 7.52, .45), P(-1.222, 7.46, .405), P(-1.215, 7.42, .385)], .008);
-        leg([I(.1028, .0334, .03), I(.106, .015, .03), I(.112, -.015, .032), I(.117, -.045, .034), P(-1.21, 8.22, .378)]);       // fuel metering valve, under the metered fuel tube
-        leg([M(.1443, 0, .025), M(.156, 0, .025), P(-1.268, 8.99, .428), P(-1.257, 9.1, .41), P(-1.252, 9.28, .375), P(-1.25, 9.5, .33)]); }   // fuel flow meter
+        leg([J8, P(-1.255, 7.62, .478), P(-1.228, 7.52, .45), P(-1.218, 7.46, .405), P(-1.213, 7.42, .385)], .008);
+        leg([I(.1301, .0088, .09), I(.13, -.02, .091), I(.132, -.05, .09), I(.133, -.075, .087), P(-1.196, 8.73, .356)]);      // fuel metering valve, inboard down the IFPC's forward face
+        leg([M(.1878, 0, .0325), M(.2, 0, .0325), P(-1.222, 9.3, .405), P(-1.224, 9.36, .37), P(-1.234, 9.43, .34), P(-1.246, 9.48, .33)]); }   // fuel flow meter
       /* buffer air (p.278-283): the valve solenoid into the T3 branch beside it; the pressure sensor, ahead of the CIC fire seal, through
          a grommet in the seal to WC08 */
       line('harnesses', [P(-1.31, .85, .344), P(-1.312, .86, .36), P(-1.33, .95, .345), P(-1.35, 1.03, .33)], .005, 'harness', { clamps: 0, ends: false });
@@ -1620,7 +1658,7 @@
         Kt.box('vib-sensors', f, [0, .015, .0], [.03, .018, .022], 'steel', { round: .004 });
         Kt.cyl('vib-sensors', f, [0, .02, -.012], 'z', .012, .034, 'steel', { edge: .003 });
         Kt.connector('vib-sensors', f, [0, .02, -.03], '-z', .0085, { lead: '-z' });
-        line('vib-sensors', [P(-1.012, 8.82, .468), P(-1.02, 8.74, .46), P(-1.05, 8.62, .43), P(-1.09, 8.52, .385), P(-1.15, 8.43, .37), P(-1.19, 8.36, .375)], .005, 'harness', { clamps: 0, ends: false }); }
+        line('vib-sensors', [P(-1.012, 8.82, .468), P(-1.02, 8.74, .46), P(-1.05, 8.62, .43), P(-1.09, 8.52, .385), P(-1.14, 8.45, .382), P(-1.162, 8.4, .38)], .005, 'harness', { clamps: 0, ends: false }); }
       { const xa = -2.425, f = Kt.frame('vib-sensors', xa, 3, rCase(xa));
         Kt.box('vib-sensors', f, [0, .007, 0], [.026, .014, .026], 'steel', { round: .003 });
         Kt.cyl('vib-sensors', f, [0, .009, .019], 'z', .012, .012, 'steel', { edge: .002 }); Kt.cyl('vib-sensors', f, [0, .021, 0], 'y', .009, .014, 'steel');
