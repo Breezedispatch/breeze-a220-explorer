@@ -338,10 +338,12 @@
       acc('sav', 'Starter air valve (SAV)', 'Pneumatically operated butterfly valve in the starter duct, spring-loaded closed, with a regulator that holds 30 psi downstream. The EEC opens it through a dual-coil torque motor and confirms it open from starter speed and N2. It sits inside a cooling shroud fed by a tube from the air/oil cooler; its line-replaceable filter is under the cover on top.\n\nA 3/8 in square-drive manual override can be reached through an access hole in the left thrust reverser door. The 2017 manual carries a warning that a manual override start is not an approved procedure, because of the motor-to-start logic that prevents starting with a bowed rotor: follow the current AMP and MEL.', 'p.290-299; p.298 warning');
       /* p.297: the starter duct branches down from the precooler's outlet tee (the starter takes cooled bleed, TTM p.579), comes down the
          left of the core through the valve at 9 o'clock, then turns forward and down into the aft end of the starter. It runs just aft of
-         the HPT, over the turbine intermediate case: further aft the gap between the LPT case and the IFS is too small for it. It drops
-         straight down under the tee and turns left low, under the precooler's strut and the left thrust link */
+         the HPT, over the turbine intermediate case: further aft the gap between the LPT case and the IFS is too small for it. From the
+         tee it slopes down and forward behind the precooler's aft face, as p.297 draws it (it dropped straight from a tee 5.5 cm further
+         forward until 2026-10-14, when the precooler was lengthened), and turns left low, under the precooler's strut and the left
+         thrust link */
       const sv = P(-2.07, 9.1, .45), st = P(ax - .29, ah, ar);                                                        // into the starter's inlet cone
-      line('sav', [V(-2.14, .685, 0), V(-2.125, .60, 0), V(-2.10, .50, .005), V(-2.09, .445, -.01), P(-2.088, 11.7, .42), P(-2.083, 11.2, .43), P(-2.077, 10.5, .435), P(-2.07, 9.7, .445), sv], .045, 'duct', { clamps: 2 });
+      line('sav', [V(-2.195, .685, 0), V(-2.165, .60, 0), V(-2.12, .50, .005), V(-2.09, .445, -.01), P(-2.087, 11.7, .42), P(-2.085, 11.2, .43), P(-2.078, 10.5, .435), P(-2.071, 9.7, .445), sv], .045, 'duct', { clamps: 2 });
       const lowDuct = line('sav', [sv, P(-2.03, 8.45, .42), P(-1.985, 8.05, .428), st], .045, 'duct', { clamps: 1 });
       /* p.299: butterfly body in the duct, actuator and regulator on its side, filter cover on top, the override access funnel, the
          connector; the whole valve sits in a quilted cooling shroud fed by its cooling tube. p.297 (scaled on the starter) makes the
@@ -1069,12 +1071,14 @@
     { const W = PW.parts.get('precooler').obj, PC = V(-1.85, .645, 0), PA = deg(17), zA = V(0, 0, 1);
       const pcW = (lx, ly, lz) => V(lx, ly, lz || 0).applyAxisAngle(zA, PA).add(PC);                              // precooler frame to engine
       const pf = new THREE.Group(); pf.position.copy(PC); pf.rotation.z = PA; W.add(pf);
-      Kt.box('precooler', pf, [0, 0, 0], [.24, .29, .16], 'nickel', { round: .006 });                                 // the core
-      for (const s of [-1, 1]) { Kt.box('precooler', pf, [0, 0, s * .0815], [.244, .294, .004], 'plateAl', { round: .002 });   // side plates
-        Kt.box('precooler', pf, [-.085, 0, s * .0838], [.045, .28, .002], 'accGrey', { round: .001 });                     // doubler along the aft edge
-        for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, -1], [0, 1]]) Kt.hex('precooler', pf, [a * .11, b * .135, s * .0855], s > 0 ? 'z' : '-z', .005, .004, 'steel'); }
-      for (let i = 0; i < 15; i++) Kt.box('precooler', pf, [-.1205, 0, -.07 + i * .01], [.002, .27, .0012], 'steel', { round: 0, shadow: false });   // fins on the open aft face
-      Kt.box('precooler', pf, [-.005, .172, 0], [.23, .055, .14], 'castAl', { round: .024 });                         // upper (outlet) header
+      /* the core runs 0.36 m along its axis, its aft face from about x -2.04 low to -2.12 high, as p.297 draws it (0.24 m, ending at
+         -2.01, until 2026-10-14: design audit 3, finding 5) */
+      Kt.box('precooler', pf, [-.06, 0, 0], [.36, .29, .16], 'nickel', { round: .006 });                              // the core
+      for (const s of [-1, 1]) { Kt.box('precooler', pf, [-.06, 0, s * .0815], [.364, .294, .004], 'plateAl', { round: .002 });   // side plates
+        Kt.box('precooler', pf, [-.205, 0, s * .0838], [.045, .28, .002], 'accGrey', { round: .001 });                     // doubler along the aft edge
+        for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, -1], [0, 1]]) Kt.hex('precooler', pf, [-.06 + a * .17, b * .135, s * .0855], s > 0 ? 'z' : '-z', .005, .004, 'steel'); }
+      for (let i = 0; i < 15; i++) Kt.box('precooler', pf, [-.2405, 0, -.07 + i * .01], [.002, .27, .0012], 'steel', { round: 0, shadow: false });   // fins on the open aft face
+      Kt.box('precooler', pf, [-.065, .172, 0], [.34, .055, .14], 'castAl', { round: .024 });                         // upper (outlet) header
       Kt.box('precooler', pf, [.01, -.198, 0], [.22, .11, .14], 'castAl', { round: .028 });                           // lower (inlet) header
       /* the bleed inlet: a stub out of the lower header's forward corner, pointing forward and to the right, where the duct from the
          PRSOV joins it on a V-band */
@@ -1111,11 +1115,11 @@
         const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
         PW.add('precooler', g, 'plateAl'); }                                                                         // the inlet diffuser
       /* bleed outlet: the upper header turns aft into a tee; the duct rises into the pylon (to the aircraft) and the starter duct drops */
-      const T = V(-2.14, .745, 0);
-      line('precooler', [pcW(-.10, .175), pcW(-.13, .178), V(-2.06, .757, 0), V(-2.095, .752, 0)], .062, 'tube', { clamps: 0, ends: false });
+      const T = V(-2.195, .748, 0);                                                                                   // the tee, aft of the longer core (at -2.14 until 2026-10-14)
+      line('precooler', [pcW(-.20, .175), pcW(-.225, .177), V(-2.15, .748, 0)], .062, 'tube', { clamps: 0, ends: false });
       Kt.ball('precooler', W, T.toArray(), .068, 'steel');
-      line('precooler', [T, V(-2.20, .82, 0), V(-2.29, .925, 0), V(-2.36, 1.0, 0), V(-2.385, 1.035, 0)], .06, 'tube', { clamps: 0, ends: false });
-      Kt.cyl('precooler', W, [-2.245, .8725, 0], [-.09, .105, 0], .067, .1, 'blanket');                                 // insulating sleeve (p.297)
+      line('precooler', [T, V(-2.24, .83, 0), V(-2.30, .925, 0), V(-2.36, 1.0, 0), V(-2.385, 1.035, 0)], .06, 'tube', { clamps: 0, ends: false });
+      Kt.cyl('precooler', W, [-2.27, .8775, 0], [-.06, .095, 0], .067, .1, 'blanket');                                  // insulating sleeve (p.297)
       Kt.vband('precooler', W, [-2.372, 1.016, 0], [-.025, .035, 0], .061, { phase: 0 });                              // the joint with the pylon's bleed duct
 
       PW.part('fav', { parent: 'precooler', label: 'Fan air valve (FAV)', src: 'TTM ch. 36 (p.578-579); p.198; Breeze maintenance',
@@ -1143,10 +1147,10 @@
 
       PW.part('bts', { parent: 'precooler', label: 'Bleed temperature sensor (BTS)', src: 'TTM ch. 36 (p.576-579); p.297',
         info: 'Temperature probe in the bleed duct just downstream of the precooler, where the starter duct branches off. The IASCs modulate the fan air valve on it, holding the temperature of the bleed delivered to the aircraft. The manual\'s starting figure (p.297) draws it on the outlet duct but does not label it.' });
-      { const g = new THREE.Group(); g.position.set(-2.156, .87, 0); PW.parts.get('bts').obj.add(g);
+      { const g = new THREE.Group(); g.position.set(-2.212, .905, 0); PW.parts.get('bts').obj.add(g);
         Kt.cyl('bts', g, [-.002, 0, 0], 'x', .013, .008, 'steel'); Kt.hex('bts', g, [.009, 0, 0], 'x', .011, .01, 'steel');
         Kt.cyl('bts', g, [.026, 0, 0], 'x', .0085, .024, 'steel'); Kt.connector('bts', g, [.038, 0, 0], 'x', .008, { lead: 'y' });
-        line('bts', [V(-2.1028, .8844, 0), V(-2.108, .95, .008), V(-2.105, 1.017, .012)], .005, 'harness', { clamps: 0, ends: false }); } }
+        line('bts', [V(-2.1588, .9194, 0), V(-2.164, .97, .008), V(-2.161, 1.017, .012)], .005, 'harness', { clamps: 0, ends: false }); } }
     PW.part('tacc', { parent: 'air', label: 'Turbine active clearance control', src: 'p.270-277',
       info: 'Fan air taken through the scoop on the right IFS at about 2 o\'clock passes the ACC valve and is sprayed onto the HPT and LPT cases from ring manifolds. Shrinking the cases closes the blade tip clearances in cruise, saving fuel; the valve is closed for takeoff and most of the climb.' });
     /* p.270-273: the ACC air valve at 1 o'clock near the rear of the HPC (it was over the HPT until 2026-10-07), fed from the scoop on the
