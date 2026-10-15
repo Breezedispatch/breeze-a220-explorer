@@ -130,7 +130,8 @@
     port(pid, f, 'fitting', add(pos, D, s * 1.45 + (o && o.stub ? o.stub + s * .15 : 0)), D, s, o); };
   /* hex-head plug (drain, overfill, core drain) */
   K.plug = (pid, f, pos, d, s, mat) => { const D = dir(d); K.cyl(pid, f, pos, d, s * 1.05, s * .3, 'steel'); K.hex(pid, f, add(pos, D, s * .55), d, s * .8, s * .8, mat || 'steel'); };
-  /* chip collector / magnetic plug: hex body with a black bayonet cap and a lockwire tab */
+  /* chip collector / magnetic plug: hex body with a black bayonet cap and its grip. These are quick-removal fittings (p.229-231), not
+     lockwired */
   K.chip = (pid, f, pos, d, s) => { s = s || .011; const D = dir(d); K.hex(pid, f, pos, d, s, s * .9, 'steel');
     K.cyl(pid, f, add(pos, D, s * .95), d, s * .95, s * .9, 'capBlack', { edge: s * .25 }); K.cyl(pid, f, add(pos, D, s * 1.55), d, s * .35, s * .4, 'capBlack'); };
   /* circular MS connector with coupling nut and a backshell turning the harness away along `lead` */
