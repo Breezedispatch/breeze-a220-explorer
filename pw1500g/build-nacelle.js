@@ -404,9 +404,12 @@
       rev(G.shellProfile(dw.map(([xx, r]) => [xx, r + .012]), dw), 'cowlWhite', { inner: true });
       /* p.18, p.42, p.60: the forward frame's V-blade. A web rises from the duct wall behind the mount ring, a lip runs forward over the
          ring's aft edge, and the blade drops into the V-groove (flange D, x -0.833), which aligns and supports the closed door. It stops
-         at 5:36 and 6:24, where the cowl anti-ice duct and the harnesses cross the flange into the lower bifurcation */
-      PW.add(pid, G.revolve([[-.806, 1.008], [-.806, 1.0], [-.815, .982], [-.824, 1.0], [-.848, 1.0], [-.848, .958], [-.862, .958], [-.862, 1.008]],
-        { seg: 72, thetaStart: sg > 0 ? it0 : deg(192), thetaLength: sg > 0 ? deg(168) - it0 : it0 + itl - deg(192) }), 'titanium', { into: hinge });
+         at 5:36 and 6:24, where the cowl anti-ice duct and the harnesses cross the flange into the lower bifurcation, and between 3:41 and
+         4:04 (7:56 and 8:19), round the door opening actuator's bracket and the hold-open rod's open fitting on the ring, which it ran
+         through until 2026-10-15 */
+      { const prof = [[-.806, 1.008], [-.806, 1.0], [-.815, .982], [-.824, 1.0], [-.848, 1.0], [-.848, .958], [-.862, .958], [-.862, 1.008]];
+        const b0 = sg > 0 ? it0 : deg(192), b1 = sg > 0 ? deg(168) : it0 + itl, g0 = deg(sg > 0 ? 110.5 : 238), g1 = deg(sg > 0 ? 122 : 249.5);
+        for (const [c0, c1] of [[b0, g0], [g1, b1]]) PW.add(pid, G.revolve(prof, { seg: Math.max(4, Math.round(72 * (c1 - c0) / (b1 - b0))), thetaStart: c0, thetaLength: c1 - c0 }), 'titanium', { into: hinge }); }
       rev([[xJ2 - .002, rDuct(xJ2) + .012], [xTB, rDuct(xJ2) + .012], [xTB, rOut(xJ2) - .025], [xJ2 - .002, rOut(xJ2) - .025]], 'lime', { inner: true });
       /* p.330-333: sixteen carbon fibre cascade boxes, eight per door, bolted between the torque box and the aft cascade ring. Each is a
          grid of curved vanes that turn the air forward, with strongbacks across them; gaps where the two actuators pass; a flow blocker
@@ -745,7 +748,7 @@
           const zs = -sg;                                                                                                         // the side away from the LVDT harness
           Kt.box(aid, f, [.0025, 0, 0], [.085, .07, .07], 'castAl', { round: .01 });                                              // head
           Kt.tube(aid, f, [-.047, 0, 0], 'x', .034, .056, .01, 'castAl');                                                         // gimbal ring
-          for (const s of [-1, 1]) { Kt.cyl(aid, f, [-.047, 0, s * .062], 'z', .011, .014, 'steel'); Kt.box(aid, f, [-.047, -.012, s * .076], [.03, .05, .012], 'greyPrimer', { round: .003 }); }   // trunnions and yoke
+          for (const s of [-1, 1]) { Kt.cyl(aid, f, [-.047, 0, s * .062], 'z', .011, .014, 'steel'); Kt.box(aid, f, [-.047, -.012, s * .068], [.03, .05, .012], 'greyPrimer', { round: .003 }); }   // trunnions and yoke, inside the gap between the cascade boxes (its cheeks were 4 mm into them until 2026-10-15)
           Kt.cyl(aid, f, [-.33, 0, 0], 'x', .033, .62, 'steel', { edge: .006 }); Kt.cyl(aid, f, [-.61, 0, 0], 'x', .041, .07, 'steel', { edge: .006 }); Kt.cyl(aid, f, [-.66, 0, 0], 'x', .027, .03, 'steel');   // body, rod-end housing and gland
           for (const xr of [-.13, -.27, -.41, -.54]) Kt.tube(aid, f, [xr, 0, 0], 'x', .033, .037, .012, 'steel');                // clamp bands
           if (feedback) { Kt.cyl(aid, f, [.0, .04, -.015 * zs], 'y', .009, .012, 'steel'); Kt.connector(aid, f, [.0, .047, -.015 * zs], 'y', .007, { lead: 'x' }); }   // lock proximity sensor on the head (p.349)
@@ -842,10 +845,12 @@
          powerpack's line reaches it at the quick-disconnect by the bearing end. p.41 draws it single-stage: a cylinder from the bearing
          end, the mechanical lock pin and the manual bleed port on its head, and a chromed rod out to the rod end. Its stroke (about 0.6 m
          on a 0.72 m actuator) is what limits the door to about 31 deg */
-      { const Kt = PW.kit, hF = sg > 0 ? 3.75 : 8.25, Af = G.onRing(-.86, 1.06, G.clock(hF)), Ad = G.onRing(-.955, 1.08, A(73.5));
+      { const Kt = PW.kit, hF = sg > 0 ? 3.75 : 8.25, Af = G.onRing(-.86, 1.08, G.clock(hF)), Ad = G.onRing(-.93, 1.08, A(73.5));
         const fl = Kt.frame('pdos', -.86, hF, .968);
-        Kt.box('pdos', fl, [0, .05, 0], [.03, .1, .045], 'lime', { round: .004 }); Kt.fitting('pdos', fl, [.015, .055, 0], 'x', .009);       // bracket on the fan case's aft ring, and the quick-disconnect
-        const fd = Kt.frame(pid, -.957, hOf(73.5), 1.08, { into: hinge }); Kt.box(pid, fd, [0, 0, 0], [.02, .05, .045], 'lime', { round: .004 });   // lug on the torque box
+        Kt.box('pdos', fl, [0, .06, 0], [.03, .12, .045], 'lime', { round: .004 }); Kt.fitting('pdos', fl, [.015, .055, 0], 'x', .009);       // bracket on the fan case's aft ring, tall enough that the actuator clears the door's V-blade (2 cm lower until 2026-10-15), and the quick-disconnect
+        /* the lug stands 4.7 cm off the torque box's face, so the actuator's head, which the retracted actuator brings within a few cm of
+           the rod end, clears the face (the lug was 2 cm deep until 2026-10-15 and the head 17 mm into the torque box) */
+        const fd = Kt.frame(pid, -.9435, hOf(73.5), 1.08, { into: hinge }); Kt.box(pid, fd, [0, 0, 0], [.047, .05, .045], 'lime', { round: .004 });   // lug on the torque box
         const Lc = .68, Lr = .69, eye = () => new THREE.SphereGeometry(.02, 14, 10);
         member('pdos', PW.parts.get('pdos').obj, [
           { geo: eye(), mat: 'steel', at: 'a', s: 0 }, { geo: tubeY(.03, Lc), mat: 'accPaint', at: 'a', s: .012 + Lc / 2 },          // bearing end, cylinder
