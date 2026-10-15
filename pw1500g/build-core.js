@@ -146,11 +146,15 @@
       info: 'The hub carries the 18 blades in dovetail slots, the No. 1 slot between the two "No. 1" marks on the hub. Composite fairings between the blades form the inner flow path, each held by a pin through lugs on the hub. The lock ring across the front of the slots holds the blades axially.\n\nInside the lock ring, behind the inlet cone, is the fan correction plane: the balance weight flange. The riveted module (Z) balance weights are set when the module is built and are never disturbed. Clip-on trim weights go either side of them. After a vibration survey the OMS trim balance procedure gives each weight (each mass has its own part number) and its angle from the 0 deg reference, a dimple on the fan shaft. Check the stored weight configuration against the hardware first: if they differ, the solution is wrong.' });
     {
       const le = L().fanLE.map(([x, r]) => [r, x]), te = L().fanTE.map(([x, r]) => [r, x]);   // tables r -> x
-      const rh = .286, rt = .925, n = 12, secs = [], sheath = [];
-      for (let k = 0; k <= n; k++) { const t = k / n, r = rh + (rt - rh) * Math.pow(t, .9);
+      /* lean: seen head-on in Brian's photo of the fan (front_all_open), each leading edge curves like a C. It leaves the hub about
+         4 deg clockwise of where it is at mid-span, swings back to mid-span (0.55 of the tip radius), then out to the tip about 3.5 deg
+         clockwise again, the same on every blade. The outer half was already right; the inner curve is the hub term, fitted to the
+         photo (until 2026-10-15 the edge came straight out of the hub) */
+      const rh = .286, rt = .925, n = 16, secs = [], sheath = [], sm = u => u >= 1 ? 1 : u * u * (3 - 2 * u);
+      for (let k = 0; k <= n; k++) { const t = k / n, f = Math.pow(t, .9), r = rh + (rt - rh) * f;
         const xl = G.interp(le, r), xt = G.interp(te, r), ax = Math.max(.12, xl - xt);
         const g = deg(26 + 34 * Math.pow(t, .85));                             // stagger from the axis: about 26 deg at the root to 60 deg at the tip
-        const s = { r, xle: xl, chord: ax / Math.cos(g), stagger: g, camber: .075 - .05 * t, thick: .11 - .08 * t, lean: -.10 * t * t };
+        const s = { r, xle: xl, chord: ax / Math.cos(g), stagger: g, camber: .075 - .05 * t, thick: .11 - .08 * t, lean: -.10 * t * t - .028 * (1 - sm(f / .32)) };
         secs.push(s); sheath.push(Object.assign({}, s)); }
       const blade = G.blade(secs, { chordPts: 16, dir: -1 }), lead = G.blade(sheath, { chordPts: 8, dir: -1, uMax: .065, inflate: 1.12 });   // sheath over the first 6.5 % of the chord
       PW.add('fan-blades', G.ringInstances(blade, PW.partMat('fan-blades', 'fanBladePU'), 18), null);
