@@ -15,42 +15,43 @@
     R.outputEncoding = THREE.sRGBEncoding; R.toneMapping = THREE.ACESFilmicToneMapping; R.toneMappingExposure = 1.0;
     R.physicallyCorrectLights = false; R.localClippingEnabled = true;
     R.shadowMap.enabled = true; R.shadowMap.type = THREE.PCFSoftShadowMap;
-    /* a dark backdrop so the engine stands out (Brian, 2026-10-15: a light grey hangar backdrop washed it out and made it hard to see),
-       a key light from high on the right for shape, and some bounce from below; the reflections come from a dim hangar (below) */
     const S = PW.scene = new THREE.Scene();
-    const BG = 0x1b2533; S.background = new THREE.Color(BG);
+    S.background = new THREE.Color(0x1b2533);
     PW.camera = new THREE.PerspectiveCamera(32, 2, .05, 200);
     PW.root = new THREE.Group(); PW.root.name = 'engine'; S.add(PW.root);
     S.environment = PW.makeEnvironment(R);
-    const hemi = new THREE.HemisphereLight(0xdfe8f4, 0x5c6168, .35); S.add(hemi);
-    const key = PW.key = new THREE.DirectionalLight(0xfff4e6, 1.5); key.position.set(3.5, 7, 5); key.castShadow = true;
+    const hemi = new THREE.HemisphereLight(0xdfe8f4, 0x2a2f36, .35); S.add(hemi);
+    const key = PW.key = new THREE.DirectionalLight(0xfff4e6, 1.6); key.position.set(3.5, 7, 5); key.castShadow = true;
     key.shadow.mapSize.set(4096, 4096); key.shadow.bias = -.0002; key.shadow.normalBias = .012;
     Object.assign(key.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: .5, far: 25 }); S.add(key, key.target);
-    const fill = new THREE.DirectionalLight(0xbcd2ff, .3); fill.position.set(-5, 2, -4); S.add(fill);
-    const rim = new THREE.DirectionalLight(0xffffff, .45); rim.position.set(-2, 5, 6); S.add(rim);
+    const fill = new THREE.DirectionalLight(0xbcd2ff, .35); fill.position.set(-5, 2, -4); S.add(fill);
+    const rim = new THREE.DirectionalLight(0xffffff, .5); rim.position.set(-2, 5, 6); S.add(rim);
     /* a soft light carried with the camera, like the work lights in a hangar, so open compartments and cut faces can be inspected */
-    PW.headlight = new THREE.PointLight(0xfff8f0, .45, 0, 1.2); PW.camera.add(PW.headlight); PW.headlight.position.set(.3, .4, 0); S.add(PW.camera);
+    PW.headlight = new THREE.PointLight(0xfff8f0, .55, 0, 1.2); PW.camera.add(PW.headlight); PW.headlight.position.set(.3, .4, 0); S.add(PW.camera);
     /* hangar floor: catches the engine's shadow and a soft contact shade */
     const floor = PW.floor = new THREE.Mesh(new THREE.CircleGeometry(30, 64), new THREE.MeshStandardMaterial({ color: new THREE.Color(0x4a5058).convertSRGBToLinear(), roughness: .72, metalness: 0, envMapIntensity: .35 }));
     floor.rotation.x = -Math.PI / 2; floor.position.y = -1.75; floor.receiveShadow = true; floor.userData.noPick = true; S.add(floor);
-    S.fog = new THREE.Fog(BG, 11, 26);                                       // the floor fades into the backdrop (fog mixes after the sRGB encode, so the same hex)
+    S.fog = new THREE.Fog(0x1b2533, 11, 26);                                 // the floor fades into the backdrop
     PW.initCut(); PW.initControls(canvas);
     return PW;
   };
-  /* a hangar rendered to a prefiltered environment map for the reflections: grey wall panels, floor and roof, a grid of high-bay lamps
-     and an open door of daylight, kept dim so the dark paint stays dark and the lamps give the highlights. Everything is unlit
-     (MeshBasic) so its colour is its radiance: until 2026-10-15 the walls used a lit material, which renders black in this lightless
-     scene, so every shiny surface reflected black and the metal finishes had been turned down to make up for it. Surfaces deep in the
-     inlet, which really see the dark inside of the engine, carry a low envMapIntensity of their own */
+  /* a hangar-like light room rendered to a prefiltered environment map, so polished metal shows long light strips the
+     way it does under hangar lighting, and painted surfaces get soft sky-like fill */
   PW.makeEnvironment = function (R) {
-    const env = new THREE.Scene(), box = new THREE.BoxGeometry(), basic = (hex, I, o) => { const m = new THREE.MeshBasicMaterial(Object.assign({ color: hex }, o)); m.color.multiplyScalar(I); return m; };
-    const room = new THREE.Mesh(box, basic(0xf2f3f5, .3, { side: THREE.BackSide })); room.scale.set(44, 18, 44); room.position.y = 7; env.add(room);
-    const plane = (hex, I, y, up) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(44, 44), basic(hex, I)); m.rotation.x = up ? -Math.PI / 2 : Math.PI / 2; m.position.y = y; env.add(m); };
-    plane(0xd9d9d6, .2, -1.9, true); plane(0xe8eaee, .3, 15.9, false);                                  // floor and roof
-    const lamp = (x, y, z, sx, sy, sz, I, col) => { const b = new THREE.Mesh(box, basic(col || 0xffffff, I)); b.position.set(x, y, z); b.scale.set(sx, sy, sz); env.add(b); };
-    for (let i = -3; i <= 3; i++) for (let j = -2; j <= 2; j++) lamp(i * 5, 15.7, j * 7, 1.2, .1, 1.2, 7);   // high-bay lamps in a grid
-    lamp(0, 6, -21.9, 26, 10, .1, 1.5, 0xe6eeff);                                                          // open hangar door: daylight
-    const pm = new THREE.PMREMGenerator(R); const tex = pm.fromScene(env, .04).texture; pm.dispose();
+    /* walls kept fairly dark: dark paint (fan blades, spinner, fan case) must read dark, with the lamps giving the highlights.
+       The walls and floor use a lit material and this scene has no lights, so they render black: only the lamps show in the
+       reflections. That is deliberate. Lit grey walls (tried on 2026-10-15) filled every surface with reflected light and washed
+       the core compartment out (Brian: "less realistic"), and the metal finishes are set for this dark surround */
+    const env = new THREE.Scene(), box = new THREE.BoxGeometry();
+    const wall = new THREE.Mesh(box, new THREE.MeshStandardMaterial({ color: 0x3f454d, side: THREE.BackSide, roughness: 1 }));
+    wall.scale.set(40, 16, 40); wall.position.y = 6; env.add(wall);
+    const floorM = new THREE.Mesh(box, new THREE.MeshStandardMaterial({ color: 0x2a2d31, roughness: 1 })); floorM.scale.set(40, .1, 40); floorM.position.y = -1.9; env.add(floorM);
+    const lamp = (x, y, z, sx, sy, sz, I, col) => { const m = new THREE.MeshBasicMaterial({ color: col || 0xffffff }); m.color.multiplyScalar(I); const b = new THREE.Mesh(box, m); b.position.set(x, y, z); b.scale.set(sx, sy, sz); env.add(b); };
+    for (let i = -2; i <= 2; i++) lamp(i * 3.2, 13.5, 0, .6, .1, 22, 9);              // ceiling strip lights running fore and aft
+    lamp(0, 7, -19.8, 18, 6, .1, 2.2, 0xdfe9ff);                                         // open hangar door: cool daylight
+    lamp(19.8, 5, 4, .1, 4, 10, 3.5, 0xfff1dc);                                          // a warm softbox on one side
+    lamp(-19.8, 6, -3, .1, 5, 8, 1.6);
+    const pm = new THREE.PMREMGenerator(R); const tex = pm.fromScene(env, .02).texture; pm.dispose();
     return tex;
   };
 
@@ -88,9 +89,7 @@
   /* the library: name -> constructor arguments. Values are first estimates and are refined against photos. */
   PW.MAT = {
     /* gloss polyurethane topcoat: a full clear coat that mirrors the hangar's strip lights, over a softer base colour */
-    /* Breeze blue stays deep and saturated in Brian's photos (about 2, 66, 200 lit); mirroring the whole white hangar at full strength
-       washed it to periwinkle (67, 104, 207), so its reflections are held to 0.4 (22-39, 66-77, 173-182 here) */
-    nacellePaint: () => new THREE.MeshPhysicalMaterial({ color: col('#0b3ea3'), roughness: .42, metalness: 0, clearcoat: 1, clearcoatRoughness: .06, envMapIntensity: .4 }),
+    nacellePaint: () => new THREE.MeshPhysicalMaterial({ color: col('#0b3ea3'), roughness: .42, metalness: 0, clearcoat: 1, clearcoatRoughness: .06 }),
     whitePaint:   () => new THREE.MeshPhysicalMaterial({ color: col('#e9ecef'), roughness: .45, metalness: 0, clearcoat: .9, clearcoatRoughness: .1 }),
     greyPrimer:   () => new THREE.MeshStandardMaterial({ color: col('#9aa29d'), roughness: .75, metalness: .05 }),
     lipAl:        () => new THREE.MeshStandardMaterial({ color: col('#c8ccd0'), roughness: .55, metalness: .55, roughnessMap: noiseTex('brushed', 256, 6, .5, 1, 8) }),   // satin light grey in the photos, not a mirror

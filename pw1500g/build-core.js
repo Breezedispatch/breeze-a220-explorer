@@ -14,14 +14,12 @@
     hotNut:      () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#4a4642'), roughness: .48, metalness: .7 }),   // the dark, heat-coloured flange nuts on the hot cases (photos)
     /* photos: the blades are glossy blue-black and pick up bright reflections of the hangar lights; the titanium leading edge reads as a
        matte pale sage band about 3 cm wide head-on (teal-green in sunlight) */
-    /* the blades, spinner and inlet liners sit deep in the inlet and really see its dark inside, which the environment map cannot know:
-       their own reflections are turned down (front photo: blades about 20 of 255, spinner 35, the liner ring 15-40) */
-    fanBladePU:  () => new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#141922'), roughness: .38, metalness: .15, clearcoat: .45, clearcoatRoughness: .22, envMapIntensity: .35 }),   // black polyurethane erosion paint (p.58)
+    fanBladePU:  () => new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#141922'), roughness: .38, metalness: .15, clearcoat: .45, clearcoatRoughness: .22 }),   // black polyurethane erosion paint (p.58)
     tiSheath:    () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#97ab9e'), roughness: .5, metalness: .3 }),   // titanium leading-edge sheath
-    coneGrey:    () => new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#33363a'), roughness: .58, metalness: .05, clearcoat: .12, clearcoatRoughness: .5, envMapIntensity: .35 }),
+    coneGrey:    () => new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#33363a'), roughness: .58, metalness: .05, clearcoat: .12, clearcoatRoughness: .5 }),
     fanCaseOlive:() => new THREE.MeshStandardMaterial({ color: new THREE.Color('#5f5f45'), roughness: .62, metalness: .08 }),
     rubTeal:     () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#6fae98'), roughness: .7, metalness: .05 }),
-    linerDark:   () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#25282b'), roughness: .62, metalness: .2, envMapIntensity: .3 }),
+    linerDark:   () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#25282b'), roughness: .62, metalness: .2 }),
     linerKhaki:  () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#958e50'), roughness: .55, metalness: .05 }),   // the band seen through the FEGVs (core photos)
     /* the FEGVs' polyurethane coat (p.60): satin blue-grey in the core photos, clearly lighter than the dark fan blades seen between them */
     fegvPU:      () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#56606c'), roughness: .4, metalness: .3 }),

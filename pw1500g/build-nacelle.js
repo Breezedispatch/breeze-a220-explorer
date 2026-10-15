@@ -26,7 +26,7 @@
     uv.needsUpdate = true; return g; };
   Object.assign(PW.MAT, {
     cowlWhite: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#e3e6e8'), roughness: .55, metalness: .02 }),
-    inletLining: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#2a2f31'), roughness: .6, metalness: .2, bumpMap: PW.tex.perf(), bumpScale: .0008, envMapIntensity: .3 }),   // deep in the inlet: see the fan materials
+    inletLining: () => new THREE.MeshStandardMaterial({ color: new THREE.Color('#2a2f31'), roughness: .6, metalness: .2, bumpMap: PW.tex.perf(), bumpScale: .0008 }),
     /* the woven stainless blanket in the core and exhaust photos: light silver with a strong weave and sheen, about 0.75 of the mint fan
        exit liner's brightness. At metalness .72 it mirrored the dark backdrop and rendered at 0.35; at .25 it was brighter but chalky.
        Now about 0.55, the weave in deeper relief */
