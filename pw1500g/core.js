@@ -123,11 +123,30 @@
     glass:        () => new THREE.MeshPhysicalMaterial({ color: col('#dfeef5'), roughness: .05, metalness: 0, transmission: .6, transparent: true, opacity: .55 }),
   };
   const libCache = {};
+  /* the cast grain (the 'cast' noise in a finish's bump or roughness map) is sampled by position, three ways at once (triplanar), at one
+     repeat a metre, instead of by the mesh's texture coordinates. On a turned part those run once round it and out along its profile, so
+     the grain converged into dark radial streaks on every flat end and boss face, and small parts got a coarser grain than large ones
+     (2026-10-15). A clone loses onBeforeCompile, so partMat applies it again */
+  const TRI = 'varying vec3 vTriP; varying vec3 vTriN;';
+  const triplanar = m => { m.userData.triplanar = true; m.customProgramCacheKey = () => 'triplanar-cast';
+    m.onBeforeCompile = sh => {
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\n' + TRI)
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvTriP = position; vTriN = objectNormal;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + TRI +
+        '\nvec4 triTex(sampler2D t) { vec3 w = pow(abs(normalize(vTriN)), vec3(4.0)); w /= w.x + w.y + w.z;' +
+        '\n  return texture2D(t, vTriP.yz) * w.x + texture2D(t, vTriP.zx) * w.y + texture2D(t, vTriP.xy) * w.z; }')
+        .replace('#include <roughnessmap_fragment>', THREE.ShaderChunk.roughnessmap_fragment.replace('texture2D( roughnessMap, vUv )', 'triTex( roughnessMap )'))
+        .replace('#include <bumpmap_pars_fragment>', THREE.ShaderChunk.bumpmap_pars_fragment.replace(/vec2 dHdxy_fwd\(\) \{[\s\S]*?return vec2\( dBx, dBy \);\s*\}/,
+          'vec2 dHdxy_fwd() { float H = bumpScale * triTex( bumpMap ).x; return vec2( dFdx( H ), dFdy( H ) ); }'));
+    };
+    return m; };
   /* three r128 takes colour values as linear, so an sRGB hex comes out far too light on screen: every library colour is converted once
      here (the explorer's nacelle blue had the same problem) */
   PW.baseMat = name => libCache[name] || (libCache[name] = (() => { const f = PW.MAT[name]; if (!f) throw new Error('no material ' + name);
     const m = f(); m.envMapIntensity = m.envMapIntensity === undefined ? 1 : m.envMapIntensity; m.side = THREE.FrontSide; m.shadowSide = THREE.FrontSide;
-    if (m.color) m.color.convertSRGBToLinear(); if (m.emissive) m.emissive.convertSRGBToLinear(); return m; })());
+    if (m.color) m.color.convertSRGBToLinear(); if (m.emissive) m.emissive.convertSRGBToLinear();
+    if (tex.cast && (m.bumpMap === tex.cast || m.roughnessMap === tex.cast)) triplanar(m);
+    return m; })());
 
   /* ---------------- part registry ---------------- */
   /* PW.part(id, { label, parent, info, sys, explode:[dx,dy,dz], anchor:[x,y,z] }) -> THREE.Group */
@@ -148,7 +167,7 @@
   };
   PW.partMat = function (id, name, over) {
     const p = PW.parts.get(id), key = name + (over ? JSON.stringify(over, (k, v) => (v && v.isTexture ? v.uuid : v)) : '');
-    if (!p.mats[key]) { const m = PW.baseMat(name).clone(); if (over) for (const k in over) { if (m[k] && m[k].isColor) m[k].set(over[k]).convertSRGBToLinear(); else m[k] = over[k]; }
+    if (!p.mats[key]) { const m = PW.baseMat(name).clone(); if (m.userData.triplanar) triplanar(m); if (over) for (const k in over) { if (m[k] && m[k].isColor) m[k].set(over[k]).convertSRGBToLinear(); else m[k] = over[k]; }
       m.userData.base = { color: m.color.clone(), emissive: m.emissive ? m.emissive.clone() : null, ei: m.emissiveIntensity || 0 }; p.mats[key] = m; }
     return p.mats[key];
   };
