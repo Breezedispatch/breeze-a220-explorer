@@ -6,6 +6,7 @@
   const PW = window.PW, G = window.PWGeo, D = PW.D, TAU = Math.PI * 2;
   (PW.builders = PW.builders || []).push(build);
   const deg = d => d * Math.PI / 180;
+  const tubeLog = [];                                                                                             // the reverser lines, seated again once every port exists (finishLines)
 
   /* woven stainless thermal blanket (the core side of the reverser doors in the photos): a fine basket weave, 16 strands to a 0.1 m tile.
      The IFS blanket's texture coordinates are in metres x 10 (see metricUV), so the weave repeats every 10 cm; until 2026-10-12 one
@@ -247,9 +248,9 @@
         Kt.connector('inlet-p2t2', f, [0, .054, 0], 'y', .009, { lead: '-x' }); Kt.connector('inlet-p2t2', f, [0, .036, .016], 'z', .008, { lead: '-x' });
         Kt.box('inlet-p2t2', f, [-.004, -.065, 0], [.022, .09, .012], 'steel', { round: .004 }); Kt.box('inlet-p2t2', f, [.004, -.106, 0], [.032, .012, .014], 'steel', { round: .004 });
         Kt.cyl('inlet-p2t2', f, [.0205, -.106, 0], 'x', .0045, .004, 'capBlack');                                            // total pressure port
-        const P = (x, h, r) => G.onRing(x, r, G.clock(h)), lead = (pts, r) => { const g = G.tube(pts, r, { radial: 10, tension: .3 }), L = g.userData.curve.getLength(), uv = g.attributes.uv;
+        const P = (x, h, r) => G.onRing(x, r, G.clock(h)), lead = (pts, r) => { const g = G.tube(Kt.leadOut(pts, r, true), r, { radial: 10, tension: .3 }), L = g.userData.curve.getLength(), uv = g.attributes.uv;
           if (uv) for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * L * 8); PW.add('inlet-p2t2', g, 'harness').userData.isLine = true; };
-        lead([P(xx - .0162, 11, rb + .0711), P(xx - .05, 11.0, rb + .073), P(.62, 11.04, 1.034), P(.5, 11.07, 1.028), P(.42, 11.09, 1.02), P(.37, 11.1, 1.016)], .007);
+        lead([P(xx - .0162, 11, rb + .0711), P(xx - .05, 11.0, rb + .073), P(.62, 11.04, 1.034), P(.5, 11.07, 1.028), P(.42, 11.09, 1.02), P(.359, 11.1, 1.016)], .007);   // into the disconnect's face (1 cm short of it until 2026-10-15)
         lead([P(xx - .0144, 11.06, rb + .036), P(xx - .04, 11.07, 1.012), P(.66, 11.05, 1.03), P(.62, 11.04, 1.034)], .005);
         const g = Kt.frame('inlet-p2t2', .35, 11.1, .97); Kt.cyl('inlet-p2t2', g, [0, .046, 0], 'x', .011, .02, 'connector', { edge: .002 });   // inlet half of the disconnect
         Kt.tube('inlet-p2t2', Kt.frame('inlet-p2t2', xJ1 + .006, 11.09, .97), [0, .05, 0], 'x', .0072, .013, .016, 'rubber'); }   // grommet in the aft bulkhead
@@ -423,7 +424,7 @@
           for (let i = 1; i < nV; i++) { const xx = xC0 - .012 + (xC1 + .024 - xC0) * i / nV;                                                     // vanes, leaning forward at the outside
             vanes.push(G.revolve([[xx - .006, ra + .003], [xx - .001, (ra + rb) / 2], [xx + .009, rb - .003], [xx + .013, rb - .003], [xx + .003, (ra + rb) / 2], [xx - .002, ra + .003]], sp(c0, c1))); } }
         PW.add(cid, G.merge(frames), 'cascadeGrey'); PW.add(cid, G.merge(vanes), 'darkBox');
-        PW.add(cid, G.revolve([[xC1, .962], [xC1 - .02, .962], [xC1 - .02, 1.05], [xC1, 1.05]], sp(10, 174, 72)), 'greyPrimer');                    // aft cascade ring
+        for (const [a0, a1] of [[10, 41], [49, 131], [139, 174]]) PW.add(cid, G.revolve([[xC1, .962], [xC1 - .02, .962], [xC1 - .02, 1.05], [xC1, 1.05]], sp(a0, a1)), 'greyPrimer');   // aft cascade ring, open where the actuator bodies pass (it ran through them until 2026-10-15)
         for (const [f0, f1] of [[10, 14], [170, 174]]) PW.add(cid, G.revolve([[xC0, .962], [xC1, .962], [xC1, 1.042], [xC0, 1.042]], sp(f0, f1, 2)), 'greyPrimer'); }   // flow blockers
       /* the translating sleeve: its own group so it can slide aft. Outer skin over the cascade cavity, the solid aft body to the trailing
          edge, the cavity's aft wall, the inner wall facing the fan duct, the skin joint, the actuator access panels and the blocker doors */
@@ -753,7 +754,7 @@
           Kt.box(aid, f, [.043, .046, .02 * zs], [.008, .014, .01], 'steel', { round: .002, mat: { color: '#c0262b', metalness: .2, roughness: .5 } });
           /* ports on the hinge side: on the locking feedback actuator the deploy inlet and the stow union at the head, on the locking
              actuator the stow union, which also feeds the track lock valve (p.358-359); on both the stow port on the rod-end housing */
-          for (const xr of feedback ? [-.06, -.085, -.60] : [-.06, -.60]) Kt.fitting(aid, f, [xr, .028, -.03 * sg], 'y', .008);
+          for (const xr of feedback ? [-.06, -.085, -.60] : [-.06, -.60]) Kt.fitting(aid, f, [xr, xr < -.575 ? .028 : .0204, -.03 * sg], 'y', .008);   // seated on the body (r .033) or the rod-end housing (r .041); the head-end ones stood 7 mm off the body until 2026-10-15
           /* the hex coupling of the flexible drive shaft and deploy tube: on the upper head's side toward the lower actuator, on the lower
              head's side toward the upper one (p.349, p.351) */
           Kt.hex(aid, f, [-.012, 0, (feedback ? .041 : -.041) * sg], [0, 0, feedback ? sg : -sg], .013, .012, 'steel');
@@ -767,9 +768,11 @@
           Kt.box(sid, g, [-.748, 0, 0], [.014, .07, .06], 'greyPrimer', { round: .004 }); }                                         // its clevis on the cavity's aft wall
         const arc = (h0, h1, r, dx) => { const pts = [], n = Math.max(1, Math.ceil(Math.abs(h1 - h0) / .2)); for (let i = 0; i <= n; i++) pts.push(G.onRing(xm + dx, r, G.clock(h0 + (h1 - h0) * i / n))); return pts; };
         /* a routed line on this door, tagged for the connection audit like build-external's (hydraulic tube or braided harness) */
-        const tube = (pts, r, mat, kind) => { const tg = G.tube(pts, r, { radial: 8, tension: .3 }), harn = kind === 'harness';
+        const tubeGeo = (pts, r, harn) => { const tg = G.tube(pts, r, { radial: 8, tension: .3 });
           if (harn && tg.attributes.uv) { const L = tg.userData.curve.getLength(), uv = tg.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * L * 8); }
-          const m = PW.add(aid, tg, mat); m.userData.isLine = true; m.userData.lineKind = kind || 'tube'; return m; };
+          return tg; };
+        const tube = (pts, r, mat, kind) => { const harn = kind === 'harness', used = Kt.leadOut(pts, r, harn), m = PW.add(aid, tubeGeo(used, r, harn), mat);
+          m.userData.isLine = true; m.userData.lineKind = kind || 'tube'; tubeLog.push({ m, pts, r, harn, used, geo: tubeGeo }); return m; };
         const hm = c => sg > 0 ? c : 12 - c, zh = -sg;                                                                          // clocks mirrored to this door; local z toward the hinge
         /* a point in a unit's frame on the case (x0, clock h, radius r0) given in that frame's axes: x forward, y radially out, z toward
            increasing clock */
@@ -827,7 +830,7 @@
         /* the track lock valve on the torque box (p.352-353): block body with its solenoid and connector on top, the supply from the
            locking actuator and the return to the aircraft on the side toward the actuator, the lines to the track lock unit aft */
         const fv = Kt.frame(aid, xm - .025, hV, 1.075);
-        Kt.box(aid, fv, [0, 0, 0], [.05, .036, .05], 'castAl', { round: .005 }); Kt.cyl(aid, fv, [0, .028, 0], 'y', .012, .022, 'darkBox'); Kt.connector(aid, fv, [0, .045, 0], 'y', .007, { lead: '-x' });
+        Kt.box(aid, fv, [0, 0, 0], [.05, .036, .05], 'castAl', { round: .005 }); Kt.cyl(aid, fv, [0, .028, 0], 'y', .012, .022, 'darkBox'); Kt.connector(aid, fv, [0, .0388, 0], 'y', .007, { lead: '-x' });   // on the solenoid's top (6 mm off it until 2026-10-15)
         Kt.box(aid, fv, [0, .022, 0], [.03, .01, .03], 'castAl', { round: .003 });                                               // square solenoid housing
         for (const [x, z] of [[.032, -.018], [.032, .018], [-.032, 0]]) { Kt.box(aid, fv, [x, -.015, z], [.016, .005, .014], 'castAl', { round: .004 }); Kt.cyl(aid, fv, [x, -.015, z], 'y', .003, .0052, 'darkBox'); }   // three mounting lugs
         Kt.decal(aid, fv, [0, 0, -.0256 * zh], zh > 0 ? '-z' : 'z', 'y', .04, .02, 'PHOSPHATE ESTER', 'castAl');                  // fluid placard (p.353)
@@ -1090,6 +1093,12 @@
        modules are spaced in order with even gaps: forward of the fan case the FDGS, the fan rotor and the inlet cone; aft of it the
        FIC, LPC, CIC, HPC, diffuser and combustor, HPT, TIC, LPT, TEC and exhaust. Each bearing goes with the case that carries it,
        the shafts drop below, and the dressing and accessories follow the module they sit on. */
+  /* after every line and port is built: the reverser lines and the engine's (PW.relead, build-external.js) that were built before the
+     fitting or connector they plug into are seated on it now, and the clamps get their brackets */
+  PW.builders.push(function finishLines() {
+    for (const e of tubeLog) { const now = PW.kit.leadOut(e.pts, e.r, e.harn); if (PW.kit.samePts(now, e.used)) continue;
+      e.m.geometry.dispose(); e.m.geometry = e.geo(now, e.r, e.harn); e.used = now; }
+    if (PW.relead) PW.relead(); });
   PW.builders.push(function explodePlan() {
     const P = id => PW.parts.get(id), V3 = (x, y, z) => new THREE.Vector3(x, y, z);
     const S1 = [0, .22], S1d = [.08, .24], S2 = [.18, .45], S3 = [.40, .68], S4 = [.62, 1];   // S1d: the doors lift once they have swung open

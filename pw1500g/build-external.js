@@ -77,12 +77,14 @@
   /* a routed line with clamps: kind 'tube' | 'hose' | 'harness' | 'duct'. The tube and its clamps, end nuts and bands share a
      lineId, so the connection audit can tell a line's own end fittings from whatever it plugs into */
   let lineSeq = 0;
-  const clampLog = PW.clampLog = [];
+  const clampLog = PW.clampLog = [], lineLog = [];
   function line(pid, pts, r, kind, o) { o = o || {};
     const inCore = pts.reduce((s, p) => s + (p.isVector3 ? p.x : p[0]), 0) / pts.length < -.95;                    // aft of the fan case, in the core compartment
     const mat = o.mat || { tube: 'tube', hose: 'fireSleeve', harness: inCore ? 'harnessCore' : 'harness', duct: 'insulation', black: 'blackHose', cable: 'braidSteel' }[kind] || 'tube', lid = ++lineSeq;
     const tag = m => { m.userData.isLine = true; m.userData.lineId = lid; m.userData.lineKind = kind; return m; };
-    const g = G.tube(pts.map(p => (p.isVector3 ? p : V(...p))), r, { radial: kind === 'duct' ? 16 : 10, tension: o.tension === undefined ? .25 : o.tension });
+    const W = pts.map(p => (p.isVector3 ? p.clone() : V(...p))), elec = kind === 'harness' || kind === 'cable', used = PW.kit.leadOut(W, r, elec);
+    if (!o.relead) lineLog.push({ pid, pts: W, r, kind, o, lid, used, elec });                                       // seated again once every port exists (PW.relead)
+    const g = G.tube(used, r, { radial: kind === 'duct' ? 16 : 10, tension: o.tension === undefined ? .25 : o.tension });
     if ((kind === 'harness' || kind === 'cable') && g.attributes.uv) { const L = g.userData.curve.getLength(), uv = g.attributes.uv, k = kind === 'cable' ? 16 : 8; for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * L * k); }   // braid repeats along its length
     tag(PW.add(pid, g, mat));
     const L = g.userData.curve.getLength(), curve = g.userData.curve;
@@ -97,28 +99,49 @@
     if (o.labels) for (const [t, m] of o.labels) tag(PW.add(pid, G.alongCurve(curve, [t], () => new THREE.CylinderGeometry(r + .0015, r + .0015, Math.max(.035, r * 3.2), 20)), m || 'labelWhite', { shadow: false }));   // printed ID sleeves (photos: white and blue on the core hoses)
     return curve;
   }
+  /* run after every builder (build-nacelle.js queues it): a line built before the fitting or connector it plugs into could not be
+     seated on it then, so each one whose seating now comes out different is built again, its old tube, clamps and sleeves removed. Then
+     the clamps get their brackets */
+  PW.relead = () => {
+    for (const e of lineLog) { const now = PW.kit.leadOut(e.pts, e.r, e.elec); if (PW.kit.samePts(now, e.used)) continue;
+      const p = PW.parts.get(e.pid);
+      for (const m of p.meshes.filter(m => m.userData.lineId === e.lid)) { m.parent.remove(m); p.meshes.splice(p.meshes.indexOf(m), 1); }
+      for (let i = clampLog.length - 1; i >= 0; i--) if (clampLog[i].lid === e.lid) clampLog.splice(i, 1);
+      line(e.pid, e.pts, e.r, e.kind, Object.assign({}, e.o, { relead: true })); }
+    supportClamps(); };
   /* P-clamp brackets. A small line's clamp is a cushioned strap whose two ends make a tab, bolted to a bracket on the engine structure
      or a unit beside it. PW.BRACKETS (build-brackets.js, baked by the research folder's tools/bake-brackets.js) lists each clamp with a
-     clear seat, by its position to the millimetre: [the distance from the line's centre to that surface, the bracket's direction round
-     the line, in radians from straight in toward the engine axis]. Those clamps get the tab and its bolt, a strip to the surface and a
-     bolted foot; any other clamp, or one whose line has moved since the table was baked, keeps its plain band. Re-bake after moving
-     lines. The frame here must match frameAt() in the bake tool */
+     clear seat, by its position to the millimetre: [the distance from the line's centre to the surface under the foot's centre, the
+     bracket's direction round the line (radians from straight in toward the engine axis), that surface's slope under the foot along the
+     line and across it, and when not the usual 0.02, the foot's length, negative for a bracket turned round with its foot on the other
+     side]. Those clamps get the tab and its bolt, a strip to the surface and a bolted foot, the strip's end and the foot bent to lie on
+     the surface (until 2026-10-15 the foot was flat and sank up to 12 mm into a sloping seat); any other clamp, or one whose line has
+     moved since the table was baked, keeps its plain band. Re-bake after moving lines. The frame here must match frameAt() in the bake
+     tool */
   function supportClamps() {
     const B = PW.BRACKETS; if (!B || PW.noBrackets) return;
     const byPart = {};
     for (const c of clampLog) { const e = B[`${Math.round(c.p.x * 1000)},${Math.round(c.p.y * 1000)},${Math.round(c.p.z * 1000)}`]; if (!e) continue;
-      const [dist, th] = e, t = c.d.clone().normalize(), inw = V(0, -c.p.y, -c.p.z).normalize(), u0 = inw.addScaledVector(t, -inw.dot(t));
+      const [dist, th, sx = 0, sz = 0, foot = .02] = e, t = c.d.clone().normalize(), inw = V(0, -c.p.y, -c.p.z).normalize(), u0 = inw.addScaledVector(t, -inw.dot(t));
       if (u0.length() < .1) u0.set(0, 1, 0).addScaledVector(t, -t.y); u0.normalize();
       const b = V().crossVectors(t, u0), u = u0.clone().multiplyScalar(Math.cos(th)).addScaledVector(b, Math.sin(th)).normalize(), w = V().crossVectors(t, u);
+      if (foot < 0) { t.negate(); w.negate(); }                                                           // turned round: the same bracket, its foot on the other side
       const m = new THREE.Matrix4().makeBasis(t, u, w), gs = (byPart[c.pid] = byPart[c.pid] || []);   // local x along the line, y toward the seat, z across
-      const add = (g, x, y, z) => { g.translate(x, y, z); g.applyMatrix4(m); g.translate(c.p.x, c.p.y, c.p.z); gs.push(g); };
-      const bw = Math.min(.014, c.band + .002), y0 = c.r - .001, y1 = dist, hexZ = () => new THREE.CylinderGeometry(.0034, .0034, .003, 6).rotateX(Math.PI / 2);
+      const put = g => { g.applyMatrix4(m); g.translate(c.p.x, c.p.y, c.p.z); gs.push(g); };
+      const fl = Math.abs(foot), zc = .0015 + fl / 2, seat = (x, z) => dist + sx * x + sz * (z - zc);    // the surface under the bracket, as a plane
+      const lay = (g, back, thick) => { const P = g.attributes.position; let top = -Infinity;             // a box's far face onto the surface (less back), its near face thick above it
+        for (let i = 0; i < P.count; i++) top = Math.max(top, P.getY(i));
+        for (let i = 0; i < P.count; i++) { const s = seat(P.getX(i), P.getZ(i)) - back; if (P.getY(i) > top - 1e-6) P.setY(i, s); else if (thick) P.setY(i, s - thick); }
+        g.computeVertexNormals(); return g; };
+      const bw = Math.min(.014, c.band + .002), y0 = c.r - .001, hexZ = () => new THREE.CylinderGeometry(.0034, .0034, .003, 6).rotateX(Math.PI / 2);
+      const y1 = Math.min(seat(-bw / 2, -.002), seat(bw / 2, -.002), seat(-bw / 2, .0045), seat(bw / 2, .0045));   // the surface's nearest point under the tab and strip
       const tl = Math.min(.012, y1 - y0 - .0025);                                                         // a line sitting close to the surface gets a short tab bolted straight to it
-      add(new THREE.BoxGeometry(bw, tl, .004), 0, y0 + tl / 2, 0);                                        // the strap's two ends, the tab
-      add(hexZ(), 0, y0 + Math.min(.008, tl * .6), -.0035);                                               // the bolt through tab and bracket
-      if (y1 - y0 - .004 > .003) add(new THREE.BoxGeometry(bw, y1 - y0 - .004, .0025), 0, (y0 + .004 + y1) / 2, .00325);   // the strip
-      add(new THREE.BoxGeometry(bw + .004, .0025, .02), 0, y1 - .00125, .0115);                          // the foot on the surface
-      add(new THREE.CylinderGeometry(.0034, .0034, .003, 6), 0, y1 - .004, .015); }                      // and its bolt
+      put(new THREE.BoxGeometry(bw, tl, .004).translate(0, y0 + tl / 2, 0));                              // the strap's two ends, the tab
+      put(hexZ().translate(0, y0 + Math.min(.008, tl * .6), -.0035));                                     // the bolt through tab and bracket
+      if (y1 - y0 - .004 > .003) put(lay(new THREE.BoxGeometry(bw, y1 - y0 - .004, .0025).translate(0, (y0 + .004 + y1) / 2, .00325), .0005));   // the strip, its end inside the foot
+      put(lay(new THREE.BoxGeometry(bw + .004, .0025, fl).translate(0, dist - .00125, zc), 0, .0025));   // the foot on the surface
+      const n = V(-sx, 1, -sz).normalize(), q = new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(V(0, 1, 0), n)), zb = .0015 + fl * .675;
+      put(new THREE.CylinderGeometry(.0034, .0034, .003, 6).applyMatrix4(q).translate(-n.x * .0015, seat(0, zb) - .0025 - n.y * .0015, zb - n.z * .0015)); }   // and its bolt, square to the foot
     for (const pid in byPart) { const g = G.merge(byPart[pid]); g.userData.solid = true; PW.add(pid, g, 'stainless', { shadow: false }); } }
   /* where along a routed line (0..1 by length) it reaches station x: for sleeves and boots where it passes through a panel */
   function tAt(curve, x) { let tb = 0, best = Infinity; for (let i = 0; i <= 400; i++) { const d = Math.abs(curve.getPointAt(i / 400).x - x); if (d < best) { best = d; tb = i / 400; } } return tb; }
@@ -275,7 +298,7 @@
       Kt.fitting('ifpc', f, [.132, -.005, -.08], 'x', .018); Kt.plug('ifpc', f, [.09, .045, -.12], 'y', .007);
       Kt.fitting('ifpc', f, [.113, .03, -.025], 'x', .008);                                                               // motive flow out, back to the aircraft (p.163)
       Kt.fitting('ifpc', f, [.113, -.02, .02], 'x', .008);                                                                // metered fuel out, round in a U to the flow meter (A Nahas photo)
-      Kt.connector('ifpc', f, [.113, .025, .09], 'x', .009, { lead: '-y' });                                              // fuel metering valve torque motor, into the core harness inboard
+      Kt.connector('ifpc', f, [.113, .015, .075], 'x', .009, { lead: '-y' });                                             // fuel metering valve torque motor, into the core harness inboard (on the face's flat, clear of its rounded edge)
       Kt.fitting('ifpc', f, [.07, -.01, -.136], '-z', .008); }                                                            // servo fuel supply to the vane, bleed and clearance control actuators (p.167)
     acc('fom', 'Fuel/oil manifold (FOM), fuel flow meter and fuel filter', 'Upright manifold block against the left end of the MGB front face, from about 7 to 9:30 o\'clock, with the VFG oil/oil heat exchanger on a tower on its top end. It carries the IFPC on its forward face at 8 o\'clock, the fuel flow meter above it at 9 o\'clock and the fuel filter below it, and routes the boost-pump fuel to and from the fuel/oil heat exchanger, which keeps it above 0 deg C at the filter inlet.\n\nIt is also the hub of the cooled-path oil (p.215). Oil from the oil control module comes in through the MGB and goes up to the FOHX bypass valve. The valve\'s air/oil cooler share comes back and goes on to the air/oil cooler through the short tube from the tower. The oil from the FOHX and from the VFG oil/oil heat exchanger joins inside the manifold on its way back to the oil control module.\n\nFuel filter: a disposable canister in a housing screwed into the filter head on the manifold face. The head carries the bypass valve, the housing drain plug and the differential pressure sensor; the housing is turned off by the hex in its end. The sensor plugs into the head beside the housing at 7:30, connector forward, and reports to both EEC channels. Above 22 psid: L(R) ENG FUEL FILTER advisory with an IMPENDING BYPASS info message. At 25 psid the bypass valve opens (BYPASS info message). Both engines in bypass gives the L-R ENG FUEL FILTER caution: suspect fuel contamination.\n\nFuel flow meter: on the manifold just above the IFPC, measuring the metered fuel going to the nozzles. Metered fuel comes up a U-tube from the IFPC to the inlet on its forward end. From the meter it goes back through the manifold into the IFPC\'s minimum pressure-shutoff valve (MPSOV) and flow divider valve (FDV), which send it out through the manifold to the primary and secondary tubes (p.166-167). Its signal goes to EEC channel A, and to channel B over the CAN bus.', 'p.162-179, p.69; TTM 73-00; A Nahas photos');
     { const t0 = G.clock(7.1), t1 = G.clock(9.35);
@@ -604,7 +627,7 @@
       const lid = (x, r) => Kt.frame('oil-tank', x, 2.29, r);                                                                       // on the lid, local -z is up out of the tank
       /* quantity sensor (p.249): the probe hangs inside nearly the full height; on the lid, its five-bolt flange and the connector */
       { const f = lid(-1.86, .435); Kt.box('oil-tank', f, [0, 0, -.004], [.064, .056, .008], 'castAl', { round: .008 }); Kt.bolts('oil-tank', f, [0, 0, -.008], '-z', .025, 5, .0035);
-        Kt.cyl('oil-tank', f, [0, 0, -.02], '-z', .016, .025, 'castAl'); Kt.connector('oil-tank', f, [0, 0, -.036], '-z', .009, { lead: 'x' }); }
+        Kt.cyl('oil-tank', f, [0, 0, -.02], '-z', .016, .025, 'castAl'); Kt.connector('oil-tank', f, [0, 0, -.0322], '-z', .009, { lead: 'x' }); }   // on the sensor head's end (3.5 mm off it until 2026-10-15)
       /* pressurization valve (p.222-223): the round valve on the lid at the aft side, under the elbow that turns its vent aft into the
          breather tube */
       { const f = lid(-2.035, .405); Kt.box('oil-tank', f, [0, 0, -.003], [.056, .03, .006], 'castAl', { round: .004 });
@@ -626,7 +649,7 @@
         Kt.cyl('oil-tank', f, [-.034, .006, 0], 'z', .004, .022, 'steel');                                                       // hinge
         Kt.box('oil-tank', f, [.004, .0105, -.006], [.052, .003, .01], 'steel', { round: .0012 }); Kt.cyl('oil-tank', f, [.004, .013, -.006], 'y', .004, .006, 'steel');   // lock bar and its T-handle
         for (const [a, b] of [[-.038, -.028], [.038, -.028], [-.026, .036], [.026, .036]]) Kt.hex('oil-tank', f, [a, .003, b], 'y', .0032, .0025, 'steel');
-        Kt.fitting('oil-tank', f, [0, .004, .05], 'z', .007); }                                                                       // scupper drain
+        Kt.fitting('oil-tank', f, [0, -.001, .05], 'z', .007); }                                                                      // scupper drain, out of the casting's side (it stood above it until 2026-10-15)
       /* sight glass (p.225; photo): QTS and LTS scales in a raised stadium boss on the forward part of the outboard face */
       { const f = Kt.frame('oil-tank', -1.842, 2.71, .526);
         Kt.box('oil-tank', f, [0, -.002, 0], [.064, .01, .09], 'castAl', { round: .004 }); for (const s of [-1, 1]) Kt.cyl('oil-tank', f, [0, -.002, s * .045], 'y', .032, .01, 'castAl');
@@ -1021,7 +1044,7 @@
       Kt.connector('hpc-bleed-valve', g, [0, .048, 0], 'y', .008, { lead: '-x' });
       line('hpc-bleed-valve', [L(0, .1043, 0), L(0, .114, 0), P(-1.52, 1.27, .353), P(-1.48, 1.2, .343), P(-1.40, 1.2, .335), P(-1.30, 1.21, .325), P(-1.22, 1.24, .322), P(-1.16, 1.3, .33),
         P(-1.125, 1.42, .362), P(-1.10, 1.55, .38), P(-1.075, 1.75, .408), P(-1.045, 2.03, .44), S(-.03, .02, 0), S(-.019, .018, 0)], .005, 'tube', { clamps: 4 });   // over WC08's end, then up the fire seal
-      line('hpc-bleed-valve', [S(-.0144, .0632, 0), S(-.026, .0634, -.002), P(-1.036, 2.08, .49), P(-1.03, 2.02, .462), P(-1.022, 2.0, .446)], .004, 'harness', { clamps: 0, ends: false }); }
+      line('hpc-bleed-valve', [S(-.0144, .0632, 0), S(-.026, .0634, -.002), P(-1.036, 2.08, .49), P(-1.03, 2.02, .462), P(-1.02, 2.0, .443)], .004, 'harness', { clamps: 0, ends: false }); }   // into the buffer air sensor's lead
     /* ---- engine bleed, TTM ch. 36 (p.576-579): 4th-stage air through a check valve, or 8th-stage air through the high-pressure valve,
        joins, passes the bleed monitoring pressure sensor and the pressure-regulating shutoff valve, and enters the precooler; the bleed
        temperature sensor is on the precooler's outlet, where the starter duct branches off. The precooler, its fan-air duct and fan air
@@ -1104,7 +1127,7 @@
          beside the tee, where the leads from the PRSOV's torque motor, the pressure sensor and the HPV's solenoid join it */
       const J1 = P(-1.43, 1.3, .44);
       line('bleed-hp', [V(-1.55, 1.017, .12), V(-1.55, .90, .125), V(-1.55, .78, .108), V(-1.55, .70, .10), V(-1.548, .635, .085), V(-1.542, .56, .078), P(-1.535, .3, .50), P(-1.50, .6, .47), P(-1.465, .95, .453), J1], .007, 'harness', { clamps: 2, ends: false });
-      line('prsov', [leads.prsov, P(-1.36, 2.02, .468), P(-1.40, 1.78, .47), P(-1.42, 1.55, .455), J1], .005, 'harness', { clamps: 0, ends: false });
+      line('prsov', [leads.prsov, P(-1.36, 2.02, .476), P(-1.40, 1.78, .474), P(-1.42, 1.55, .455), J1], .005, 'harness', { clamps: 0, ends: false });
       line('bmps', [leads.bmps, P(-1.405, 1.55, .462), P(-1.414, 1.585, .459)], .004, 'harness', { clamps: 0, ends: false });   // into the PRSOV's lead
       line('hpv', [leads.hpv, P(-1.43, 2.0, .482), P(-1.43, 1.8, .48), P(-1.415, 1.67, .468)], .005, 'harness', { clamps: 0, ends: false }); }   // into the PRSOV's lead
 
@@ -1184,7 +1207,7 @@
         Kt.box('fav', f, [.012, .159, -.0345], [.03, .004, .002], 'capBlack', { round: .001, rot: [0, 0, .6] });         // its pointer
         Kt.box('fav', f, [.058, .153, -.004], [.016, .02, .03], 'castAl', { round: .004 }); Kt.hex('fav', f, [.058, .153, -.022], '-z', .006, .005, 'steel');   // mounting ear
         Kt.box('fav', f, [.03, .207, 0], [.05, .03, .036], 'darkBox', { round: .005 });                                  // electrical control head
-        Kt.connector('fav', f, [.05, .224, 0], 'y', .01);
+        Kt.connector('fav', f, [.05, .2218, 0], 'y', .01);                                                                 // on the control head's top (2 mm off it until 2026-10-15)
         Kt.fitting('fav', f, [-.045, .153, -.004], '-x', .007); }
       Kt.fitting('precooler', pf, [.10, .045, .0835], 'z', .006);                                                       // tap for the valve's tube, on the right side plate
       /* the valve's pressure sense line: aft over the top of the duct and down its right side to the tap on the precooler (the A Nahas
@@ -1240,7 +1263,7 @@
       Kt.cyl('tacc', f, [-.012, .084, .02], 'y', .019, .018, 'darkBox', { edge: .003 });                                     // torque motor
       Kt.connector('tacc', f, [-.012, .094, .02], 'y', .008, { lead: '-x' });                                                 // its connector, backshell aft, away from the thrust link and the scoop tube
       Kt.cyl('tacc', f, [-.02, .05, -.035], 'x', .012, .06, 'steel'); Kt.cyl('tacc', f, [-.052, .05, -.035], 'x', .008, .006, 'steel');   // LVDT
-      Kt.connector('tacc', f, [.015, .05, -.035], 'x', .008, { lead: '-z' });
+      Kt.connector('tacc', f, [.0105, .05, -.035], 'x', .008, { lead: '-z' });                                               // on the LVDT's end (5 mm off it until 2026-10-15)
       for (const z of [-.01, .012]) Kt.fitting('tacc', f, [.037, .07, z], 'x', .006);                                          // servo fuel in and out, high enough to clear the inlet flange and elbow
       Kt.plate('tacc', f, [-.01, .056, .0476], 'z', 'y', .04, .025);
       line('tacc', [P(-1.62, 2.1, .545), P(-1.615, 2.07, .51), P(-1.595, 1.9, .49), P(-1.575, 1.75, .484), L(...onIn(.045).toArray()), L(...onIn(.007).toArray())], .036, 'tube', { clamps: 0, ends: false, mat: 'castAl' });   // from the IFS port at 2:06 (1:36 until 2026-10-14) round to the inlet ring
@@ -1264,8 +1287,8 @@
     { const f = Kt.frame('buffer-air', -.80, 1.9, .40);                                                                       // BAPS
       Kt.box('buffer-air', f, [0, .008, 0], [.03, .016, .03], 'steel', { round: .004 }); Kt.cyl('buffer-air', f, [0, .026, 0], 'y', .011, .022, 'steel'); Kt.connector('buffer-air', f, [0, .038, 0], 'y', .008, { lead: '-x' }); Kt.fitting('buffer-air', f, [.02, .008, 0], 'x', .006); }
     { const f = Kt.frame('buffer-air', -1.25, .85, .30);                                                                       // BAVS: solenoid on its mounting base, pilot air ports
-      Kt.box('buffer-air', f, [0, .008, 0], [.06, .016, .045], 'steel', { round: .004 }); Kt.cyl('buffer-air', f, [-.01, .03, 0], 'x', .014, .06, 'steel', { edge: .003 });
-      Kt.connector('buffer-air', f, [-.045, .03, 0], '-x', .008, { lead: 'y' }); for (const z of [-.012, .012]) Kt.fitting('buffer-air', f, [.03, .02, z], 'x', .006); }
+      Kt.box('buffer-air', f, [0, .013, 0], [.06, .026, .045], 'steel', { round: .004 }); Kt.cyl('buffer-air', f, [-.01, .03, 0], 'x', .014, .06, 'steel', { edge: .003 });   // the base up round the pilot fittings (they stood in the air until 2026-10-15)
+      Kt.connector('buffer-air', f, [-.0405, .03, 0], '-x', .008, { lead: 'y' }); for (const z of [-.012, .012]) Kt.fitting('buffer-air', f, [.03, .02, z], 'x', .006); }   // the connector on the solenoid's end face (5 mm off it until 2026-10-15)
     { const f = Kt.frame('buffer-air', -1.47, 11.03, .248);                                                                    // BASOV (p.281): upright on the rear HPC case, V-bands top and bottom
       Kt.box('buffer-air', f, [0, .006, 0], [.03, .012, .036], 'castAl', { round: .004 });                                      // mounting pad
       Kt.cyl('buffer-air', f, [0, .046, 0], 'y', .021, .066, 'castAl', { edge: .005 }); for (const y of [.018, .078]) Kt.vband('buffer-air', f, [0, y, 0], 'y', .017, { phase: Math.PI });
@@ -1489,9 +1512,9 @@
          probe, to 1 o'clock; branches to the N1 probe's two connectors, the P2.5/T2.5 probe and, aft over the HPC, the T3 probe */
       line('harnesses', [P(-1.35, 6.9, .42), P(-1.3, 6.7, .40), P(-1.2, 6.3, .36), P(-1.13, 6.0, .349), P(-1.115, 5.5, .342), P(-1.115, 5.0, .34), P(-1.115, 4.5, .34), P(-1.115, 4.0, .34),
         P(-1.115, 3.5, .34), P(-1.115, 3.0, .34), P(-1.115, 2.5, .34), P(-1.115, 2.0, .34), P(-1.115, 1.5, .34), P(-1.115, 1.2, .34)], .011, 'harness', { clamps: 5, ends: false, bands: [.03] });
-      for (const dx of [-.009, .009]) line('harnesses', [P(-1.065 + dx, 4.8, .41), P(-1.09 + dx * .5, 4.86, .38), P(-1.112, 4.92, .345)], .005, 'harness', { clamps: 0, ends: false });   // N1 probe
+      for (const [dx, h0, r0] of [[-.009, 4.80, .402], [.009, 4.78, .423]]) line('harnesses', [P(-1.065 + dx, h0, r0), P(-1.09 + dx * .5, 4.86, .38), P(-1.112, 4.92, .345)], .005, 'harness', { clamps: 0, ends: false });   // N1 probe, from its two connectors (they started 8 and 14 mm off them until 2026-10-15)
       line('harnesses', [P(-1.0355, 1.19, .486), P(-1.05, 1.22, .47), P(-1.09, 1.22, .40), P(-1.115, 1.2, .35)], .006, 'harness', { clamps: 0, ends: false });                  // P2.5/T2.5 probe
-      line('harnesses', [P(-1.115, 1.2, .34), P(-1.2, 1.1, .33), P(-1.35, 1.05, .327), P(-1.5, 1.02, .31), P(-1.6, 1.0, .295), P(-1.645, 1.0, .287)], .007, 'harness', { clamps: 3, ends: false });   // T3 probe
+      line('harnesses', [P(-1.115, 1.2, .34), P(-1.2, 1.1, .33), P(-1.35, 1.05, .327), P(-1.5, 1.02, .31), P(-1.6, 1.0, .295), P(-1.635, 1.0, .284), P(-1.652, 1.0, .2754)], .007, 'harness', { clamps: 3, ends: false });   // down onto the T3 probe's terminal posts (it stopped 1 cm short until 2026-10-15)   // T3 probe
       /* the gearbox units (p.107 draws a cluster of branches round the gearbox; the photos from below show braided runs along its aft
          side). A trunk leaves W03/W04 where they come up from the bifurcation and runs aft under the MGB at about 6:30 to its aft face.
          There one branch takes the PMAG's two connectors and the VFG's left connector; one goes up the left of the starter to its speed
@@ -1534,7 +1557,7 @@
         leg([I(-.082, .061, -.0823), I(-.082, .061, -.1), I(-.08, .058, -.128), P(-1.375, 7.73, .51), P(-1.33, 7.68, .505), J8]);   // the lower aft cylinder (overspeed shutdown solenoid), down round the IFPC's lower edge
         leg([Fh(.1232, -.0016, .08), Fh(.1232, .01, .08), P(-1.305, 7.64, .486), J8]);                                          // fuel filter delta-P, from its forward end
         leg([J8, P(-1.255, 7.62, .478), P(-1.228, 7.52, .45), P(-1.218, 7.46, .405), P(-1.213, 7.42, .385)], .008);
-        leg([I(.1301, .0088, .09), I(.13, -.02, .091), I(.132, -.05, .09), I(.133, -.075, .087), P(-1.196, 8.73, .356)]);      // fuel metering valve, inboard down the IFPC's forward face
+        leg([I(.1301, -.0012, .075), I(.1305, -.025, .078), I(.132, -.05, .084), I(.133, -.075, .087), P(-1.196, 8.73, .356)]);   // fuel metering valve, inboard down the IFPC's forward face
         leg([M(.1878, 0, .0325), M(.2, 0, .0325), P(-1.222, 9.3, .405), P(-1.224, 9.36, .37), P(-1.234, 9.43, .34), P(-1.246, 9.48, .33)]); }   // fuel flow meter
       /* buffer air (p.278-283): the valve solenoid into the T3 branch beside it; the pressure sensor, ahead of the CIC fire seal, through
          a grommet in the seal to WC08 */
@@ -1544,7 +1567,7 @@
       /* turbine clearance control valve: the torque motor aft and down the valve's far side, the LVDT down its near side under the
          right thrust link, both into the T3 branch */
       line('harnesses', [P(-1.666, 1.27, .51), P(-1.69, 1.29, .505), P(-1.71, 1.4, .465), P(-1.72, 1.47, .40), P(-1.695, 1.42, .34), P(-1.67, 1.2, .31), P(-1.645, 1.06, .298), P(-1.62, 1.02, .295)], .005, 'harness', { clamps: 0, ends: false });
-      line('harnesses', [P(-1.595, .99, .45), P(-1.575, .99, .445), P(-1.555, 1.0, .41), P(-1.545, 1.0, .36), P(-1.54, 1.0, .325), P(-1.53, 1.015, .307)], .005, 'harness', { clamps: 0, ends: false });
+      line('harnesses', [P(-1.61, .99, .453), P(-1.608, .95, .45), P(-1.59, .935, .447), P(-1.57, .96, .44), P(-1.555, .995, .41), P(-1.545, 1.0, .36), P(-1.54, 1.0, .325), P(-1.53, 1.015, .307)], .005, 'harness', { clamps: 0, ends: false });   // out of the LVDT connector's backshell (it started 15 mm forward of it until 2026-10-15)
       /* WC05 aft over the fuel manifolds, under the right edge of the precooler and over the clearance control manifolds (the precooler
          sits low enough over the combustor that it can no longer run along 12 o'clock) */
       line('harnesses', [P(-1.67, 12.05, .305), P(-1.684, 12.35, .32), P(-1.697, 12.45, .345), P(-1.712, 12.45, .356), P(-1.75, 12.45, .356), P(-1.80, 12.45, .34), P(-1.95, 12.45, .325), P(-2.05, 12.4, .345), P(-2.10, 12.35, .385), P(-2.14, 12.3, .47), P(-2.20, 12.18, .51), P(-2.24, 12.08, .555), P(-2.40, 12.0, .56), P(-2.45, 12.0, .52), P(-2.465, 12.0, .4835)], .012, 'harness', { clamps: 4 });
@@ -1624,7 +1647,9 @@
           f.updateMatrixWorld(true); const st = f.localToWorld(V(.033, .016, 0));                                              // the lead forward from the stub to the cable
           line('egt', [st, P(st.x + .025, h, Math.hypot(st.y, st.z) + .003), P(xs - .025, h, rs), P(xs, h, rs)], .0028, 'tube', { clamps: 0, ends: false }); }
         const run = (a, b) => { const pts = [], n = Math.max(2, Math.ceil(Math.abs(b - a) / .2)); for (let i = 0; i <= n; i++) pts.push(P(xs, a + (b - a) * i / n, rs)); return pts; };
-        line('egt', run(hs[0], hj - .09), .0028, 'tube', { clamps: 0, ends: false }); line('egt', run(hs[3], hj + .09), .0028, 'tube', { clamps: 0, ends: false });
+        /* each run turns aft at its end into the side of the probe junction (they stopped 8 mm forward of it until 2026-10-15) */
+        line('egt', run(hs[0], hj - .09).concat([P(-2.499, hj - .086, rs), P(-2.506, hj - .08, rs)]), .0028, 'tube', { clamps: 0, ends: false });
+        line('egt', run(hs[3], hj + .09).concat([P(-2.499, hj + .086, rs), P(-2.506, hj + .08, rs)]), .0028, 'tube', { clamps: 0, ends: false });
         const g = Kt.frame('egt', -2.512, hj, PW.tecR(-2.512), { rz: tilt });                                                  // probe junction
         Kt.box('egt', g, [0, .014, 0], [.03, .028, .045], 'steel', { round: .004 }); Kt.connector('egt', g, [0, .028, 0], 'y', .0075, { lead: 'x' }); }
       /* N1 speed probe (p.112-115): on the CIC's conical aft face at 4:30, normal to it; a flat head with one bolted ear and its two
@@ -1654,7 +1679,7 @@
         Kt.cyl('nf-probe', f, [0, .018, 0], 'y', .012, .024, 'steel');                                                             // head
         const hr = 1.3, fr = Kt.frame('nf-probe', -1.0, hr, .455, { rz: .88 }), R = FLa(-1.0, hr, .455, .88);                   // bulkhead receptacle on the CIC cone, beside the thrust link lug
         Kt.cyl('nf-probe', fr, [0, -.008, 0], 'y', .011, .05, 'steel'); Kt.box('nf-probe', fr, [0, .006, 0], [.034, .004, .034], 'steel', { round: .004 });
-        Kt.connector('nf-probe', fr, [0, -.03, 0], '-y', .008, { lead: '-y' }); Kt.connector('nf-probe', fr, [0, .02, 0], 'y', .008, { lead: '-x' });
+        Kt.connector('nf-probe', fr, [0, -.03, 0], '-y', .008, { lead: '-y' }); Kt.connector('nf-probe', fr, [0, .0168, 0], 'y', .008, { lead: '-x' });   // on the receptacle's end (3 mm off it until 2026-10-15)
         line('nf-probe', [P(xp, 1.0, rcn + .03), P(xp - .006, 1.0, rcn + .045), P(-.29, 1.04, .262), P(-.33, 1.1, .285), P(-.37, 1.0, .305), P(-.40, 1.0, .309), P(-.44, 1.0, .293),
           P(-.48, 1.0, .291), P(-.50, 1.0, .33), P(-.505, 1.0, .40), P(-.512, 1.05, .44), P(-.56, 1.15, .438), P(-.65, 1.25, .435), P(-.78, 1.28, .438), P(-.86, 1.29, .462), P(-.90, hr, .475),
           P(-.93, hr, .47), R(0, -.075, 0), R(0, -.0596, 0)], .004, 'cable', { clamps: 4, ends: false, mat: 'steel' });          // the semi-rigid lead: wires in a steel tube
@@ -1669,12 +1694,12 @@
         Kt.box('vib-sensors', f, [0, .015, .0], [.03, .018, .022], 'steel', { round: .004 });
         Kt.cyl('vib-sensors', f, [0, .02, -.012], 'z', .012, .034, 'steel', { edge: .003 });
         Kt.connector('vib-sensors', f, [0, .02, -.03], '-z', .0085, { lead: '-z' });
-        line('vib-sensors', [P(-1.012, 8.82, .468), P(-1.02, 8.74, .46), P(-1.05, 8.62, .43), P(-1.09, 8.52, .385), P(-1.14, 8.45, .382), P(-1.162, 8.4, .38)], .005, 'harness', { clamps: 0, ends: false }); }
+        line('vib-sensors', [P(-1.015, 8.75, .472), P(-1.017, 8.69, .467), P(-1.03, 8.63, .45), P(-1.055, 8.59, .425), P(-1.09, 8.52, .385), P(-1.14, 8.45, .382), P(-1.162, 8.4, .38)], .005, 'harness', { clamps: 0, ends: false }); }   // out of the connector's backshell (it started 17 mm inside it until 2026-10-15)
       { const xa = -2.425, f = Kt.frame('vib-sensors', xa, 3, rCase(xa));
         Kt.box('vib-sensors', f, [0, .007, 0], [.026, .014, .026], 'steel', { round: .003 });
         Kt.cyl('vib-sensors', f, [0, .009, .019], 'z', .012, .012, 'steel', { edge: .002 }); Kt.cyl('vib-sensors', f, [0, .021, 0], 'y', .009, .014, 'steel');
         Kt.connector('vib-sensors', f, [0, .028, 0], 'y', .0075, { lead: '-x' });
-        line('vib-sensors', [P(xa - .014, 3.0, rCase(xa) + .042), P(xa - .03, 3.04, rCase(xa) + .036), P(-2.462, 3.12, .476)], .005, 'harness', { clamps: 0, ends: false }); }
+        line('vib-sensors', [P(xa - .014, 3.0, rCase(xa) + .042), P(xa - .03, 2.99, rCase(xa) + .036), P(-2.465, 2.965, PW.tecR(-2.465) + .016)], .005, 'harness', { clamps: 0, ends: false }); }   // into WC05 just before its ring round the LPT's aft flange ends at 3 o'clock (it stopped short until 2026-10-15)
       /* p.104-107: P2.5/T2.5 on the CIC at 1 o'clock (it was at 2:30), T3 on the diffuser case forward of the fuel nozzles at about
          1 o'clock (it was at 2:36 behind them), Pb on the CIC fire seal at 10 o'clock (it was on the HPC at 10:36) */
       PW.part('p25-probe', { parent: 'sensors', label: 'P2.5/T2.5 probe', src: 'p.102, p.106-107',
@@ -1845,7 +1870,7 @@
       /* p.32-37: a hydraulic line with a quick-disconnect at the far end to each door's locking actuator, the right one short, the left
          one down the aft flange and round the bottom of the fan case on its aft mount ring (p.37), under the cowl anti-ice duct, the
          W03 and W04 harnesses and the ignition cables where they lift over the ring */
-      line('pdos', [P(-.655, 2.3, 1.0), P(-.70, 2.6, 1.04), P(-.76, 3.1, 1.05), P(-.80, 3.55, 1.05), P(-.818, 3.72, 1.026), P(-.832, 3.75, 1.023)], .007, 'black', { clamps: 1 });
+      line('pdos', [P(-.643, 2.3, 1.001), P(-.67, 2.33, 1.008), P(-.70, 2.6, 1.04), P(-.76, 3.1, 1.05), P(-.80, 3.55, 1.05), P(-.818, 3.72, 1.026), P(-.832, 3.75, 1.023)], .007, 'black', { clamps: 1 });
       { const ring = []; for (let h = 3.4; h < 8.3; h += .4) ring.push(P(h < 4.2 ? -.72 - (h - 3.4) * .0625 : h > 7.6 ? -.77 + (h - 7.6) * .05 : -.77, h, 1.008));
         line('pdos', [P(-.6416, 2.242, 1.0), P(-.665, 2.26, 1.005), P(-.69, 2.5, 1.008), P(-.705, 2.9, 1.008)].concat(ring, [P(-.775, 8.22, 1.025), P(-.815, 8.245, 1.025), P(-.832, 8.25, 1.023)]), .005, 'black', { clamps: 6 }); } }
     /* the door locking actuators themselves (p.32, p.36, p.41: between the fan case at 3:45 and 8:15 and the torque boxes, centred on 3
@@ -1874,7 +1899,7 @@
       info: 'Two detection loops, A and B, each of five sensing elements in series: one on the pylon above the core and two on each core cowl (the inner fixed structure halves), so the cowl elements open with the reverser doors. The FIDEX control unit, with two identical cards, monitors the loops, the bottle cartridges and pressure switches, and drives the L or R ENG FIRE lights, the FIRE light on the ENGINE panel, the CAS message and the aural warning. A manual test is run from the flight deck.\n\nTwo bottles on the aft spar just forward of the main gear bay, each with two discharge heads, can discharge into either engine. The discharge line comes down the pylon to a nozzle with two outlets at the top of the core compartment.' });
     /* TTM p.268: the pylon element (loops A and B side by side) along the underside of the pylon, in the gap between the IFS halves;
        the core cowl elements are built with the reverser doors in build-nacelle.js */
-    { for (const dz of [-.10, -.122]) line('fire', [V(-1.10, 1.0135, dz), V(-1.25, 1.0135, dz), V(-1.45, 1.0135, dz)], .0035, 'tube', { clamps: 3, tension: 0 });   // clipped to the pylon, left of the precooler duct
+    { for (const dz of [-.10, -.122]) line('fire', [V(-1.10, 1.0165, dz), V(-1.25, 1.0165, dz), V(-1.45, 1.0165, dz)], .0035, 'tube', { clamps: 3, tension: 0 });   // against the keel (3 mm below it until 2026-10-15), clipped to the pylon, left of the precooler duct
       /* TTM ch. 26: the discharge line comes down from the pylon, past the precooler supply duct, to a nozzle with two outlets at the
          top of the core compartment */
       line('fire', [V(-1.42, 1.03, -.075), V(-1.42, .86, -.09), V(-1.42, .744, -.105), V(-1.42, .64, -.08), V(-1.42, .58, -.052), P(-1.42, 11.84, .535)], .008, 'tube', { clamps: 2 });   // down the left of the precooler's fan-air duct
@@ -2033,7 +2058,7 @@
         const blk = new THREE.ExtrudeGeometry(sh, { depth: .006, bevelEnabled: true, bevelThickness: .0008, bevelSize: .0008, bevelSegments: 1 });
         blk.rotateX(-Math.PI / 2); blk.translate(0, .008, 0); blk.userData.solid = true; PW.add('drain-mast', blk, 'phenolic', { into: g });
         plate.forEach(([a, t]) => { Kt.cyl('drain-mast', g, [a, .015, t], 'y', .0043, .005, 'brass'); Kt.cyl('drain-mast', g, [a, .0177, t], 'y', .0027, .0008, 'darkBox'); }); } }
-    supportClamps();
+    /* the clamps get their brackets in PW.relead, once every line is seated (build-nacelle.js queues it after the last builder) */
   }
   /* a small circle profile (tori for manifolds) */
   function circ(x, r, rad, n) { const out = []; for (let i = 0; i < n; i++) { const a = i / n * TAU; out.push([x + rad * Math.cos(a), r + rad * Math.sin(a)]); } return out; }

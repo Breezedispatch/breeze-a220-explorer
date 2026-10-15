@@ -123,11 +123,32 @@
   /* every fitting and connector registers its outer end as a port (frame, local end point, direction), so the connection audit
      can list ports with nothing attached; `o.plugged` marks a port that is capped or tested only on the ground */
   PW.ports = PW.ports || [];
-  const port = (pid, f, kind, end, D, size, o) => PW.ports.push({ pid, f, kind, end: end.slice(), dir: [D.x, D.y, D.z], size, plugged: !!(o && o.plugged) });
+  /* base: where the fitting or connector sits on its unit; axis: its mounting direction; own: its own meshes (for the flush audit) */
+  const port = (pid, f, kind, end, D, size, o, base, axis, own) => PW.ports.push({ pid, f, kind, end: end.slice(), dir: [D.x, D.y, D.z], size, plugged: !!(o && o.plugged),
+    base: base && base.slice(), axis: axis && [axis.x, axis.y, axis.z], own: own || [] });
+  /* a routed line that starts or ends at a kit port is seated on it and leaves it straight along the port's direction, as a real tube
+     leaves its B-nut and a harness its backshell. An end within 8 mm of a port's outer end is moved onto it; then, when the line's first
+     leg is more than 8 deg off the port's direction, a point is added a short lead (2.5 tube radii, at least 8 mm, at most 45% of the
+     leg) out along it. pts are world points; elec picks connectors (harnesses, cables) or fittings. Until 2026-10-15 about 90 line ends
+     left their ports at 15 to 130 deg, kinking at the nut, and about 15 stood off or ran into them by 3 to 22 mm */
+  K.leadOut = (pts, r, elec) => { if (pts.length < 2) return pts;
+    const portAt = E => { let best = null, bd = .008;
+      for (const pt of PW.ports) { if ((pt.kind === 'connector') !== !!elec) continue; pt.f.updateWorldMatrix(true, false);
+        const W = pt.f.localToWorld(new THREE.Vector3(...pt.end)), d = W.distanceTo(E); if (d < bd) { bd = d; best = { pt, W }; } }
+      return best; };
+    const fix = (P, rev) => { const Q = rev ? P.slice().reverse() : P.slice(), hit = portAt(Q[0]); if (!hit) return P;
+      const q = new THREE.Quaternion(); hit.pt.f.getWorldQuaternion(q); const D = new THREE.Vector3(...hit.pt.dir).applyQuaternion(q).normalize();
+      Q[0] = hit.W.clone();
+      const v = Q[1].clone().sub(Q[0]), len = v.length(); if (len < 1e-6) return P;
+      if (v.dot(D) / len <= Math.cos(8 * Math.PI / 180)) Q.splice(1, 0, Q[0].clone().addScaledVector(D, Math.min(Math.max(2.5 * r, .008), .45 * len)));
+      return rev ? Q.reverse() : Q; };
+    return fix(fix(pts, false), true); };
+  /* the same points? (to tell whether a line built before its port needs rebuilding) */
+  K.samePts = (a, b) => a.length === b.length && a.every((p, i) => p.distanceTo(b[i]) < 1e-6);
   /* B-nut fitting: hex nut on a short nipple, pointing along d (the tube leaves from its far end) */
-  K.fitting = (pid, f, pos, d, s, o) => { s = s || .009; const D = dir(d); K.cyl(pid, f, add(pos, D, -s * .3), d, s * .75, s * 1.2, 'steel');
-    K.hex(pid, f, add(pos, D, s * .8), d, s, s * 1.3, 'steel'); if (o && o.stub) K.cyl(pid, f, add(pos, D, s * 1.6 + o.stub / 2), d, s * .45, o.stub, 'tube');
-    port(pid, f, 'fitting', add(pos, D, s * 1.45 + (o && o.stub ? o.stub + s * .15 : 0)), D, s, o); };
+  K.fitting = (pid, f, pos, d, s, o) => { s = s || .009; const D = dir(d), own = [K.cyl(pid, f, add(pos, D, -s * .3), d, s * .75, s * 1.2, 'steel')];
+    own.push(K.hex(pid, f, add(pos, D, s * .8), d, s, s * 1.3, 'steel')); if (o && o.stub) own.push(K.cyl(pid, f, add(pos, D, s * 1.6 + o.stub / 2), d, s * .45, o.stub, 'tube'));
+    port(pid, f, 'fitting', add(pos, D, s * 1.45 + (o && o.stub ? o.stub + s * .15 : 0)), D, s, o, add(pos, D, -s * .9), D, own); };
   /* hex-head plug (drain, overfill, core drain) */
   K.plug = (pid, f, pos, d, s, mat) => { const D = dir(d); K.cyl(pid, f, pos, d, s * 1.05, s * .3, 'steel'); K.hex(pid, f, add(pos, D, s * .55), d, s * .8, s * .8, mat || 'steel'); };
   /* chip collector / magnetic plug: hex body with a black bayonet cap and its grip. These are quick-removal fittings (p.229-231), not
@@ -135,13 +156,13 @@
   K.chip = (pid, f, pos, d, s) => { s = s || .011; const D = dir(d); K.hex(pid, f, pos, d, s, s * .9, 'steel');
     K.cyl(pid, f, add(pos, D, s * .95), d, s * .95, s * .9, 'capBlack', { edge: s * .25 }); K.cyl(pid, f, add(pos, D, s * 1.55), d, s * .35, s * .4, 'capBlack'); };
   /* circular MS connector with coupling nut and a backshell turning the harness away along `lead` */
-  K.connector = (pid, f, pos, d, r, o) => { o = o || {}; r = r || .016; const D = dir(d);
-    K.cyl(pid, f, add(pos, D, r * .4), d, r * 1.15, r * .8, 'steel', { edge: r * .15 });                       // receptacle flange
-    K.cyl(pid, f, add(pos, D, r * 1.3), d, r * 1.05, r * 1.1, o.nut || 'connector', { edge: r * .2 });           // coupling nut
+  K.connector = (pid, f, pos, d, r, o) => { o = o || {}; r = r || .016; const D = dir(d), own = [];
+    own.push(K.cyl(pid, f, add(pos, D, r * .4), d, r * 1.15, r * .8, 'steel', { edge: r * .15 }));             // receptacle flange
+    own.push(K.cyl(pid, f, add(pos, D, r * 1.3), d, r * 1.05, r * 1.1, o.nut || 'connector', { edge: r * .2 })); // coupling nut
     const L = o.lead ? dir(o.lead) : D, e = add(pos, D, r * 1.9);
-    K.cyl(pid, f, add(e, L, r * .9), L, r * .78, r * 1.8, 'steel', { edge: r * .2 });                           // backshell
-    if (o.boot) K.cyl(pid, f, add(e, L, r * 2.1), L, r * .72, r * .9, 'silicone', { edge: r * .25 });
-    port(pid, f, 'connector', add(e, L, r * (o.boot ? 2.55 : 1.8)), L, r, o); };
+    own.push(K.cyl(pid, f, add(e, L, r * .9), L, r * .78, r * 1.8, 'steel', { edge: r * .2 }));                 // backshell
+    if (o.boot) own.push(K.cyl(pid, f, add(e, L, r * 2.1), L, r * .72, r * .9, 'silicone', { edge: r * .25 }));
+    port(pid, f, 'connector', add(e, L, r * (o.boot ? 2.55 : 1.8)), L, r, o, pos, D, own); };
 
   /* ---------------- labels and gauges ----------------
      Each is a thin backing piece with its printing on a flat quad in front (a box's own UVs do not map a picture onto a face) */

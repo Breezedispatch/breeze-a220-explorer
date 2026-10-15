@@ -144,7 +144,11 @@
 
   /* ---- tubes, hoses and harnesses routed through points ----
      Waypoints are [x, y, z]. A tube is closed at both ends so it stays watertight for the section caps. */
-  G.curve = (pts, tension) => new THREE.CatmullRomCurve3(pts.map(p => (p.isVector3 ? p : new THREE.Vector3(p[0], p[1], p[2]))), false, 'catmullrom', tension === undefined ? .2 : tension);
+  /* a two-point curve is a straight line. three r128's CatmullRomCurve3 extrapolates both missing end points into one shared vector,
+     so with two points the curve set off backwards for 2 mm, its first ring of tube vertices came out mirrored and the faces to the
+     next ring crossed: a twisted, streaky patch on every two-point tube (the thrust links showed it worst; until 2026-10-15) */
+  G.curve = (pts, tension) => { const P = pts.map(p => (p.isVector3 ? p : new THREE.Vector3(p[0], p[1], p[2])));
+    return P.length === 2 ? new THREE.LineCurve3(P[0], P[1]) : new THREE.CatmullRomCurve3(P, false, 'catmullrom', tension === undefined ? .2 : tension); };
   G.tube = function (pts, r, opts) {
     opts = opts || {};
     const curve = pts.getPointAt ? pts : G.curve(pts, opts.tension), L = curve.getLength();
