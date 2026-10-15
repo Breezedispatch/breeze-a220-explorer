@@ -33,7 +33,6 @@
     floor.rotation.x = -Math.PI / 2; floor.position.y = -1.75; floor.receiveShadow = true; floor.userData.noPick = true; S.add(floor);
     S.fog = new THREE.Fog(0x1b2533, 11, 26);                                 // the floor fades into the backdrop
     PW.initCut(); PW.initControls(canvas);
-    PW.ao = PW.makeAO(R);
     return PW;
   };
   /* a hangar-like light room rendered to a prefiltered environment map, so polished metal shows long light strips the
@@ -54,82 +53,6 @@
     lamp(-19.8, 6, -3, .1, 5, 8, 1.6);
     const pm = new THREE.PMREMGenerator(R); const tex = pm.fromScene(env, .02).texture; pm.dispose();
     return tex;
-  };
-
-  /* ---------------- ambient occlusion ----------------
-     Shade where surfaces crowd each other, as in the A220 explorer's aircraft view (index.html): after the normal render the visible
-     engine alone is drawn into a half-size normal and depth buffer, a 16-sample hemisphere test finds what is occluded within about
-     15 cm, a depth-aware blur smooths it, and the frame is multiplied by the result. Without it the sky light and the camera's work light
-     reach every surface in the packed core compartment alike, so it looked flat and too light (Brian, 2026-10-15: "add some shadowing").
-     On the left core view it takes the mean brightness from 120 to 104 of 255; about 4 ms a frame here, and only while the view moves.
-     It is recomputed when the view or the scene changes; if that makes frames slow, it waits until the view settles and fades in. It
-     is left off while a section cut is on, since it cannot see the clipped faces and their caps. */
-  PW.makeAO = function (R) {
-    const KS = 16, kernel = []; let seed = 20261015;
-    const rnd = () => (seed = seed * 16807 % 2147483647) / 2147483647;                    // a fixed kernel, the same on every load
-    for (let i = 0; i < KS; i++) { const v = new THREE.Vector3(rnd() * 2 - 1, rnd() * 2 - 1, rnd()).normalize(); let s = i / KS; s = .1 + .9 * s * s; kernel.push(v.multiplyScalar(s * (.4 + .6 * rnd()))); }
-    const nt = new THREE.WebGLRenderTarget(2, 2, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter }); nt.depthTexture = new THREE.DepthTexture(); nt.depthTexture.type = THREE.UnsignedIntType;
-    const at = new THREE.WebGLRenderTarget(2, 2), bt = new THREE.WebGLRenderTarget(2, 2);
-    const normM = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
-    const quadVS = 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
-    const aoM = new THREE.ShaderMaterial({ depthTest: false, depthWrite: false,
-      uniforms: { tNormal: { value: nt.texture }, tDepth: { value: nt.depthTexture }, proj: { value: new THREE.Matrix4() }, invProj: { value: new THREE.Matrix4() }, kernel: { value: kernel }, radius: { value: .15 }, bias: { value: .0025 } },
-      vertexShader: quadVS, fragmentShader: `uniform sampler2D tNormal, tDepth; uniform mat4 proj, invProj; uniform vec3 kernel[${KS}]; uniform float radius, bias; varying vec2 vUv;
-        vec3 viewPos(vec2 uv, float d) { vec4 v = invProj * vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0); return v.xyz / v.w; }
-        void main() { float d = texture2D(tDepth, vUv).x; if (d >= 1.0) { gl_FragColor = vec4(1.0); return; }
-          vec3 P = viewPos(vUv, d), N = normalize(texture2D(tNormal, vUv).xyz * 2.0 - 1.0);
-          vec2 cell = mod(floor(gl_FragCoord.xy), 4.0); float a = (cell.x + 4.0 * cell.y + .5) / 16.0 * 6.2831853;   /* 16 rotations in a 4 x 4 tile, which the 4 x 4 blur averages out */
-          vec3 r = vec3(cos(a), sin(a), 0.0), T = normalize(r - N * dot(r, N)), B = cross(N, T); mat3 TBN = mat3(T, B, N);
-          float occ = 0.0;
-          for (int i = 0; i < ${KS}; i++) { vec3 S = P + TBN * kernel[i] * radius; vec4 o = proj * vec4(S, 1.0); vec2 su = o.xy / o.w * .5 + .5;
-            vec3 SP = viewPos(su, texture2D(tDepth, su).x); occ += (SP.z >= S.z + bias * (1.0 - P.z * .2) ? 1.0 : 0.0) * smoothstep(0.0, 1.0, radius / abs(P.z - SP.z)); }
-          occ *= smoothstep(.12, .4, dot(N, normalize(-P)));   /* a surface seen edge-on samples its own depth and comes out in dark dashes */
-          gl_FragColor = vec4(vec3(1.0 - occ / float(${KS})), 1.0); }` });
-    const blurM = new THREE.ShaderMaterial({ depthTest: false, depthWrite: false, uniforms: { tAO: { value: at.texture }, tDepth: { value: nt.depthTexture }, invProj: aoM.uniforms.invProj, texel: { value: new THREE.Vector2() } }, vertexShader: quadVS,
-      fragmentShader: `uniform sampler2D tAO, tDepth; uniform mat4 invProj; uniform vec2 texel; varying vec2 vUv;
-        float vz(vec2 uv) { vec4 v = invProj * vec4(uv * 2.0 - 1.0, texture2D(tDepth, uv).x * 2.0 - 1.0, 1.0); return v.z / v.w; }
-        void main() { float zc = vz(vUv), s = 0.0, w = 0.0;   /* depth-aware: only neighbours at about the same depth, so a crease's shade does not spread across an edge */
-          for (int x = -2; x < 2; x++) for (int y = -2; y < 2; y++) { vec2 uv = vUv + (vec2(float(x), float(y)) + .5) * texel; float k = exp(-abs(vz(uv) - zc) * 60.0); s += texture2D(tAO, uv).r * k; w += k; }
-          gl_FragColor = vec4(vec3(w > 0.0 ? s / w : 1.0), 1.0); }` });
-    const mulM = new THREE.ShaderMaterial({ depthTest: false, depthWrite: false, transparent: true, blending: THREE.CustomBlending, blendEquation: THREE.AddEquation,
-      blendSrc: THREE.ZeroFactor, blendDst: THREE.SrcColorFactor, blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor,   // the frame times the occlusion
-      uniforms: { tAO: { value: bt.texture }, strength: { value: 1 } }, vertexShader: quadVS,
-      fragmentShader: 'uniform sampler2D tAO; uniform float strength; varying vec2 vUv; void main() { gl_FragColor = vec4(vec3(mix(1.0, texture2D(tAO, vUv).r, strength)), 1.0); }' });
-    const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2)), qScene = new THREE.Scene(), qCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1); quad.frustumCulled = false; qScene.add(quad);
-    const pass = (mat, to) => { quad.material = mat; R.setRenderTarget(to); R.render(qScene, qCam); };
-    const lastView = new THREE.Matrix4(), lastProj = new THREE.Matrix4(); let lastSig = '', ok = true, checked = false, slow = 0, settle = false, still = 0, fade = 0, have = false, since = 0;
-    /* what else changes the picture: running spools, explode, doors, hidden and ghosted parts, dragging */
-    const sig = () => { let v = 0, g = 0; for (const p of PW.parts.values()) { if (p.obj.visible) v++; if (p.ghost) g++; }
-      const N = PW.nac; return [PW.speed || 0, PW.explodeT || 0, N ? N.fan + ',' + N.tr : '', v, g, PW.anyDrag ? 1 : 0].join('|'); };
-    const compute = () => { const S = PW.scene, cam = PW.camera, W = Math.max(2, Math.round(R.domElement.width / 2)), H = Math.max(2, Math.round(R.domElement.height / 2));
-      if (nt.width !== W || nt.height !== H) { nt.setSize(W, H); at.setSize(W, H); bt.setSize(W, H); blurM.uniforms.texel.value.set(1 / W, 1 / H); }
-      const off = [];                                                                                        // the floor, hazard areas, cut cap and ghosted parts sit this out
-      for (const o of S.children) if (o !== PW.root && o.visible && o !== cam && !o.isLight) { off.push(o); o.visible = false; }
-      for (const p of PW.parts.values()) if (p.ghost) for (const m of p.meshes) if (m.visible) { off.push(m); m.visible = false; }
-      const bg = S.background, cc = R.getClearColor(new THREE.Color()), ca = R.getClearAlpha(), su = R.shadowMap.autoUpdate; S.background = null; S.overrideMaterial = normM; R.setClearColor(0x000000, 0);
-      R.shadowMap.autoUpdate = false;                                                                         // the frame just drew the shadow map; this pass needs none
-      R.setRenderTarget(nt); R.clear(); R.render(S, cam); S.overrideMaterial = null; S.background = bg; R.setClearColor(cc, ca); R.shadowMap.autoUpdate = su; for (const o of off) o.visible = true;
-      aoM.uniforms.proj.value.copy(cam.projectionMatrix); aoM.uniforms.invProj.value.copy(cam.projectionMatrixInverse); pass(aoM, at); pass(blurM, bt); R.setRenderTarget(null);
-      if (!checked) { checked = true; const px = new Uint8Array(4 * 16); R.readRenderTargetPixels(bt, Math.floor(W / 2) - 2, Math.floor(H / 2) - 2, 4, 4, px);   // a shader that failed to compile leaves it black, which would black out the frame
-        let s = 0; for (let i = 0; i < px.length; i += 4) s += px[i]; if (s / 16 < 12) { ok = false; console.warn('Ambient occlusion off: its buffer came out black'); return false; } }
-      have = true; return true; };
-    return { get enabled() { return ok; }, set enabled(v) { ok = !!v; have = false; },
-      get strength() { return mulM.uniforms.strength.value; }, set strength(v) { mulM.uniforms.strength.value = v; },
-      get radius() { return aoM.uniforms.radius.value; }, set radius(v) { aoM.uniforms.radius.value = v; have = false; },
-      /* after the frame is drawn: dt in seconds; force recomputes now and applies it in full (single frames for review) */
-      render(dt, force) {
-        if (!ok || (PW.cut && PW.cut.on)) { have = false; return; }
-        const cam = PW.camera, s = sig(), moved = force || !have || !lastView.equals(cam.matrixWorldInverse) || !lastProj.equals(cam.projectionMatrix) || s !== lastSig || (PW.speed || 0) > 0;
-        lastView.copy(cam.matrixWorldInverse); lastProj.copy(cam.projectionMatrix); lastSig = s; since += dt;
-        if (force) { if (!compute()) return; fade = 1; }
-        else if (moved) { still = 0;
-          if (!settle) { if (!compute()) return; fade = 1; if (dt > .028) { if (++slow > 60) { settle = true; console.info('Ambient occlusion: frames slow, now applied once the view settles'); } } else slow = Math.max(0, slow - 2); }
-          else { fade = 0; have = false; return; } }
-        else if (settle) { still += dt; if (!have) { if (still < .15) return; if (!compute()) return; fade = 0; } fade = Math.min(1, fade + dt / .25); }
-        else if (since > 1) { since = 0; compute(); }                                                     // a quiet refresh, for anything that moved unseen
-        if (!have || fade <= 0) return;
-        const k = mulM.uniforms.strength.value; mulM.uniforms.strength.value = k * fade;
-        const ac = R.autoClear; R.autoClear = false; pass(mulM, null); R.autoClear = ac; mulM.uniforms.strength.value = k; } };
   };
 
   /* ---------------- materials ----------------
@@ -338,7 +261,7 @@
   PW.look = (theta, phi, r, target) => { const W = PW.ctl.want; W.theta = theta; W.phi = phi; W.r = r; if (target) W.target.set(...target); };
   /* jump straight to a view and draw one frame now (for review screenshots: a hidden browser pane throttles animation frames) */
   PW.snap = (theta, phi, r, target) => { PW.look(theta, phi, r, target); const K = PW.ctl; K.theta = theta; K.phi = phi; K.r = r; if (target) K.target.set(...target);
-    PW.updateCamera(0); PW.followCamera(); PW.renderer.render(PW.scene, PW.camera); if (PW.ao) PW.ao.render(0, true); return 'ok'; };
+    PW.updateCamera(0); PW.followCamera(); PW.renderer.render(PW.scene, PW.camera); return 'ok'; };
 
   /* ---------------- picking and highlight ---------------- */
   const ray = new THREE.Raycaster();
@@ -441,7 +364,6 @@
       PW.followCamera();
       onFrame && onFrame(dt, now / 1000);
       PW.renderer.render(PW.scene, PW.camera);
-      if (PW.ao) PW.ao.render(dt);
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
