@@ -340,12 +340,18 @@
     line('edp', [P(-1.418, 5.42, .388), P(-1.405, 5.36, .40), P(-1.385, 5.3, .425), P(-1.35, 5.2, .455), P(-1.326, 5.05, .463), P(-1.322, 4.85, .482), P(-1.324, 4.7, .50), P(-1.32, 4.4, .51), P(-1.32, 3.2, .51), P(-1.33, 1.9, .512),
       P(-1.333, 1.62, .515), P(-1.337, 1.35, .515), P(-1.36, 1.05, .505), P(-1.42, .6, .51), P(-1.46, .3, .52), P(-1.468, .15, .555), V(-1.47, .62, .078), V(-1.475, .70, .097), V(-1.48, .76, .107), V(-1.485, .85, .12), V(-1.49, 1.03, .125)], .006, 'hose', { clamps: 4 });
     acc('lsop', 'Lubrication and scavenge oil pump (LSOP)', 'Seven-stage pump at the right end of the MGB forward face, 5 o\'clock: one pressure stage and six scavenge stages. It slides onto the gearbox pad on two guide pins and is held by captive bolts. Each scavenge return has its own chip collector with a black bayonet cap along the pump body, so a debris message can be traced to the bearing compartment it came from. The No. 4 and No. 5/6 scavenge tubes come forward under the gearbox into the two fittings on its 6 o\'clock side. A low oil pressure indication with normal quantity often points here or to the oil control module.', 'p.212-235, p.231, p.69; photos');
+    /* p.231: a tall mounting flange held by captive bolts round its edge (it seats on a face seal over the gearbox pad, p.67), a shoulder
+       by the flange and a long rounded body; the six chip collectors in two rows of three. p.231 shows three on one face and two of the
+       other row, and the photos from below show two rows of dark caps here, so one row faces out and one faces 6 o'clock, both
+       reachable from below. They serve FBC, BC3, BC4, BC5, MGB and AGB (p.230), lettered on the casting too small to read in p.231, so
+       they are not told apart. Until 2026-10-15: a square flange, a box and the six in one zigzag row */
     { const f = Kt.frame('lsop', mx0, 4.85, .40);
-      Kt.box('lsop', f, [.008, 0, 0], [.016, .13, .13], 'castTan', { round: .008 });                                       // square mounting flange
-      for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) Kt.hex('lsop', f, [.019, a * .052, b * .052], 'x', .006, .006, 'steel');   // captive bolts
-      Kt.box('lsop', f, [.13, 0, 0], [.23, .1, .11], 'castTan', { round: .03 });                                           // pump body
-      Kt.box('lsop', f, [.12, -.005, .062], [.18, .07, .014], 'castTan', { round: .005 });                                // manifold plate
-      for (let i = 0; i < 6; i++) Kt.chip('lsop', f, [.05 + i * .033, .052, (i % 2 ? -.025 : .02)], 'y', .01);           // the six scavenge chip collectors
+      Kt.box('lsop', f, [.008, -.005, .005], [.016, .17, .125], 'castTan', { round: .01 });                                 // mounting flange
+      for (const [y, z] of [[-.08, -.05], [-.08, .06], [.07, -.05], [.07, .06], [-.03, -.054], [.025, -.054], [-.03, .064], [.025, .064], [-.084, .005], [.074, .005]])
+        Kt.hex('lsop', f, [.0185, y, z], 'x', .0055, .006, 'steel');                                                     // captive bolts
+      Kt.box('lsop', f, [.04, 0, .005], [.05, .13, .12], 'castTan', { round: .025 });                                     // shoulder, carrying the scavenge inlets
+      Kt.box('lsop', f, [.15, 0, .005], [.2, .1, .105], 'castTan', { round: .035 });                                      // pump body
+      for (let i = 0; i < 3; i++) { Kt.chip('lsop', f, [.09 + i * .05, .05, .005], 'y', .013); Kt.chip('lsop', f, [.1 + i * .05, -.005, .0575], 'z', .013); }   // the chip collectors, caps about 0.28 of the body's width (p.231)
       /* the No. 4 (outer) and No. 5/6 scavenge inlets at the aft end of the manifold plate, their tubes coming forward under the gearbox
          (p.214-215). The front compartments' and the gearboxes' stages are fed through the gearbox casting and are not drawn */
       for (const y of [.02, -.02]) Kt.fitting('lsop', f, [.04, y, .07], 'z', .01); }
