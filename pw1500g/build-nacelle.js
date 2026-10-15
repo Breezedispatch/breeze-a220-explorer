@@ -346,6 +346,34 @@
     const IFS = [[xI0, rI0], [xI0 - .2, .555], [-1.35, .585], [-1.9, .588], [-2.2, .575], [xTE, .53], [xTE - .25, .47], [xCN + .004, .392]];
     const DUCT = [[-.92, .945], [-1.4, .955], [-1.981, .952], [-2.3, .94], [xTE, .93]];
     const rIFS = xx => G.interp(IFS, xx), rDuct = xx => G.interp(DUCT, xx);
+    /* the IFS halves' top edges, as an angle from the crown: 10 deg either side, with the upper bifurcation's walls rising from them to
+       the hinge beam, as far aft as x -1.85; from there they ease out to 24 deg by x -2.05 and stay there. Brian's rear photos (cowls
+       closed, and all open) show the pylon's aft fairing sitting on the core about half a metre wide (27 deg either side), and p.24-25
+       say the gap between the doors is larger at the top (the upper bumpers need a compression strut): so the upper bifurcation is wide
+       at the core and narrows up to the hinge beam, and the thrust links rise through it into the aft fairing. Until 2026-10-15 the
+       edges ran at 10 deg the whole length and the links passed through them from x -2.0 to -2.4 */
+    const EDGE = xx => { const t = Math.max(0, Math.min(1, (-1.85 - xx) / .2)); return deg(10) + deg(14) * t * t * (3 - 2 * t); };
+    /* G.revolve for a closed profile whose angular range changes along x: lo(x) to hi(x) at each profile point. The faces are still
+       surfaces of revolution, so they take G.revolve's normals; the two edge faces, whose angle follows x, take their own */
+    const revVar = (pts, lo, hi, seg) => {
+      let P = pts.map(p => [p[0], p[1]]), area = 0;
+      for (let i = 0; i < P.length; i++) { const [x0, r0] = P[i], [x1, r1] = P[(i + 1) % P.length]; area += x0 * r1 - x1 * r0; } if (area < 0) P = P.reverse();
+      const n = P.length, cc = Math.cos(deg(35)), sn = [];
+      for (let i = 0; i < n; i++) { const [x0, r0] = P[i], [x1, r1] = P[(i + 1) % n], L = Math.hypot(x1 - x0, r1 - r0) || 1; sn.push([(r1 - r0) / L, -(x1 - x0) / L]); }
+      const endN = (i, end) => { const a = sn[i], b = sn[(end ? i + 1 : i - 1 + n) % n]; if (a[0] * b[0] + a[1] * b[1] < cc) return a;
+        const m = [a[0] + b[0], a[1] + b[1]], L = Math.hypot(m[0], m[1]) || 1; return [m[0] / L, m[1] / L]; };
+      const ang = (p, j) => lo(p[0]) + (hi(p[0]) - lo(p[0])) * j / seg, pos = [], nor = [], uv = [], idx = [];
+      for (let i = 0; i < n; i++) { const A = P[i], B = P[(i + 1) % n], nA = endN(i, 0), nB = endN(i, 1), base = pos.length / 3;
+        for (let j = 0; j <= seg; j++) { const ta = ang(A, j), tb = ang(B, j), ca = Math.cos(ta), sa = Math.sin(ta), cb = Math.cos(tb), sb = Math.sin(tb);
+          pos.push(A[0], A[1] * ca, A[1] * sa, B[0], B[1] * cb, B[1] * sb); nor.push(nA[0], nA[1] * ca, nA[1] * sa, nB[0], nB[1] * cb, nB[1] * sb); uv.push(j / seg, 0, j / seg, 1); }
+        for (let j = 0; j < seg; j++) { const a = base + j * 2, b = a + 1; idx.push(a, b, a + 2, a + 2, b, a + 3); } }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+      g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx);
+      const tris = THREE.ShapeUtils.triangulateShape(P.map(p => new THREE.Vector2(p[0], p[1])), []), parts = [g];
+      for (const [j, s] of [[0, -1], [seg, 1]]) { const cp = [], ci = []; for (const p of P) { const t = ang(p, j); cp.push(p[0], p[1] * Math.cos(t), p[1] * Math.sin(t)); }
+        for (const t of tris) s > 0 ? ci.push(t[0], t[1], t[2]) : ci.push(t[0], t[2], t[1]);
+        const cg = new THREE.BufferGeometry(); cg.setAttribute('position', new THREE.Float32BufferAttribute(cp, 3)); cg.setIndex(ci); cg.computeVertexNormals(); parts.push(cg); }
+      const out = G.merge(parts); out.userData.solid = true; return out; };
     for (const side of ['left', 'right']) {
       const sg = side === 'right' ? 1 : -1, pid = `tr-${side}`;
       PW.part(pid, { parent: 'thrust-reverser', label: `${side === 'left' ? 'Left' : 'Right'} thrust reverser door`, explode: [0, .25, sg * .9], src: 'p.18-23; photos',
@@ -463,10 +491,14 @@
          (about 12 cm wide at the core, 20 cm at the duct wall) carries the ignition cables, the core harnesses, the cowl anti-ice duct and the drain mast across
          the fan duct. The outer cowl and sleeve still meet at the latch beam */
       const xB = xTE + .25;                                                                                   // aft end of the bifurcation walls
-      for (const [xa, xb, a0, al, n] of [[xI0, xB, it0, itl, 20], [xB, xTE - .02, t0, tl, 6]]) {
+      /* the top edge follows EDGE (above): on the right door it is the start of the door's arc, on the left its end */
+      const lo = (a0, xx) => sg > 0 ? EDGE(xx) : a0, hi = (a1, xx) => sg > 0 ? a1 : TAU - EDGE(xx);
+      const offTop = (xx, th, m) => sg > 0 ? th < EDGE(xx) + m - 1e-9 : th > TAU - EDGE(xx) - m + 1e-9;   // within m of the top edge (or past it)
+      for (const [xa, xb, a0, al, n] of [[xI0, -1.85, it0, itl, 14], [-1.85, xB, it0, itl, 15], [xB, xTE - .02, t0, tl, 6]]) {
         const ifo = []; for (let i = 0; i <= n; i++) { const xx = xa + (xb - xa) * i / n; ifo.push([xx, rIFS(xx)]); }
-        PW.add(iid, G.revolve(G.shellProfile(ifo, ifo.map(([xx, r]) => [xx, r - .02])), { seg: 72, thetaStart: a0, thetaLength: al }), 'cowlWhite');
-        PW.add(iid, metricUV(G.revolve(G.shellProfile(ifo.map(([xx, r]) => [xx, r - .02]), ifo.map(([xx, r]) => [xx, r - .032])), { seg: 72, thetaStart: a0 + deg(1), thetaLength: al - deg(2) }), a0), 'blanket'); }
+        const L = xx => lo(a0, xx), H = xx => hi(a0 + al, xx);
+        PW.add(iid, revVar(G.shellProfile(ifo, ifo.map(([xx, r]) => [xx, r - .02])), L, H, 72), 'cowlWhite');
+        PW.add(iid, metricUV(revVar(G.shellProfile(ifo.map(([xx, r]) => [xx, r - .02]), ifo.map(([xx, r]) => [xx, r - .032])), xx => L(xx) + deg(1), xx => H(xx) - deg(1), 72), a0), 'blanket'); }
       /* the core cowl's two fire detection elements (built below): [x, clock of the upper end, clock of the lower end, which way the
          lower end bends to its connectors: +1 forward, -1 aft], read off p.21 and Brian's photos from below; long one first */
       const fireEls = sg > 0 ? [[-2.12, 2.15, 4.2, 1], [-1.60, 3.9, 4.2, -1]] : [[-2.23, 10.25, 8.5, 1], [-1.81, 9.0, 8.55, -1]];   // on the right the short one clears the OCM's filter cover and the leads pass above the tank's supply tube
@@ -489,21 +521,21 @@
           for (const [xx, th] of pts) { if (inHole(xx, th, .03) || inFire(xx, th, .015)) flush(); else run.push([xx, th]); } flush(); };
         let row = 0;
         for (let xx = -1.06; xx > xTE - .02; xx -= .19, row++) {                                        // to the blanket's aft end (a row hung below the bare aft collar until 2026-10-14)
-          for (const th of cols) { if (inHole(xx, th, 0) || inFire(xx, th, .025)) continue;
+          for (const th of cols) { if (inHole(xx, th, 0) || inFire(xx, th, .025) || offTop(xx, th, deg(sg > 0 ? 9 : 8))) continue;
             const place = (g, dr) => g.rotateX(th).translate(...G.onRing(xx, rB(xx) - dr, th).toArray());
             btn.push(place(new THREE.CylinderGeometry(.019, .023, .004, 20), .002)); nut.push(place(new THREE.CylinderGeometry(.0062, .0062, .007, 6), .0075)); }
-          if (row % 2) { const pts = []; for (let th = it0 + deg(4); th <= it0 + itl - deg(4); th += deg(2)) pts.push([xx, th]); hem(pts); } }
+          if (row % 2) { const pts = []; for (let th = it0 + deg(4); th <= it0 + itl - deg(4); th += deg(2)) if (!offTop(xx, th, deg(4))) pts.push([xx, th]); hem(pts); } }
         for (let k = 2; k < cols.length - 1; k += 3) { const pts = []; for (let xx = -1.02; xx > xTE - .015; xx -= .02) pts.push([xx, cols[k]]); hem(pts); }
         PW.add(iid, G.merge(btn), 'plateAl', { solid: true }); PW.add(iid, G.merge(nut), 'steel', { solid: true }); PW.add(iid, metricUV(G.merge(hems), it0), 'blanket'); }
       /* p.21 and the photos: red-brown bulb fire seals along the IFS half's forward edge, where it closes against the firewall, and along
          its hinge beam edge */
-      { const ha = sg > 0 ? it0 + deg(2) : it0 + itl - deg(2), along = [], gaps = sg > 0 ? [] : [8.2, 9.17];   // gaps where the VFG oil lines pass the firewall
+      { const ha = xx => sg > 0 ? EDGE(xx) + deg(2) : TAU - EDGE(xx) - deg(2), along = [], gaps = sg > 0 ? [] : [8.2, 9.17];   // gaps where the VFG oil lines pass the firewall
         const a0 = it0 + deg(2), a1 = it0 + itl - deg(2), cuts = [a0];
         for (const g of gaps) cuts.push(G.clock(g - .12), G.clock(g + .12)); cuts.push(a1);
         for (let k = 0; k < cuts.length; k += 2) { const arc = [], n = Math.max(2, Math.round((cuts[k + 1] - cuts[k]) / deg(5)));
           for (let i = 0; i <= n; i++) arc.push(G.onRing(xI0 - .011, rIFS(xI0 - .011) - .028, cuts[k] + (cuts[k + 1] - cuts[k]) * i / n));
           PW.add(iid, G.tube(arc, .013, { radial: 12 }), 'siliconeSeal'); }
-        for (let xx = -1.08; xx >= -2.15; xx -= .0825) along.push(G.onRing(xx, rIFS(xx) - .03, ha));             // aft of the fuel supply hose and forward of the thrust links
+        for (let xx = -1.08; xx >= -2.15; xx -= .0825) along.push(G.onRing(xx, rIFS(xx) - .03, ha(xx)));         // aft of the fuel supply hose, along the edge as it turns out for the upper bifurcation
         PW.add(iid, G.tube(along, .013, { radial: 12 }), 'siliconeSeal'); }
       /* the openings and doors seen from the core side (photos from below and aft). On the left the air/oil cooler window shows as two
          openings side by side over the cooler's plenums: the forward (inlet) one framed by a thick orange silicone gasket, the aft
@@ -584,10 +616,25 @@
         for (const [a, z] of [[l0, s0], [l1, s1]]) { const pts = [a]; for (let i = 1; i < 6; i++) pts.push(a.clone().lerp(z, i / 6)); pts.push(z);
           line(pts.map((p, i) => { if (i === 0 || i === pts.length - 1) return p; const r = Math.hypot(p.y, p.z), want = ro(p.x); return new THREE.Vector3(p.x, p.y * want / r, p.z * want / r); }), .003); } }
       const ac = []; for (let i = 0; i <= 10; i++) { const xx = xTE - .02 + (xCN + .004 - (xTE - .02)) * i / 10; ac.push([xx, rIFS(xx)]); }
-      PW.add(iid, G.revolve(G.shellProfile(ac, ac.map(([xx, r]) => [xx, r - .008])), { seg: 72, thetaStart: t0, thetaLength: tl }), 'bareCowl');
+      PW.add(iid, revVar(G.shellProfile(ac, ac.map(([xx, r]) => [xx, r - .008])), xx => lo(t0, xx), xx => hi(t0 + tl, xx), 72), 'bareCowl');   // its top edge under the aft fairing, with the IFS's
       // bifurcation half-walls at the top (hinge beam) and bottom (latch beam)
       for (const [aEdge, top] of [[it0, sg > 0], [it0 + itl, sg < 0]]) {
         const isTop = top, wall = new THREE.Shape(), xs = [xI0 - .05, xTE + .25], r0 = .56, r1 = .94;
+        /* the upper wall: from the IFS's top edge (EDGE) up to the hinge beam at 10 deg, 12 mm thick, flat while the edge is at 10 deg and
+           leaning in toward the top aft of x -1.95 (see EDGE). Each face has its own vertices, so the edges stay crisp */
+        if (isTop) { const NW = 30, sd = sg > 0 ? 1 : -1, ring = [];
+          for (let i = 0; i <= NW; i++) { const xx = xs[0] + (xs[1] - xs[0]) * i / NW, f = i / NW, rb = r0 - .02 * f, rt = r1 - .02 * f, ab = EDGE(xx), at = deg(10);
+            const B = [rb * Math.cos(ab), sd * rb * Math.sin(ab)], T = [rt * Math.cos(at), sd * rt * Math.sin(at)], dl = Math.hypot(T[0] - B[0], T[1] - B[1]);
+            const nv = [-(T[1] - B[1]) / dl * .006, (T[0] - B[0]) / dl * .006];
+            ring.push([xx, [[B[0] - nv[0], B[1] - nv[1]], [B[0] + nv[0], B[1] + nv[1]], [T[0] + nv[0], T[1] + nv[1]], [T[0] - nv[0], T[1] - nv[1]]]]); }
+          const parts = [];
+          for (let e = 0; e < 4; e++) { const pos = [], idx = []; ring.forEach(([xx, q]) => { const a = q[e], b = q[(e + 1) % 4]; pos.push(xx, a[0], a[1], xx, b[0], b[1]); });
+            for (let k = 0; k < NW; k++) { const a = 2 * k; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
+            const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); parts.push(g); }
+          for (const k of [0, NW]) { const [xx, q] = ring[k], pos = []; q.forEach(([y, z]) => pos.push(xx, y, z));
+            const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(k ? [0, 2, 1, 0, 3, 2] : [0, 1, 2, 0, 2, 3]); g.computeVertexNormals(); parts.push(g); }
+          const g = G.merge(parts); G.orientOutward(g); g.computeVertexNormals(); g.userData.solid = true;
+          PW.add(pid, g, 'cowlWhite', { solid: true, into: hinge }); continue; }
         wall.moveTo(xs[0], r0); wall.lineTo(xs[1], r0 - .02); wall.lineTo(xs[1], r1 - .02); wall.lineTo(xs[0], r1); wall.lineTo(xs[0], r0);
         const g = new THREE.ExtrudeGeometry(wall, { depth: .012, bevelEnabled: false }); g.translate(0, 0, -.006);
         const m = new THREE.Mesh(g); m.rotation.x = aEdge - Math.PI / 2 * 0; m.position.set(0, 0, 0);
@@ -928,7 +975,10 @@
       const rbA = mono([[xCN, rIFS(xCN + .004) + .004], [-3.45, .41], [-3.8, .45], [-4.21, .55], [x(880.6), .79], [-5.2, 1.3], [-5.5, 1.645]]);
       const rb = xx => xx > xCN + .004 ? rIFS(xx) + .004 : rbA(xx);                        // the base's underside, a circle round the engine axis
       const xC6 = x(806.7), xHS = x(880.6), HS = .17;                                       // the heat shield runs between them, HS up the skirt
-      const aft = xx => { const W2 = G.interp(WID, xx) / 2, ws = xx > xTE + .02 ? G.lerp(.13, G.interp(WID, xTE + .02) / 2, ss((xB - xx) / (xB - xTE - .02))) : W2;
+      /* at the end of the upper bifurcation the base is as wide as the bifurcation is at the core (its walls' lower edges, EDGE), so the
+         IFS's top edges close against its sides (it was 0.26 m wide there until 2026-10-15, when the bifurcation narrowed to 10 deg) */
+      const wsB = (rIFS(xB) + .004) * Math.sin(EDGE(xB)) + .005;
+      const aft = xx => { const W2 = G.interp(WID, xx) / 2, ws = xx > xTE + .02 ? G.lerp(wsB, G.interp(WID, xTE + .02) / 2, ss((xB - xx) / (xB - xTE - .02))) : W2;
         const r = rb(xx), ysd = Math.sqrt(Math.max(0, r * r - ws * ws)), yTop = TOPF(xx), yt = xx > xTE ? sec(xx).yc + .01 : yTop;
         const hT = Math.min(G.lerp(Math.max(.1, Math.min(.45, .86 - ysd)), .26, ss((xC6 + .03 - xx) / .12)), (yTop - ysd) * .5), yF = ysd + hT;
         const tf = Math.max(.04, Math.min(1, G.lerp(1, .62, ss((-3.15 - xx) / .7)), W2 / .1));

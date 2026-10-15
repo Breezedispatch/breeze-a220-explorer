@@ -1957,9 +1957,10 @@
          rod end's eye on a radial pin, a slim 28 mm tube tapering out over the middle to the 46 mm aft half, a ribbed swaged collar and
          the aft spherical rod end. The CIC lug, aft of the IFS's forward fire seal, holds the pin 8 cm off the CIC's aft cone, so the
          slim tube passes over the HP bleed duct, the fuel lines and the TACC valve (the FOHX boost lines cross over the left one about
-         4 mm clear), and the links stay just over the LPT's front spray ring. The model's IFS hugs the top of the turbine closer than
-         the real upper bifurcation does, so from x -2.1 to -2.4 the links run through its top edge, as the curved links before them
-         did (until 2026-10-14 they were bent 44 mm tubes); with the reverser doors open they are clear */
+         4 mm clear), and the links stay just over the LPT's front spray ring. They rise through the upper bifurcation, which widens at
+         the core aft of x -1.85 (build-nacelle.js, EDGE), into the aft fairing round the aft mount. Until 2026-10-15 the bifurcation was
+         a 10 deg slot the whole length and the links ran through the IFS's top edges from x -2.0 to -2.4 (until 2026-10-14 they were
+         bent 44 mm tubes) */
       PW.part('thrust-links', { parent: 'mounts', label: 'Thrust links (2)', src: 'p.44-45, p.48-49',
         info: 'Two straight links from the compressor intermediate case (CIC) to the aft mount\'s balance beam. They carry the engine thrust aft into the aft mount and keep it from bending the core. Each has a rod end at both ends, on a pin through a clevis on the CIC at the front and in a fork of the balance beam at the back, which shares the thrust between them. If any link of the aft mount fails, including a thrust link, the load moves to a secondary path.' });
       const tl = PW.parts.get('thrust-links').obj;
