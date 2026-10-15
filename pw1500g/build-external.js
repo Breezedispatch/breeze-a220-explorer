@@ -522,7 +522,7 @@
       Kt.flange('deoiler', f, [-.039, 0, .017], '-x', .012, .022, .006, 4, 'steel');                                            // the duct's bolted flange, low on the aft end
       /* over the top of the VFG's aft section (since the VFG was enlarged on 2026-10-14), then down behind it to 6 o'clock */
       line('deoiler', [Ld(-.042, 0, .017), Ld(-.055, .006, .02), P(-1.74, 4.38, .356), P(-1.80, 4.46, .356), P(-1.87, 4.55, .352), P(-1.925, 4.75, .348), P(-1.945, 5.0, .345), P(-1.955, 5.25, .337),
-        P(-1.97, 5.5, .32), P(-1.99, 5.75, .316), P(-2.02, 5.92, .315), P(-2.042, 5.975, .316), P(-2.065, 6.0, .345), P(-2.083, 6.0, .385), P(-2.11, 6.0, .44), P(-2.14, 6.0, .494), P(-2.20, 6.0, .516), P(-2.25, 6.0, .523), P(-2.32, 6.0, .523),
+        P(-1.97, 5.5, .32), P(-1.99, 5.75, .316), P(-2.017, 5.9, .315), P(-2.042, 5.968, .318), P(-2.057, 5.992, .337), P(-2.072, 6.0, .363), P(-2.09, 6.0, .40), P(-2.11, 6.0, .44), P(-2.14, 6.0, .494), P(-2.20, 6.0, .516), P(-2.25, 6.0, .523), P(-2.32, 6.0, .523),
         P(-2.38, 6.0, .512), P(-2.415, 6.0, .494)], .015, 'tube', { clamps: 4, ends: false });
       /* the flattened outlet, about 5 cm wide, lying along the front of the turbine exhaust case to x -2.53 with a long scarfed mouth
          on its outer face (Brian's photo from below: the mouth shows as a dark ellipse from the TEC flange to about a third of the way
@@ -648,10 +648,10 @@
       line('oil-tank', [Lo(-.125, .05, .11095), Lo(-.125, .05, .13), P(-1.715, 4.14, .465), P(-1.745, 4.3, .458), P(-1.775, 4.47, .447), P(-1.80, 4.62, .44), P(-1.84, 4.8, .437),
         P(-1.88, 4.95, .43), P(-1.94, 4.99, .408), P(-1.99, 4.99, .40), P(-2.05, 4.99, .398), P(-2.095, 4.86, .41),
         P(-2.104, 4.6, .45), P(-2.104, 4.3, .48), P(-2.104, 4.0, .49), P(-2.104, 3.2, .49),
-        P(-2.104, 2.5, .49), P(-2.104, 2.32, .49), P(-2.09, 2.2, .49), P(-2.05, 2.196, .49), P(-2.0173, 2.1965, .49)], .014, 'tube', { clamps: 3 });
+        P(-2.104, 2.6, .49), P(-2.102, 2.42, .49), P(-2.092, 2.30, .49), P(-2.072, 2.225, .49), P(-2.045, 2.198, .49), P(-2.0173, 2.1965, .49)], .014, 'tube', { clamps: 3 });
       /* p.223: the supply leaves the outlet boss forward, up the cone's forward side, over igniter A's lead and on to the pump inlet */
       line('oil-tank', [P(-1.98, 5.146, .458), P(-1.96, 5.13, .468), P(-1.93, 5.0, .50), P(-1.90, 4.76, .522), P(-1.87, 4.56, .527), P(-1.80, 4.45, .525), P(-1.75, 4.42, .52),
-        P(-1.60, 4.44, .512), P(-1.50, 4.55, .505), P(-1.455, 4.68, .49), P(-1.43, 4.75, .44)], .016, 'tube', { clamps: 3 }); }
+        P(-1.60, 4.44, .512), P(-1.50, 4.55, .505), P(-1.462, 4.64, .497), P(-1.44, 4.71, .47), P(-1.43, 4.75, .44)], .016, 'tube', { clamps: 3 }); }
     /* p.214-215: the OCM sends pressure oil to the No. 4 and No. 5/6 bearing compartments in one tube that tees for the two, each branch
        entering through a last-chance strainer; each compartment's scavenge comes back in its own tube to its stage of the LSOP (chip
        collectors BC4 and BC5, p.230). The manual gives the circuit, not the routes. Here the scavenge tubes run aft under the gearbox at
@@ -780,7 +780,7 @@
       { const c = line('vfgoohx', [P(vx, 9.72, .43), P(-1.40, 9.72, .44), P(-1.30, 9.55, .43), P(-1.20, 9.38, .424), P(-1.10, 9.28, .444), P(-1.03, 9.28, .468), P(-.995, 9.22, .462), P(-.975, 9.12, .444), P(-.965, 8.85, .446), P(-.958, 8.55, .452), FLa(-.936, 8.4, .462)(-.01595, 0, 0)], .011, 'hose', { clamps: 3, labels: [[.3, 'labelWhite']] });   // above the forward vibration sensor
         PW.add('vfgoohx', G.alongCurve(c, [tAt(c, -.99)], () => new THREE.CylinderGeometry(.018, .018, .016, 6)), 'steel').userData.isLine = true; }
       /* and back (p.213 draws the VFG oil circuit as a pair, to and from the VFG): beside the first, aft of and outboard of it, between the fuel/oil manifold and the air/oil cooler's plenum */
-      line('vfgoohx', [P(vx - .045, 9.74, .44), P(-1.512, 9.62, .485), P(-1.515, 9.5, .525), P(-1.515, 9.3, .53), P(-1.51, 9.1, .53), P(-1.545, 8.55, .512), P(-1.585, 8.05, .512), P(-1.597, 7.75, .518), P(-1.615, 7.52, .522), P(-1.665, 7.40, .522), P(-1.69, 7.25, .519), P(-1.712, 7.0, .518), P(-1.745, 6.78, .532), FLa(mx1, 6.15, VFG_R)(-.11, .0765, .1621), FLa(mx1, 6.15, VFG_R)(-.11, .06592, .14709)], .014, 'tube', { clamps: 3 }); }
+      line('vfgoohx', [P(vx - .045, 9.74, .44), P(-1.509, 9.67, .468), P(-1.513, 9.57, .51), P(-1.515, 9.44, .528), P(-1.515, 9.3, .53), P(-1.51, 9.1, .53), P(-1.545, 8.55, .512), P(-1.585, 8.05, .512), P(-1.597, 7.75, .518), P(-1.615, 7.52, .522), P(-1.665, 7.40, .522), P(-1.69, 7.25, .519), P(-1.712, 7.0, .518), P(-1.745, 6.78, .532), FLa(mx1, 6.15, VFG_R)(-.11, .0765, .1621), FLa(mx1, 6.15, VFG_R)(-.11, .06592, .14709)], .014, 'tube', { clamps: 3 }); }
     /* the VFG air/oil cooler. p.215 and p.217 put it in the VFG oil loop but the manual never shows where it is; the A Nahas location
        photos (p.18) and Brian's photo from the opened left reverser show it: under a fairing on the fan exit liner, low on the left, its
        matrix (yellow slats) open to the fan stream behind a raised hood. Its return line runs aft through the compressor intermediate
@@ -847,7 +847,7 @@
       line('fohe', [P(-1.155 - .01595, 11.90, .42), P(-1.19, 11.90, .425), P(-1.25, 11.88, .435), P(-1.34, 11.84, .445), P(-1.43, 11.76, .46), P(-1.468, 11.55, .475), P(-1.47, 11.25, .495),
         P(-1.47, 10.9, .524), P(-1.47, 10.6, .515), P(-1.47, 10.3, .497), P(-1.47, 10.0, .495), P(-1.47, 9.7, .505), P(-1.47, 9.45, .512), P(-1.47, 9.26, .505), P(-1.47, 9.16, .492), P(-1.47, 9.16, .465 + .0145)], .011, 'tube', { clamps: 3 });   // the air/oil cooler share
       { const o = new THREE.Vector3(-.165, .01, -.1 - .012 * 1.45); f.updateMatrixWorld(true); f.localToWorld(o);
-        line('fohe', [o, P(-1.41, 10.40, .415), P(-1.385, 10.33, .412), P(-1.373, 10.15, .405), P(-1.37, 9.85, .40), P(-1.374, 9.63, .395), P(-1.40, 9.56, .393), P(-1.4505 + .011 * 1.45, 9.55, .393)], .012, 'tube', { clamps: 1 }); } }   // the cooled oil back to the manifold's tower
+        line('fohe', [o, P(-1.41, 10.40, .415), P(-1.385, 10.33, .412), P(-1.373, 10.15, .405), P(-1.37, 9.88, .40), P(-1.376, 9.72, .397), P(-1.393, 9.61, .394), P(-1.415, 9.558, .393), P(-1.4505 + .011 * 1.45, 9.55, .393)], .012, 'tube', { clamps: 1 }); } }   // the cooled oil back to the manifold's tower
 
     /* ============================== FUEL ============================== */
     PW.part('fuel', { label: 'Fuel system lines', explode: [0, 0, -.45], src: 'p.162-183; TTM ch. 73',
@@ -865,7 +865,7 @@
       P(-1.118, 11.755, .60), P(-1.118, 11.755, .80), P(-1.118, 11.755, 1.04)], .005, 'tube', { clamps: 4 });
     for (const [o, r1] of [[0, 0], [.12, .03]]) {                                                                                               // boost fuel to and from the FOHX
       line('fuel', [P(-1.12 - o * .25, 11.55 + o, .43), P(-1.115 - o * .25, 11.2, .475), P(-1.125 - o * .25, 10.8, .494), P(-1.13 - o * .25, 10.45, .5015 + o * .028), P(-1.16 - o * .28, 10.1 + o * .6, .49), P(-1.25, 9.9 + o * .8, .49 + r1 * .5),
-        P(-1.32, 9.75 + o * .8, .475 + r1), P(-1.40, 9.4 + o * .67, .465 + r1 * .83), P(-1.432 - o * .233, 9.47 + o * .25, .44 + o * .2), P(-1.444 - o * .233, 9.407, .43 + o * .208)], .012, 'tube', { clamps: 2 }); }
+        P(-1.32, 9.75 + o * .8, .475 + r1), P(-1.39 - o * .1, 9.64 + o * .5, .466 + r1 * .7), P(-1.428 - o * .233, 9.53 + o * .25, .441 + o * .2), P(-1.444 - o * .233, 9.407, .43 + o * .208)], .012, 'tube', { clamps: 2 }); }   // down onto the fittings from above (they overshot and came back, kinking, until 2026-10-15)
     /* metered fuel: two tubes leave the inner face of the FOM near its top end, run up in front of the MGB's left arm under the oil
        tower and the VFG oil/oil cooler, and aft above the arm, under the AOHX, to the primary and secondary manifolds */
     /* p.162-163, p.174-175: the two manifold rings round the diffuser case. The secondary, the larger bore with a forged tee at every
@@ -1288,7 +1288,8 @@
       boss(11.68, .36, .025); boss(11.97, .36, .02); boss(.6, .37, .02);
       const fc = Kt.frame('buffer-air', -1.44, 11.97, .282); Kt.box('buffer-air', fc, [0, .003, 0], [.034, .006, .034], 'nickel', { round: .004 }); Kt.fitting('buffer-air', fc, [0, .004, 0], 'y', .02);
       const ft = Kt.frame('buffer-air', -2.10, .13, .338); Kt.box('buffer-air', ft, [0, .003, 0], [.034, .006, .034], 'nickel', { round: .004 }); Kt.fitting('buffer-air', ft, [0, .004, 0], 'y', .02); }
-    line('buffer-air', [P(-1.47, 11.03, .367), P(-1.47, 11.03, .392), P(-1.475, 11.25, .41), P(-1.47, 11.5, .40), P(-1.45, 11.66, .385), P(-1.40, 11.68, .366), P(-1.30, 11.68, .362),
+    line('buffer-air', [P(-1.47, 11.03, .367), P(-1.47, 11.03, .381), P(-1.4705, 11.11, .399), P(-1.473, 11.21, .408), P(-1.475, 11.33, .41), P(-1.472, 11.45, .403), P(-1.458, 11.58, .39),
+      P(-1.43, 11.66, .376), P(-1.39, 11.68, .366), P(-1.30, 11.68, .362),
       P(-1.20, 11.68, .36), P(-1.16, 11.68, .36), P(-1.1307, 11.68, .36)], .02, 'tube', { clamps: 2 });   // BASOV outlet into the case, to the buffer manifold
     line('buffer-air', [P(-1.44, 11.97, .315), P(-1.43, 11.97, .33), P(-1.38, 11.97, .345), P(-1.25, 11.97, .355), P(-1.16, 11.97, .36), P(-1.1237, 11.97, .36)], .015, 'tube', { clamps: 1 });   // 4th stage to the BAHX
     line('buffer-air', [P(-1.1154, .6, .37), P(-1.15, .58, .366), P(-1.20, .5, .352), P(-1.30, .45, .337), P(-1.42, .42, .332), P(-1.53, .42, .333), P(-1.60, .45, .345), P(-1.66, .55, .375),
@@ -1305,7 +1306,7 @@
     for (const h of [10.45, 11.15, 1.6]) {
       line('hpt-cooling', [P(-1.515, h, .251), P(-1.53, h, .30), P(-1.56, h, .345), P(-1.70, h, .357), P(-1.85, h, .357), P(-1.88, h, .32), P(-1.893, h, .27), P(-1.895, h, .245)], .015, 'tube', { clamps: 2, ends: false });
       boss(-1.515, h, .251); boss(-1.895, h, .245); }
-    line('hpt-cooling', [P(-1.515, 3.80, .251), P(-1.53, 3.83, .30), P(-1.56, 3.79, .343), P(-1.62, 3.74, .351), P(-1.68, 3.70, .351), P(-1.72, 3.67, .354), P(-1.76, 3.64, .354), P(-1.83, 3.6, .345),
+    line('hpt-cooling', [P(-1.515, 3.80, .251), P(-1.53, 3.81, .30), P(-1.552, 3.80, .335), P(-1.585, 3.77, .35), P(-1.62, 3.745, .353), P(-1.68, 3.70, .351), P(-1.72, 3.67, .354), P(-1.76, 3.64, .354), P(-1.83, 3.6, .345),
       P(-1.87, 3.6, .315), P(-1.89, 3.6, .27), P(-1.895, 3.6, .245)], .015, 'tube', { clamps: 2, ends: false });
     boss(-1.515, 3.80, .251, .03); boss(-1.895, 3.6, .245);                                                        // a smaller plate at the port, between the bosses either side
     /* p.276-277: 4th-stage air for the TIC fairings and transition ducts, the LPT case and the LPT rotor. Four supply tubes leave bolted

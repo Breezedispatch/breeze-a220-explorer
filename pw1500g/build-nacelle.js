@@ -778,7 +778,7 @@
         const hV = hOf(150), hT = hBot - sg * .1, V = (lx, ly, lz) => loc(xm - .025, hV, 1.075, lx, ly, lz), T = (lx, ly, lz) => loc(-1.93, hT, 1.0, lx, ly, lz);
         /* p.347-351: the flexible drive shaft that keeps the two actuators in step runs inside the deploy tube, one rigid tube from the
            upper head's hex coupling down the torque box into the lower head's */
-        tube([U(-.012, 0, -.047 * zh), U(-.012, .002, -.065 * zh), U(-.022, .016, -.088 * zh)].concat(arc(hU + .12 * sg, hL - .15 * sg, ra + .03, -.03), [Lw(-.022, .016, .088 * zh), Lw(-.012, .002, .065 * zh), Lw(-.012, 0, .047 * zh)]), .008, 'stainless');
+        tube([U(-.012, 0, -.047 * zh), U(-.012, .002, -.065 * zh), U(-.022, .016, -.088 * zh)].concat(arc(hU + .24 * sg, hL - .26 * sg, ra + .03, -.03), [Lw(-.022, .016, .088 * zh), Lw(-.012, .002, .065 * zh), Lw(-.012, 0, .047 * zh)]), .008, 'stainless');   // the arc starts past the heads' couplings (it doubled back there, kinked, until 2026-10-15)
         /* stow, deploy and return lines from the DCU come down from the hinge beam (p.347): deploy into the upper actuator's head; stow
            into its stow union, from which its stow tube runs along the body to the rod end and a line runs on down the torque box beside
            the deploy tube to the locking actuator's stow union, which feeds that actuator's stow tube and the track lock valve. The
@@ -787,9 +787,9 @@
         tube(arc(hm(.35), hm(1.30), ra + .05, -.084).concat([U(-.09, .05, .065 * zh), U(-.085, .045, .036 * zh), U(-.085, .0396, .03 * zh)]), .006, 'tube');   // stow, under the harness, into the upper stow union
         tube(arc(hm(.35), hm(1.36), ra + .038, -.072).concat([U(-.07, .05, .05 * zh), U(-.06, .045, .035 * zh), U(-.06, .0396, .03 * zh)]), .006, 'tube');   // deploy
         for (const [W, x0] of [[U, -.085], [Lw, -.06]]) tube([W(x0, .0396, .03 * zh), W(x0 - .02, .047, .05 * zh), W(-.30, .045, .05 * zh), W(-.56, .042, .048 * zh), W(-.60, .042, .035 * zh), W(-.60, .0396, .03 * zh)], .006, 'tube');   // each actuator's stow tube, head to rod end
-        tube([U(-.085, .0396, .03 * zh), U(-.092, .05, .012 * zh), U(-.098, .052, -.025 * zh), U(-.098, .042, -.058 * zh), U(-.09, .03, -.085 * zh)].concat(arc(hU + .16 * sg, hL - .19 * sg, ra + .03, -.085), [Lw(-.08, .04, .085 * zh), Lw(-.07, .05, .05 * zh), Lw(-.06, .045, .035 * zh), Lw(-.06, .0396, .03 * zh)]), .006, 'tube');   // stow on down the torque box
-        tube(arc(hm(.35), hm(1.2), ra + .02, -.06).concat([G.onRing(-1.09, 1.12, G.clock(hm(1.3)))], arc(hm(1.4), hm(4.75), ra + .085, -.04), [V(0, .03, .075 * zh), V(0, .008, .075 * zh), V(0, .008, .0337 * zh)]), .006, 'tube');   // return, the upper union
-        tube([Lw(-.06, .0396, .03 * zh), Lw(-.055, .07, 0), Lw(-.05, .065, -.07 * zh), loc(xm - .035, hOf(143), 1.09, 0, 0, 0), V(0, -.022, .075 * zh), V(0, -.008, .075 * zh), V(0, -.008, .0337 * zh)], .006, 'tube');   // stow pressure to the track lock valve, the lower union
+        tube([U(-.085, .0396, .03 * zh), U(-.092, .05, .012 * zh), U(-.098, .052, -.025 * zh), U(-.098, .042, -.058 * zh), U(-.09, .03, -.085 * zh)].concat(arc(hU + .24 * sg, hL - .27 * sg, ra + .03, -.085), [Lw(-.08, .04, .085 * zh), Lw(-.07, .05, .05 * zh), Lw(-.06, .045, .035 * zh), Lw(-.06, .0396, .03 * zh)]), .006, 'tube');   // stow on down the torque box
+        tube(arc(hm(.35), hm(1.2), ra + .02, -.06).concat([G.onRing(-1.09, 1.12, G.clock(hm(1.3)))], arc(hm(1.4), hm(4.75), ra + .085, -.04), [V(0, .03, .075 * zh), V(0, .017, .071 * zh), V(0, .0105, .059 * zh), V(0, .008, .046 * zh), V(0, .008, .0337 * zh)]), .006, 'tube');   // return, the upper union
+        tube([Lw(-.06, .0396, .03 * zh), Lw(-.055, .07, 0), Lw(-.05, .065, -.07 * zh), loc(xm - .035, hOf(143), 1.09, 0, 0, 0), V(0, -.012, .09 * zh), V(0, -.016, .075 * zh), V(0, -.013, .06 * zh), V(0, -.009, .047 * zh), V(0, -.008, .0337 * zh)], .006, 'tube');   // stow pressure to the track lock valve, the lower union, in under the return
         /* the track lock valve's two lines aft along the latch beam to the track lock unit, side by side: unlock pressure and return.
            Low in the latch beam, under the closure assist and the stowed lockout pins and outboard of the BLS rod; they reach the unit's
            ports from forward, under the harness */
